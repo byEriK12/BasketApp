@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🏀 Stats Basket – App JS</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --card:#111826; --muted:#91a3b0; --text:#e7eef6; --accent:#4f9cff; --ok:#39d98a; --bad:#ff6b6b; --chip:#1b2636;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#0b0f14,#0d1117);color:var(--text)}
+    header{position:sticky;top:0;backdrop-filter:blur(6px);background:rgba(11,15,20,0.65);border-bottom:1px solid #1a2534;z-index:10}
+    header .wrap{max-width:1100px;margin:auto;display:flex;align-items:center;gap:16px;padding:14px 16px}
+    header h1{font-size:20px;margin:0}
+    .tag{background:var(--chip);color:var(--muted);padding:4px 10px;border-radius:999px;font-size:12px;border:1px solid #233047}
+
+    main{max-width:1100px;margin:20px auto;padding:0 16px;display:grid;grid-template-columns:320px 1fr;gap:16px}
+    @media (max-width: 960px){main{grid-template-columns:1fr}}
+
+    .panel{background:var(--card);border:1px solid #22314b;border-radius:16px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+    .panel h2{font-size:16px;margin:0 0 10px;color:#cfe1ff}
+    .panel .sub{font-size:12px;color:var(--muted);margin-top:4px}
+
+    .controls{display:grid;gap:10px}
+    label{font-size:12px;color:var(--muted)}
+    select, input[type="text"], input[type="number"]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid #2a3b57;background:#0f1521;color:var(--text);outline:none}
+    button{appearance:none;border:1px solid #2a3b57;background:linear-gradient(180deg,#142036,#10192b);color:#eaf2ff;padding:10px 12px;border-radius:12px;cursor:pointer;transition:transform .04s ease, box-shadow .2s}
+    button:hover{box-shadow:0 6px 18px rgba(79,156,255,.25)}
+    button:active{transform:translateY(1px)}
+    .btn-accent{background:linear-gradient(180deg,#4f9cff,#3e86e3);border-color:#3a74c4;color:#0b1220}
+
+    .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    @media (max-width: 780px){.cards{grid-template-columns:1fr}}
+    .card{background:linear-gradient(180deg,#101725,#0f1625);border:1px solid #21314a;border-radius:16px;padding:14px}
+    .card h3{margin:0 0 8px;font-size:15px}
+    .stat{display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed #22314b}
+    .chip{display:inline-flex;align-items:center;gap:6px;background:#0f1726;border:1px solid #1f2b41;color:#cfe1ff;border-radius:999px;padding:4px 10px;font-size:12px}
+
+    .tabs{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+    .tab{padding:8px 10px;border-radius:10px;border:1px solid #263753;background:#0f1521;color:#bcd0ee;cursor:pointer}
+    .tab.active{background:#142036;color:#fff;border-color:#34507c}
+
+    .list{display:grid;gap:8px}
+    .row{display:grid;grid-template-columns:1fr 100px 100px;gap:10px;align-items:center;padding:8px 10px;border:1px dashed #22314b;border-radius:10px;background:#0f1521}
+    .row small{color:var(--muted)}
+
+    footer{max-width:1100px;margin:20px auto 60px;padding:0 16px;color:#8fa6c2}
+
+    .kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
+    @media (max-width:780px){.kpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .kpi .box{background:#0f1521;border:1px solid #22314b;border-radius:14px;padding:12px}
+    .kpi .box .label{font-size:12px;color:#94a8c6}
+    .kpi .box .value{font-size:20px;margin-top:4px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>🏀 Stats Basket</h1>
+    </div>
+  </header>
+
+  <main>
+    <!-- LADO IZQUIERDO: CONTROLES -->
+    <aside class="panel">
+      <h2>Buscador</h2>
+      <div class="controls">
+        <div>
+          <label for="selFormato">Formato</label>
+          <select id="selFormato">
+            <option value="2vs2">2vs2</option>
+            <option value="3vs3" selected>3vs3</option>
+            <option value="4vs4">4vs4</option>
+            <option value="5vs5">5vs5</option>
+            <option value="Todos">Todos</option>
+          </select>
+        </div>
+        <div>
+          <button id="btnVer" class="btn-accent">Ver partidos del formato</button>
+          <div class="controls">
+            <div>
+              <div>
+                <label for="jugadorSelect">Jugador</label>
+                <select id="perfilJugador">
+                  <option value="">Selecciona un jugador</option>
+                </select>
+                <button onclick="populatePlayerDropdown()" style="margin-top:4px; font-size:12px; padding:4px 8px;">Actualizar lista</button>
+                <div id="perfilJugadorStats" class="sub" style="margin-top:8px"></div>
+              </div>
+            </div>
+            <div>
+              <label for="txtEquipo">Win rate de equipo (escribe nombres separados por coma)</label>
+              <input id="txtEquipo" type="text" placeholder="eric, llongueras, gomez" />
+              <div style="display:flex;gap:6px;margin-top:6px">
+                <button id="btnEstimado">Calcular win rate estimado</button>
+                <button id="btnEquipo">Calcular win rate de equipo</button>
+            </div>
+            <div id="outEstimado" class="sub"></div>
+            <div id="outEquipo" class="sub"></div>
+        </div>
+        
+      </div>
+    </aside>
+
+    <!-- LADO DERECHO: CONTENIDO PRINCIPAL -->
+    <section class="panel">
+      <div class="tabs">
+        <button class="tab active" data-tab="tab-partidos">Partidos</button>
+        <button class="tab" data-tab="tab-temporada">Temporada</button>
+        <button class="tab" data-tab="tab-colectivas">Colectivas</button>
+        <button class="tab" data-tab="tab-clutch">Clutch</button>
+      </div>
+
+      <!-- TAB PARTIDOS -->
+      <div id="tab-partidos">
+        <div class="sub" id="infoFormato"></div>
+        <div id="gridPartidos" class="cards" style="margin-top:12px"></div>
+      </div>
+
+      <!-- TAB TEMPORADA -->
+      <div id="tab-temporada" hidden>
+        <div class="kpi">
+          <div class="box"><div class="label">Partidos</div><div class="value" id="kpiPartidos">-</div></div>
+          <div class="box"><div class="label">Puntos equipo</div><div class="value" id="kpiPtosEquipo">-</div></div>
+          <div class="box"><div class="label">Puntos rivales</div><div class="value" id="kpiPtosRiv">-</div></div>
+          <div class="box"><div class="label">Win rate</div><div class="value" id="kpiWR">-</div></div>
+        </div>
+        <div class="cards">
+          <div class="card" id="cardTotales">
+            <h3>Totales de la temporada</h3>
+            <div id="totales" class="list"></div>
+          </div>
+          <div class="card" id="cardPorPartido">
+            <h3>Por partido</h3>
+            <div id="porPartido" class="list"></div>
+          </div>
+          <div class="card" id="cardAvanzadas">
+            <h3>Avanzadas</h3>
+            <div id="avanzadas" class="list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB COLECTIVAS -->
+      <div id="tab-colectivas" hidden>
+        <div class="cards">
+          <div class="card">
+            <h3>+/- total (todos los partidos)</h3>
+            <div class="list" id="listMasMenosTotal"></div>
+          </div>
+          <div class="card">
+            <h3>+/- por partido (mín. 5 pj)</h3>
+            <div class="list" id="listMasMenosPP"></div>
+          </div>
+          <div class="card">
+            <h3>Win rate por jugador (mín. 5 pj)</h3>
+            <div class="list" id="listWR"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB CLUTCH -->
+      <div id="tab-clutch" hidden>
+        <div class="card">
+          <h3>Win rate en partidos muy reñidos (perdedor > 75% pts del ganador)</h3>
+          <div class="list" id="listWRClutch"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+
+  <script src="partidos.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
