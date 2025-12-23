@@ -516,5 +516,20 @@
     formato:"3vs3", resultado:true, puntos_totales:21, puntos_rivales:3, minutos:20,
     puntos:6, asistencias:3, rebotes:10, tapones:0, triples_intentados:1, triples_anotados:0,
     jugadores_equipo:["Eric","Arnau","Dani"], jugadores_rivales:["Pere","Grinyó","Jamo"]
+  },
+  {
+    formato:"3vs3", resultado:false, puntos_totales:19, puntos_rivales:23, minutos:25,
+    puntos:6, asistencias:2, rebotes:12, tapones:1, triples_intentados:2, triples_anotados:0,
+    jugadores_equipo:["Eric","Ert","Raset"], jugadores_rivales:["Aleix","Diaz","Cavi"]
+  },
+  {
+    formato:"3vs3", resultado:false, puntos_totales:13, puntos_rivales:21, minutos:20,
+    puntos:8, asistencias:2, rebotes:8, tapones:0, triples_intentados:1, triples_anotados:0,
+    jugadores_equipo:["Eric","Ert","Raset"], jugadores_rivales:["Aleix","Diaz","Cavi"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:21, puntos_rivales:5, minutos:20,
+    puntos:12, asistencias:1, rebotes:5, tapones:0, triples_intentados:1, triples_anotados:0,
+    jugadores_equipo:["Eric","Ert","Cavi"], jugadores_rivales:["Aleix","Diaz","Raset"]
   }
 ];
