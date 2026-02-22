@@ -561,5 +561,55 @@
     formato:"3vs3", resultado:false, puntos_totales:8, puntos_rivales:11, minutos:20,
     puntos:4, asistencias:1, rebotes:6, tapones:0, triples_intentados:0, triples_anotados:0,
     jugadores_equipo:["Eric","Cavi","Ert"], jugadores_rivales:["Grinyo","Jamo","Diaz"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:0, minutos:10,
+    puntos:4, asistencias:2, rebotes:3, tapones:0, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Cavi","Ert"], jugadores_rivales:["Batalla","Jamo","Roger"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:4, minutos:10,
+    puntos:5, asistencias:1, rebotes:3, tapones:0, triples_intentados:1, triples_anotados:1,
+    jugadores_equipo:["Eric","Roger","Ert"], jugadores_rivales:["Batalla","Jamo","Cavi"]
+  },
+  {
+    formato:"3vs3", resultado:false, puntos_totales:8, puntos_rivales:11, minutos:15,
+    puntos:5, asistencias:1, rebotes:6, tapones:0, triples_intentados:2, triples_anotados:1,
+    jugadores_equipo:["Eric","Batalla","Ert"], jugadores_rivales:["Roger","Jamo","Cavi"]
+  },
+  {
+    formato:"3vs3", resultado:false, puntos_totales:8, puntos_rivales:12, minutos:15,
+    puntos:5, asistencias:1, rebotes:8, tapones:1, triples_intentados:1, triples_anotados:0,
+    jugadores_equipo:["Eric","Cavi","Jamo"], jugadores_rivales:["Roger","Ert","Diaz"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:0, minutos:10,
+    puntos:7, asistencias:1, rebotes:5, tapones:0, triples_intentados:1, triples_anotados:1,
+    jugadores_equipo:["Eric","Diaz","Roger"], jugadores_rivales:["Jamo","Ert","Batalla"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:4, minutos:10,
+    puntos:3, asistencias:1, rebotes:2, tapones:0, triples_intentados:1, triples_anotados:1,
+    jugadores_equipo:["Eric","Diaz","Ert"], jugadores_rivales:["Jamo","Batalla","Cavi"]
+  },
+  {
+    formato:"3vs3", resultado:false, puntos_totales:2, puntos_rivales:11, minutos:10,
+    puntos:0, asistencias:1, rebotes:4, tapones:0, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Cavi","Batalla"], jugadores_rivales:["Jamo","Diaz","Ert"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:5, minutos:15,
+    puntos:5, asistencias:1, rebotes:4, tapones:1, triples_intentados:1, triples_anotados:1,
+    jugadores_equipo:["Eric","Ert","Batalla"], jugadores_rivales:["Cavi","Diaz","Roger"]
+  },
+  {
+    formato:"3vs3", resultado:false, puntos_totales:7, puntos_rivales:11, minutos:15,
+    puntos:2, asistencias:0, rebotes:4, tapones:1, triples_intentados:1, triples_anotados:0,
+    jugadores_equipo:["Eric","Diaz","Roger"], jugadores_rivales:["Cavi","Jamo","Batalla"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:12, puntos_rivales:5, minutos:15,
+    puntos:7, asistencias:1, rebotes:7, tapones:0, triples_intentados:1, triples_anotados:1,
+    jugadores_equipo:["Eric","Jamo","Roger"], jugadores_rivales:["Cavi","Diaz","Batalla"]
   }
 ];
