@@ -611,5 +611,50 @@
     formato:"3vs3", resultado:true, puntos_totales:12, puntos_rivales:5, minutos:15,
     puntos:7, asistencias:1, rebotes:7, tapones:0, triples_intentados:1, triples_anotados:1,
     jugadores_equipo:["Eric","Jamo","Roger"], jugadores_rivales:["Cavi","Diaz","Batalla"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:12, puntos_rivales:3, minutos:10,
+    puntos:4, asistencias:2, rebotes:1, tapones:1, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Jamo","Arnau"], jugadores_rivales:["Grinyo","Ert","Sean"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:12, puntos_rivales:0, minutos:10,
+    puntos:5, asistencias:1, rebotes:0, tapones:0, triples_intentados:1, triples_anotados:1,
+    jugadores_equipo:["Eric","Jamo","Ert"], jugadores_rivales:["Grinyo","Arnau","Sean"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:0, minutos:10,
+    puntos:2, asistencias:2, rebotes:2, tapones:0, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Ert","Arnau"], jugadores_rivales:["Grinyo","Jamo","Sean"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:12, puntos_rivales:10, minutos:20,
+    puntos:7, asistencias:1, rebotes:5, tapones:0, triples_intentados:2, triples_anotados:1,
+    jugadores_equipo:["Eric","Ert","Sean"], jugadores_rivales:["Grinyo","Jamo","Arnau"]
+  },
+  {
+    formato:"3vs3", resultado:false, puntos_totales:10, puntos_rivales:13, minutos:20,
+    puntos:6, asistencias:1, rebotes:8, tapones:1, triples_intentados:2, triples_anotados:0,
+    jugadores_equipo:["Eric","Ert","Grinyo"], jugadores_rivales:["Arnau","Jamo","Sean"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:12, puntos_rivales:2, minutos:10,
+    puntos:2, asistencias:3, rebotes:6, tapones:0, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Grinyo","Arnau"], jugadores_rivales:["Ert","Jamo","Sean"]
+  },
+  {
+    formato:"3vs3", resultado:false, puntos_totales:6, puntos_rivales:11, minutos:15,
+    puntos:4, asistencias:1, rebotes:8, tapones:0, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Ert","Sean"], jugadores_rivales:["Grinyo","Jamo","Arnau"]
+  },
+  {
+    formato:"3vs3", resultado:false, puntos_totales:8, puntos_rivales:11, minutos:15,
+    puntos:2, asistencias:1, rebotes:9, tapones:1, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Jamo","Ert"], jugadores_rivales:["Grinyo","Sean","Arnau"]
+  },
+  {
+    formato:"3vs3", resultado:false, puntos_totales:8, puntos_rivales:11, minutos:10,
+    puntos:4, asistencias:1, rebotes:6, tapones:0, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Jamo","Grinyo"], jugadores_rivales:["Ert","Sean","Arnau"]
   }
 ];
