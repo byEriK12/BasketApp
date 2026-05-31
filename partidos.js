@@ -691,5 +691,40 @@
     formato:"3vs3", resultado:true, puntos_totales:13, puntos_rivales:4, minutos:15,
     puntos:7, asistencias:1, rebotes:6, tapones:1, triples_intentados:1, triples_anotados:1,
     jugadores_equipo:["Eric","Sean","Diaz"], jugadores_rivales:["Jamo","Ert","Arnau"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:12, puntos_rivales:8, minutos:15,
+    puntos:3, asistencias:1, rebotes:7, tapones:1, triples_intentados:3, triples_anotados:1,
+    jugadores_equipo:["Eric","Cavi","Diaz"], jugadores_rivales:["Jamo","Ot","Arnau"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:12, puntos_rivales:8, minutos:15,
+    puntos:6, asistencias:1, rebotes:5, tapones:0, triples_intentados:2, triples_anotados:0,
+    jugadores_equipo:["Eric","Jamo","Ot"], jugadores_rivales:["Diaz","Cavi","Arnau"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:12, puntos_rivales:4, minutos:10,
+    puntos:7, asistencias:1, rebotes:2, tapones:1, triples_intentados:1, triples_anotados:1,
+    jugadores_equipo:["Eric","Arnau","Diaz"], jugadores_rivales:["Jamo","Cavi","Ot"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:12, puntos_rivales:8, minutos:15,
+    puntos:5, asistencias:1, rebotes:3, tapones:1, triples_intentados:2, triples_anotados:1,
+    jugadores_equipo:["Eric","Arnau","Diaz"], jugadores_rivales:["Jamo","Cavi","Ot"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:9, minutos:15,
+    puntos:4, asistencias:2, rebotes:6, tapones:0, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Jamo","Cavi"], jugadores_rivales:["Diaz","Arnau","Ot"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:12, puntos_rivales:10, minutos:15,
+    puntos:0, asistencias:2, rebotes:3, tapones:0, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Jamo","Cavi"], jugadores_rivales:["Arnau","Diaz","Ot"]
+  },
+  {
+    formato:"3vs3", resultado:false, puntos_totales:8, puntos_rivales:11, minutos:15,
+    puntos:4, asistencias:1, rebotes:5, tapones:2, triples_intentados:1, triples_anotados:0,
+    jugadores_equipo:["Eric","Ot","Cavi"], jugadores_rivales:["Arnau","Diaz","Jamo"]
   }
 ];
