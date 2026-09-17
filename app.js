@@ -258,6 +258,52 @@
         };
       }
 
+      // Nuevo método para calcular estadísticas según el tipo de partido
+        calcular_estadisticas_por_tipo_de_partido() {
+        // Si uno de los dos equipos acaba con 11, 12 o 13 puntos hay que guardar todas las stats sumadas y crear el tipo de partido a 11 puntos.
+        if (this.partidos.length === 0) return {};
+        const tipos = {};
+        for (const p of this.partidos) {
+          let tipo;
+          if (p.puntos_totales === 11 || p.puntos_rivales === 11 || p.puntos_totales === 12 || p.puntos_rivales === 12 || p.puntos_totales === 13 || p.puntos_rivales === 13) {
+            tipo = 'A 11 puntos';
+          }
+          // Si uno de los dos equipos acaba con 21, 22 o 23 puntos hay que guardar todas las stats sumadas y crear el tipo de partido a 21 puntos.
+          else if (p.puntos_totales === 21 || p.puntos_rivales === 21 || p.puntos_totales === 22 || p.puntos_rivales === 22 || p.puntos_totales === 23 || p.puntos_rivales === 23) {
+            tipo = 'A 21 puntos';
+          }
+          // Si uno de los equipos acaba con un número diferente a los comentados hay que guardar las stats sumadas y crear el tipo de partido otros.
+          else {
+            tipo = 'Otros';
+          }
+          if (!(tipo in tipos)) {
+            tipos[tipo] = {
+              partidos: 0,
+              puntos_totales: 0,
+              puntos_rivales: 0,
+              minutos: 0,
+              puntos: 0,
+              asistencias: 0,
+              rebotes: 0,
+              tapones: 0,
+              triples_intentados: 0,
+              triples_anotados: 0
+            };
+          }
+          tipos[tipo].partidos += 1;
+          tipos[tipo].puntos_totales += p.puntos_totales;
+          tipos[tipo].puntos_rivales += p.puntos_rivales;
+          tipos[tipo].minutos += p.minutos;
+          tipos[tipo].puntos += p.puntos;
+          tipos[tipo].asistencias += p.asistencias;
+          tipos[tipo].rebotes += p.rebotes;
+          tipos[tipo].tapones += p.tapones;
+          tipos[tipo].triples_intentados += p.triples_intentados;
+          tipos[tipo].triples_anotados += p.triples_anotados;
+        }
+        return tipos;
+      }
+      
       // Obtener todos los jugadores únicos
       obtener_todos_jugadores(){
         const jugadores = new Set();
@@ -271,10 +317,20 @@
 
     function equalSets(a,b){ if(a.size!==b.size) return false; for(const v of a) if(!b.has(v)) return false; return true; }
     const partidos = partidosRaw.map(p=> new Partido(p));
-    function getPartidosFiltrados(formato) {
-        if (formato === "Todos") return partidos;
-        return partidos.filter(p => p.formato === formato);
-        }
+
+    function getPuntuacionCategoria(p) {
+        const puntos = [p.puntos_totales, p.puntos_rivales];
+        if (puntos.some(v => v >= 11 && v <= 13)) return 'A 11 puntos';
+        if (puntos.some(v => v >= 21 && v <= 23)) return 'A 21 puntos';
+        return 'Otros';
+    }
+
+    function getPartidosFiltrados(formato = 'Todos', puntuacion = 'Todos') {
+        let filtrados = partidos;
+        if (formato !== 'Todos') filtrados = filtrados.filter(p => p.formato === formato);
+        if (puntuacion !== 'Todos') filtrados = filtrados.filter(p => getPuntuacionCategoria(p) === puntuacion);
+        return filtrados;
+    }
 
     const temporada = new Temporada(partidos);
 
@@ -283,11 +339,19 @@
     // ==========================
     const el = (id)=> document.getElementById(id);
 
-    function renderPartidos(formato){
-        const f = getPartidosFiltrados(formato);
-        el('infoFormato').textContent = `Hay un total de ${f.length} partidos de ${formato}.`;
+    function getFiltrosActivos(){
+        return {
+            formato: el('selFormato').value,
+            puntuacion: el('selPuntuacion').value
+        };
+    }
+
+    function renderPartidos(formato = 'Todos', puntuacion = 'Todos'){
+        const f = getPartidosFiltrados(formato, puntuacion);
+        const descripcion = [formato === 'Todos' ? 'todos los formatos' : formato, puntuacion === 'Todos' ? 'todas las puntuaciones' : puntuacion];
+        el('infoFormato').textContent = `Hay un total de ${f.length} partidos para ${descripcion[0]} y ${descripcion[1]}.`;
         const grid = el('gridPartidos'); grid.innerHTML = '';
-        if(f.length===0){ grid.innerHTML = '<div class="sub">No hay partidos de este formato.</div>'; return; }
+        if(f.length===0){ grid.innerHTML = '<div class="sub">No hay partidos con estos filtros.</div>'; return; }
         f.forEach((p,i)=>{
             const d=document.createElement('div'); d.className='card';
             const mm = p.calcular_mas_menos();
@@ -306,8 +370,8 @@
     // -------------------------
     // Render de estadísticas filtradas por formato
     // -------------------------
-    function renderTemporadaPorFormato(formato){
-    const partidosFiltrados = getPartidosFiltrados(formato);
+    function renderTemporadaPorFormato(formato = 'Todos', puntuacion = 'Todos'){
+    const partidosFiltrados = getPartidosFiltrados(formato, puntuacion);
     const temp = new Temporada(partidosFiltrados);
     const t = temp.calcular_estadisticas_totales();
     const pp = temp.estadisticas_por_partido();
@@ -352,10 +416,40 @@
     const comp = document.createElement('div'); comp.className='sub';
     comp.textContent = `Compañeros más frecuentes: ${av.jugadores_equipo.join(', ')} · Rivales más frecuentes: ${av.jugadores_rivales.join(', ')}`;
     avDiv.appendChild(comp);
+
+    const tipos = temp.calcular_estadisticas_por_tipo_de_partido();
+    const tiposDiv = el('porTipoPartido');
+    if (tiposDiv) {
+      tiposDiv.innerHTML = '';
+      const categorias = Object.keys(tipos);
+
+      if (categorias.length === 0) {
+        tiposDiv.innerHTML = '<div class="sub">Sin datos para este formato.</div>';
+      } else {
+        categorias.forEach(cat => {
+          const data = tipos[cat];
+          const ptsPP = (data.puntos / data.partidos).toFixed(1);
+          const triplesPct = data.triples_intentados > 0 
+            ? Math.round((data.triples_anotados / data.triples_intentados) * 100) 
+            : 0;
+
+          const block = document.createElement('div');
+          block.style.cssText = 'padding: 8px 10px; border: 1px dashed #22314b; border-radius: 10px; margin-bottom: 8px; background: #0f1521;';
+          block.innerHTML = `
+            <div style="font-weight:600; color:var(--accent); margin-bottom:4px;">${cat} (${data.partidos} pj)</div>
+            <div class="stat" style="font-size:12px;"><span>Puntos (tot / pp):</span><span>${data.puntos} (${ptsPP} pp)</span></div>
+            <div class="stat" style="font-size:12px;"><span>Marcador global:</span><span>${data.puntos_totales} - ${data.puntos_rivales}</span></div>
+            <div class="stat" style="font-size:12px;"><span>Reb / Ast / Tap:</span><span>${data.rebotes} / ${data.asistencias} / ${data.tapones}</span></div>
+            <div class="stat" style="font-size:12px;"><span>Triples:</span><span>${data.triples_anotados}/${data.triples_intentados} (${triplesPct}%)</span></div>
+          `;
+          tiposDiv.appendChild(block);
+        });
+      }
+    }
     }
 
-    function renderColectivasPorFormato(formato){
-    const temp = new Temporada(getPartidosFiltrados(formato));
+    function renderColectivasPorFormato(formato = 'Todos', puntuacion = 'Todos'){
+    const temp = new Temporada(getPartidosFiltrados(formato, puntuacion));
     const mmt = temp.calcular_mas_menos_total_jugadores();
     const mmpp = temp.calcular_mas_menos_por_partido_jugadores();
     const wr = temp.calcular_win_rate_total_de_jugadores();
@@ -378,8 +472,8 @@
     list('listWR', wr);
     }
 
-    function renderClutchPorFormato(formato){
-    const temp = new Temporada(getPartidosFiltrados(formato));
+    function renderClutchPorFormato(formato = 'Todos', puntuacion = 'Todos'){
+    const temp = new Temporada(getPartidosFiltrados(formato, puntuacion));
     const wr = temp.calcular_win_rate_clutch();
     const c=el('listWRClutch'); c.innerHTML='';
     if(wr.length===0){ c.innerHTML='<div class="sub">No hay partidos muy reñidos.</div>'; return; }
@@ -409,8 +503,8 @@
     // Llamar a la función para poblar el dropdown al cargar la página
     window.populatePlayerDropdown = populatePlayerDropdown;
 
-    function renderPlayerStats(nombreJugador, formato = 'Todos'){
-      const partidosFiltrados = getPartidosFiltrados(formato);
+    function renderPlayerStats(nombreJugador, formato = 'Todos', puntuacion = 'Todos'){
+      const partidosFiltrados = getPartidosFiltrados(formato, puntuacion);
       const temp = new Temporada(partidosFiltrados);
       const stats = temp.calcular_estadisticas_jugador(nombreJugador);
       
@@ -465,46 +559,43 @@
     // ==========================
     // Eventos UI
     // ==========================
+    function aplicarFiltros(){
+      const { formato, puntuacion } = getFiltrosActivos();
+      renderPartidos(formato, puntuacion);
+      renderTemporadaPorFormato(formato, puntuacion);
+      renderColectivasPorFormato(formato, puntuacion);
+      renderClutchPorFormato(formato, puntuacion);
+
+      const selectedPlayer = el('perfilJugador').value;
+      if(selectedPlayer){
+        renderPlayerStats(selectedPlayer, formato, puntuacion);
+      }
+    }
+
     document.querySelectorAll('.tab').forEach(btn=>{
     btn.addEventListener('click',()=>{
         document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
         btn.classList.add('active');
         const id=btn.dataset.tab;
         document.querySelectorAll('[id^="tab-"]').forEach(v=> v.hidden = (v.id!==id));
-        const formato = el('selFormato').value;
-        if(id==='tab-temporada') renderTemporadaPorFormato(formato);
-        if(id==='tab-colectivas') renderColectivasPorFormato(formato);
-        if(id==='tab-clutch') renderClutchPorFormato(formato);
+        aplicarFiltros();
     })
     });
 
-    el('btnVer').addEventListener('click', ()=>{
-    const f = el('selFormato').value; renderPartidos(f);
-    renderTemporadaPorFormato(f);
-    renderColectivasPorFormato(f);
-    renderClutchPorFormato(f);
+    el('selFormato').addEventListener('change', ()=>{
+      aplicarFiltros();
     });
 
-    el('selFormato').addEventListener('change', ()=>{
-    const f = el('selFormato').value;
-    renderPartidos(f);
-    renderTemporadaPorFormato(f);
-    renderColectivasPorFormato(f);
-    renderClutchPorFormato(f);
-    
-    // Update player stats if a player is selected
-    const selectedPlayer = el('perfilJugador').value;
-    if(selectedPlayer){
-      renderPlayerStats(selectedPlayer, f);
-    }
+    el('selPuntuacion').addEventListener('change', ()=>{
+      aplicarFiltros();
     });
 
     el('perfilJugador').addEventListener('change', ()=>{
       const selectedPlayer = el('perfilJugador').value;
-      const formato = el('selFormato').value;
+      const { formato, puntuacion } = getFiltrosActivos();
       
       if(selectedPlayer){
-        renderPlayerStats(selectedPlayer, formato);
+        renderPlayerStats(selectedPlayer, formato, puntuacion);
       } else {
         el('perfilJugadorStats').innerHTML = '';
       }
@@ -542,12 +633,11 @@
     // ==========================
     // Use setTimeout to ensure all scripts are loaded
     setTimeout(() => {
-      
-      const formatoInicial = el('selFormato').value;
-      renderPartidos(formatoInicial);
-      renderTemporadaPorFormato(formatoInicial);
-      renderColectivasPorFormato(formatoInicial);
-      renderClutchPorFormato(formatoInicial);
+      const { formato, puntuacion } = getFiltrosActivos();
+      renderPartidos(formato, puntuacion);
+      renderTemporadaPorFormato(formato, puntuacion);
+      renderColectivasPorFormato(formato, puntuacion);
+      renderClutchPorFormato(formato, puntuacion);
       
       // Initialize player dropdown
       populatePlayerDropdown();
