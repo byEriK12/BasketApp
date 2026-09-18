@@ -75,9 +75,7 @@
     .player-hero-meta{font-size:12px;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;font-weight:700}
     .player-hero-name{margin:0;font-size:clamp(2.2rem,5vw,4rem);line-height:0.95;font-weight:900;text-transform:uppercase;letter-spacing:-.04em}
     .player-hero-actions{display:flex;justify-content:flex-end;align-items:center}
-    .player-favorite{padding:8px 12px;border-radius:999px;border:1px solid #2b3b56;background:#101b2f;color:#dfeaff;font-weight:600}
-
-    .player-summary-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .player-summary-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
     @media (max-width:700px){.player-summary-strip{grid-template-columns:1fr}}
     .player-summary-item{padding:12px 14px;border:1px solid #22314b;border-radius:12px;background:#0f1521;display:flex;flex-direction:column;gap:6px}
     .player-summary-label{font-size:11px;color:#8fa6c2;text-transform:uppercase;letter-spacing:.1em}
@@ -104,6 +102,8 @@
     .type-card .detail:first-of-type{border-top:none}
 
     .secondary-btn{padding:8px 12px;border-radius:10px;background:#0f1521;border:1px solid #22314b;color:#e7eef6;cursor:pointer}
+    .player-link{padding:0;border:0;background:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;text-decoration-color:transparent}
+    .player-link:hover{text-decoration-color:currentColor;box-shadow:none}
   </style>
 </head>
 <body>
@@ -142,7 +142,6 @@
           <select id="perfilJugador">
             <option value="">Selecciona un jugador</option>
           </select>
-          <button onclick="populatePlayerDropdown()" style="margin-top:4px; font-size:12px; padding:4px 8px;">Actualizar lista</button>
           <div id="perfilJugadorStats" class="sub" style="margin-top:8px"></div>
         </div>
         <div>
@@ -231,7 +230,6 @@
           <div id="gridJugadores" class="player-grid"></div>
         </div>
         <div id="vistaPerfilJugador" class="player-profile-shell" hidden>
-          <button id="btnVolverJugadores" class="secondary-btn" type="button">← Volver a jugadores</button>
           <div id="perfilHero" class="player-hero"></div>
           <div id="perfilTexto" class="player-profile-shell"></div>
         </div>

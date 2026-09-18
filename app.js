@@ -4,6 +4,7 @@
     const norm = (s)=> (s||"").toString().trim().toLowerCase();
     const fmtPct = (x)=> isFinite(x) ? `${(Math.round(x*10)/10).toFixed(1)}%` : '-';
     const fmt1 = (x)=> isFinite(x) ? (Math.round(x*10)/10).toFixed(1) : '-';
+    const plural = (value, singular, pluralForm) => value === 1 ? singular : pluralForm;
 
     // ==========================
     // Clases (migración de Python a JS)
@@ -304,47 +305,47 @@
         return tipos;
       }
 
-      calcular_estadisticas_jugador_por_tipo_de_partido(nombreJugador) {
+      calcular_estadisticas_jugador_por_categoria(nombreJugador, categoria = 'puntuacion') {
         const jugadorNorm = norm(nombreJugador);
         const tipos = {};
-
         for (const p of this.partidos) {
           const enEquipo = p.jugadores_equipo.some(j => norm(j) === jugadorNorm);
-          if (!enEquipo) continue;
-
-          let tipo;
-          if (p.puntos_totales === 11 || p.puntos_rivales === 11 || p.puntos_totales === 12 || p.puntos_rivales === 12 || p.puntos_totales === 13 || p.puntos_rivales === 13) {
-            tipo = 'A 11 puntos';
-          } else if (p.puntos_totales === 21 || p.puntos_rivales === 21 || p.puntos_totales === 22 || p.puntos_rivales === 22 || p.puntos_totales === 23 || p.puntos_rivales === 23) {
-            tipo = 'A 21 puntos';
-          } else {
-            tipo = 'Otros';
+          const enRivales = p.jugadores_rivales.some(j => norm(j) === jugadorNorm);
+          if (!enEquipo && !enRivales) continue;
+          const tipo = categoria === 'formato' ? p.formato : getPuntuacionCategoria(p);
+          if (!(tipo in tipos)) tipos[tipo] = {
+            partidos: 0, victorias: 0, mas_menos_total: 0,
+            puntos: 0, rebotes: 0, asistencias: 0,
+            triples_intentados: 0, triples_anotados: 0
+          };
+          const datos = tipos[tipo];
+          datos.partidos += 1;
+          datos.victorias += enEquipo === p.resultado ? 1 : 0;
+          datos.mas_menos_total += p.calcular_mas_menos() * (enEquipo ? 1 : -1);
+          if (enEquipo && jugadorNorm === 'eric') {
+            datos.puntos += p.puntos;
+            datos.rebotes += p.rebotes;
+            datos.asistencias += p.asistencias;
+            datos.triples_intentados += p.triples_intentados;
+            datos.triples_anotados += p.triples_anotados;
           }
-
-          if (!(tipo in tipos)) {
-            tipos[tipo] = {
-              partidos: 0,
-              puntos: 0,
-              rebotes: 0,
-              asistencias: 0,
-              tapones: 0,
-              triples_intentados: 0,
-              triples_anotados: 0,
-              minutos: 0
-            };
-          }
-
-          tipos[tipo].partidos += 1;
-          tipos[tipo].puntos += p.puntos;
-          tipos[tipo].rebotes += p.rebotes;
-          tipos[tipo].asistencias += p.asistencias;
-          tipos[tipo].tapones += p.tapones;
-          tipos[tipo].triples_intentados += p.triples_intentados;
-          tipos[tipo].triples_anotados += p.triples_anotados;
-          tipos[tipo].minutos += p.minutos;
         }
-
+        for (const datos of Object.values(tipos)) {
+          datos.win_rate = datos.victorias / datos.partidos * 100;
+          datos.mas_menos_pp = datos.mas_menos_total / datos.partidos;
+          datos.puntos_pp = datos.puntos / datos.partidos;
+          datos.rebotes_pp = datos.rebotes / datos.partidos;
+          datos.asistencias_pp = datos.asistencias / datos.partidos;
+        }
         return tipos;
+      }
+
+      calcular_estadisticas_jugador_por_tipo_de_partido(nombreJugador) {
+        return this.calcular_estadisticas_jugador_por_categoria(nombreJugador, 'puntuacion');
+      }
+
+      calcular_estadisticas_jugador_por_formato(nombreJugador) {
+        return this.calcular_estadisticas_jugador_por_categoria(nombreJugador, 'formato');
       }
       
       // Obtener todos los jugadores únicos
@@ -368,10 +369,14 @@
         return 'Otros';
     }
 
-    function getPartidosFiltrados(formato = 'Todos', puntuacion = 'Todos') {
+    function getPartidosFiltrados(formato = 'Todos', puntuacion = 'Todos', jugador = '') {
         let filtrados = partidos;
         if (formato !== 'Todos') filtrados = filtrados.filter(p => p.formato === formato);
         if (puntuacion !== 'Todos') filtrados = filtrados.filter(p => getPuntuacionCategoria(p) === puntuacion);
+        if (jugador) {
+          const jugadorNorm = norm(jugador);
+          filtrados = filtrados.filter(p => [...p.jugadores_equipo, ...p.jugadores_rivales].some(j => norm(j) === jugadorNorm));
+        }
         return filtrados;
     }
 
@@ -381,17 +386,13 @@
       eric: {
         // Edita estos valores a mano cuando tengas los datos reales del jugador.
         nombreMostrado: 'Eric',
-        equipo: 'Pickup Squad',
+        equipo: 'Salesians Sabadell',
         escudoUrl: 'https://via.placeholder.com/80x80?text=Logo',
-        dorsal: '#0',
-        posicion: 'Base',
-        alturaCm: null,
-        pesoKg: null,
-        pais: 'España',
-        fechaNacimiento: null,
-        ultimaFormacion: '-',
-        draftInfo: 'No draft',
-        experienciaTemporadas: 1,
+        dorsal: '#12',
+        posicion: 'PF',
+        alturaCm: 187,
+        pesoKg: 79,
+        fechaNacimiento: '31/10/2004',
         fotoUrl: 'https://ui-avatars.com/api/?name=Eric&background=111&color=fff&size=400',
         esJugadorPrincipal: true // activa el bloque de stats avanzadas de Eric
       }
@@ -411,11 +412,7 @@
         posicion: base.posicion || 'Jugador',
         alturaCm: base.alturaCm ?? null,
         pesoKg: base.pesoKg ?? null,
-        pais: base.pais || '-',
         fechaNacimiento: base.fechaNacimiento || null,
-        ultimaFormacion: base.ultimaFormacion || '-',
-        draftInfo: base.draftInfo || '-',
-        experienciaTemporadas: base.experienciaTemporadas ?? '-',
         fotoUrl: base.fotoUrl || fotoGenerica,
         esJugadorPrincipal: !!base.esJugadorPrincipal
       };
@@ -449,13 +446,14 @@
     function getFiltrosActivos(){
         return {
             formato: el('selFormato').value,
-            puntuacion: el('selPuntuacion').value
+        puntuacion: el('selPuntuacion').value,
+        jugador: el('perfilJugador').value
         };
     }
 
-    function renderPartidos(formato = 'Todos', puntuacion = 'Todos'){
-        const f = getPartidosFiltrados(formato, puntuacion);
-        const descripcion = [formato === 'Todos' ? 'todos los formatos' : formato, puntuacion === 'Todos' ? 'todas las puntuaciones' : puntuacion];
+    function renderPartidos(formato = 'Todos', puntuacion = 'Todos', jugador = ''){
+      const f = getPartidosFiltrados(formato, puntuacion, jugador);
+      const descripcion = [formato === 'Todos' ? 'todos los formatos' : formato, puntuacion === 'Todos' ? 'todas las puntuaciones' : puntuacion];
         el('infoFormato').textContent = `Hay un total de ${f.length} partidos para ${descripcion[0]} y ${descripcion[1]}.`;
         const grid = el('gridPartidos'); grid.innerHTML = '';
         if(f.length===0){ grid.innerHTML = '<div class="sub">No hay partidos con estos filtros.</div>'; return; }
@@ -469,7 +467,7 @@
             <div class="stat"><span>Estadísticas</span><span>${p.puntos} pts · ${p.asistencias} ast · ${p.rebotes} reb · ${p.tapones} blk</span></div>
             <div class="stat"><span>Triples</span><span>${p.triples_anotados}/${p.triples_intentados} (${fmt1(p.calcular_porcentaje_triples())}%)</span></div>
             <div class="stat"><span>+/-</span><span style="color:${mm>=0?'var(--ok)':'var(--bad)'}">${mm>=0?'+':''}${mm}</span></div>
-            <div class="sub" style="margin-top:8px">Equipo: ${p.jugadores_equipo.join(', ')} · Rivales: ${p.jugadores_rivales.join(', ')}</div>
+            <div class="sub" style="margin-top:8px">Equipo: ${p.jugadores_equipo.map(j => playerLink(j)).join(', ')} · Rivales: ${p.jugadores_rivales.map(j => playerLink(j)).join(', ')}</div>
             `;
             grid.appendChild(d);
         });
@@ -477,8 +475,8 @@
     // -------------------------
     // Render de estadísticas filtradas por formato
     // -------------------------
-    function renderTemporadaPorFormato(formato = 'Todos', puntuacion = 'Todos'){
-    const partidosFiltrados = getPartidosFiltrados(formato, puntuacion);
+    function renderTemporadaPorFormato(formato = 'Todos', puntuacion = 'Todos', jugador = ''){
+    const partidosFiltrados = getPartidosFiltrados(formato, puntuacion, jugador);
     const temp = new Temporada(partidosFiltrados);
     const t = temp.calcular_estadisticas_totales();
     const pp = temp.estadisticas_por_partido();
@@ -555,8 +553,8 @@
     }
     }
 
-    function renderColectivasPorFormato(formato = 'Todos', puntuacion = 'Todos'){
-    const temp = new Temporada(getPartidosFiltrados(formato, puntuacion));
+    function renderColectivasPorFormato(formato = 'Todos', puntuacion = 'Todos', jugador = ''){
+    const temp = new Temporada(getPartidosFiltrados(formato, puntuacion, jugador));
     const mmt = temp.calcular_mas_menos_total_jugadores();
     const mmpp = temp.calcular_mas_menos_por_partido_jugadores();
     const wr = temp.calcular_win_rate_total_de_jugadores();
@@ -567,9 +565,9 @@
         for(const item of arr){
         const r=document.createElement('div'); r.className='row';
         if(id==='listWR'){
-            const [j, w, pj] = item; r.innerHTML = `<div>${j}</div><div style="text-align:right">${fmtPct(w)}</div><div style="text-align:right"><small>${pj} pj</small></div>`;
+            const [j, w, pj] = item; r.innerHTML = `<div>${playerLink(j)}</div><div style="text-align:right">${fmtPct(w)}</div><div style="text-align:right"><small>${pj} pj</small></div>`;
         }else{
-            const [j, v] = item; r.innerHTML = `<div>${j}</div><div style="text-align:right">${v>=0?'+':''}${fmt1(v)}</div><div></div>`;
+            const [j, v] = item; r.innerHTML = `<div>${playerLink(j)}</div><div style="text-align:right">${v>=0?'+':''}${fmt1(v)}</div><div></div>`;
         }
         c.appendChild(r);
         }
@@ -579,14 +577,14 @@
     list('listWR', wr);
     }
 
-    function renderClutchPorFormato(formato = 'Todos', puntuacion = 'Todos'){
-    const temp = new Temporada(getPartidosFiltrados(formato, puntuacion));
+    function renderClutchPorFormato(formato = 'Todos', puntuacion = 'Todos', jugador = ''){
+    const temp = new Temporada(getPartidosFiltrados(formato, puntuacion, jugador));
     const wr = temp.calcular_win_rate_clutch();
     const c=el('listWRClutch'); c.innerHTML='';
     if(wr.length===0){ c.innerHTML='<div class="sub">No hay partidos muy reñidos.</div>'; return; }
     for(const [j,w,pj] of wr){
         const r=document.createElement('div'); r.className='row';
-        r.innerHTML = `<div>${j}</div><div style="text-align:right">${fmtPct(w)}</div><div style="text-align:right"><small>${pj} pj</small></div>`;
+        r.innerHTML = `<div>${playerLink(j)}</div><div style="text-align:right">${fmtPct(w)}</div><div style="text-align:right"><small>${pj} pj</small></div>`;
         c.appendChild(r);
     }
     }
@@ -610,8 +608,22 @@
     // Llamar a la función para poblar el dropdown al cargar la página
     window.populatePlayerDropdown = populatePlayerDropdown;
 
+    function playerLink(nombre) {
+      return `<button type="button" class="player-link" data-player="${nombre}">${nombre}</button>`;
+    }
+
+    function abrirPerfilJugador(nombre) {
+      jugadorSeleccionadoActual = nombre;
+      document.querySelector('[data-tab="tab-jugadores"]').click();
+      el('vistaIndiceJugadores').hidden = true;
+      el('vistaPerfilJugador').hidden = false;
+      const { formato, puntuacion, jugador } = getFiltrosActivos();
+      renderPerfilDetallado(nombre, formato, puntuacion);
+      el('vistaPerfilJugador').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
     function renderPlayerStats(nombreJugador, formato = 'Todos', puntuacion = 'Todos'){
-      const partidosFiltrados = getPartidosFiltrados(formato, puntuacion);
+      const partidosFiltrados = getPartidosFiltrados(formato, puntuacion, nombreJugador);
       const temp = new Temporada(partidosFiltrados);
       const stats = temp.calcular_estadisticas_jugador(nombreJugador);
       
@@ -628,7 +640,7 @@
         <div style="margin-top:8px; padding:12px; background:#0f1521; border:1px solid #22314b; border-radius:10px;">
           <div style="font-weight:bold; margin-bottom:8px;">${nombreJugador}</div>
           <div class="stat" style="font-size:12px; padding:4px 0;">
-            <span>Partidos jugados:</span><span>${stats.partidos_jugados}</span>
+            <span>${plural(stats.partidos_jugados, 'Partido jugado', 'Partidos jugados')}:</span><span>${stats.partidos_jugados}</span>
           </div>
           <div class="stat" style="font-size:12px; padding:4px 0;">
             <span>Win rate:</span><span style="color:${stats.win_rate >= 50 ? 'var(--ok)' : 'var(--bad)'}">${fmtPct(stats.win_rate)}</span>
@@ -643,16 +655,13 @@
       if(isEric){
         html += `
           <div class="stat" style="font-size:12px; padding:4px 0;">
-            <span>Puntos totales:</span><span>${stats.puntos_totales}</span>
-          </div>
-          <div class="stat" style="font-size:12px; padding:4px 0;">
             <span>Puntos por partido:</span><span>${fmt1(stats.puntos_pp)}</span>
           </div>
           <div class="stat" style="font-size:12px; padding:4px 0;">
-            <span>Rebotes totales:</span><span>${stats.rebotes_totales}</span>
+            <span>Rebotes por partido:</span><span>${fmt1(stats.rebotes_pp)}</span>
           </div>
           <div class="stat" style="font-size:12px; padding:4px 0;">
-            <span>Asistencias totales:</span><span>${stats.asistencias_totales}</span>
+            <span>Asistencias por partido:</span><span>${fmt1(stats.asistencias_pp)}</span>
           </div>
           <div class="stat" style="font-size:12px; padding:4px 0;">
             <span>Triples:</span><span>${stats.triples_anotados_totales}/${stats.triples_intentados_totales} (${fmt1(stats.pct_triples)}%)</span>
@@ -705,19 +714,14 @@
             </div>
           </div>
         `;
-        card.addEventListener('click', () => {
-          jugadorSeleccionadoActual = nombre;
-          document.getElementById('vistaIndiceJugadores').hidden = true;
-          document.getElementById('vistaPerfilJugador').hidden = false;
-          renderPerfilDetallado(nombre, formato, puntuacion);
-        });
+        card.addEventListener('click', () => abrirPerfilJugador(nombre));
         grid.appendChild(card);
       }
     }
 
     function renderPerfilDetallado(nombreJugador, formato = 'Todos', puntuacion = 'Todos') {
       const perfil = obtenerPerfil(nombreJugador);
-      const partidosFiltrados = getPartidosFiltrados(formato, puntuacion);
+      const partidosFiltrados = getPartidosFiltrados(formato, puntuacion, nombreJugador);
       const temp = new Temporada(partidosFiltrados);
       const stats = temp.calcular_estadisticas_jugador(nombreJugador);
       const hero = el('perfilHero');
@@ -733,14 +737,16 @@
 
       const metrics = perfil.esJugadorPrincipal
         ? [
-            { label: 'Puntos / partido', value: fmt1(stats.puntos_pp) },
-            { label: 'Rebotes / partido', value: fmt1(stats.rebotes_pp) },
-            { label: 'Asistencias / partido', value: fmt1(stats.asistencias_pp) }
+            { label: 'Puntos / part.', value: fmt1(stats.puntos_pp) },
+            { label: 'Rebotes / part.', value: fmt1(stats.rebotes_pp) },
+            { label: 'Asistencias / part.', value: fmt1(stats.asistencias_pp) },
+            { label: '% triples', value: `${fmt1(stats.pct_triples)}%` }
           ]
         : [
-            { label: 'Partidos jugados', value: stats.partidos_jugados },
+            { label: plural(stats.partidos_jugados, 'Partido jugado', 'Partidos jugados'), value: stats.partidos_jugados },
+            { label: plural(stats.victorias, 'Partido ganado', 'Partidos ganados'), value: stats.victorias },
+            { label: plural(stats.partidos_jugados - stats.victorias, 'Partido perdido', 'Partidos perdidos'), value: stats.partidos_jugados - stats.victorias },
             { label: 'Win rate', value: fmtPct(stats.win_rate) },
-            { label: '+/- por partido', value: `${stats.mas_menos_pp >= 0 ? '+' : ''}${fmt1(stats.mas_menos_pp)}` }
           ];
 
       hero.innerHTML = `
@@ -752,9 +758,6 @@
           <div class="player-hero-meta">${franquicia} | ${dorsal} | ${posicion}</div>
           <h2 class="player-hero-name">${perfil.nombreMostrado}</h2>
         </div>
-        <div class="player-hero-actions">
-          <button class="player-favorite" type="button">★ Favorito</button>
-        </div>
       `;
 
       const clutchList = temp.calcular_win_rate_clutch();
@@ -764,12 +767,8 @@
       const bioGrid = [
         ['Altura', perfil.alturaCm ? `${perfil.alturaCm} cm` : '-'],
         ['Peso', perfil.pesoKg ? `${perfil.pesoKg} kg` : '-'],
-        ['País', valorVisible(perfil.pais)],
-        ['Última formación', valorVisible(perfil.ultimaFormacion)],
         ['Edad', edadTexto],
-        ['Fecha de nacimiento', perfil.fechaNacimiento ? perfil.fechaNacimiento : '-'],
-        ['Draft', valorVisible(perfil.draftInfo)],
-        ['Experiencia', valorVisible(perfil.experienciaTemporadas)]
+        ['Fecha de nacimiento', perfil.fechaNacimiento ? perfil.fechaNacimiento : '-']
       ];
 
       let generalHtml = `
@@ -779,20 +778,19 @@
         <div class="bio-grid">
           ${bioGrid.map(([label, value]) => `<div class="bio-item"><div class="bio-label">${label}</div><div class="bio-value">${valorVisible(value)}</div></div>`).join('')}
         </div>
-        <div class="player-section">
+        ${perfil.esJugadorPrincipal ? `<div class="player-section">
           <h3>General</h3>
           <div class="stats-grid">
-            <div class="stat-box"><div class="label">Partidos jugados</div><div class="value">${stats.partidos_jugados}</div></div>
-            <div class="stat-box"><div class="label">Victorias</div><div class="value">${stats.victorias}</div></div>
+            <div class="stat-box"><div class="label">${plural(stats.partidos_jugados, 'Partido jugado', 'Partidos jugados')}</div><div class="value">${stats.partidos_jugados}</div></div>
+            <div class="stat-box"><div class="label">${plural(stats.victorias, 'Partido ganado', 'Partidos ganados')}</div><div class="value">${stats.victorias}</div></div>
             <div class="stat-box"><div class="label">Win rate</div><div class="value" style="color:${stats.win_rate >= 50 ? 'var(--ok)' : 'var(--bad)'}">${fmtPct(stats.win_rate)}</div></div>
           </div>
-        </div>
+        </div>` : ''}
         <div class="player-section">
           <h3>Impacto en el marcador</h3>
           <div class="stats-grid">
             <div class="stat-box"><div class="label">+/- total</div><div class="value" style="color:${stats.mas_menos_total >= 0 ? 'var(--ok)' : 'var(--bad)'}">${stats.mas_menos_total >= 0 ? '+' : ''}${fmt1(stats.mas_menos_total)}</div></div>
             <div class="stat-box"><div class="label">+/- por partido</div><div class="value" style="color:${stats.mas_menos_pp >= 0 ? 'var(--ok)' : 'var(--bad)'}">${stats.mas_menos_pp >= 0 ? '+' : ''}${fmt1(stats.mas_menos_pp)}</div></div>
-            <div class="stat-box"><div class="label">muestra</div><div class="value">${stats.partidos_jugados < 5 ? '(muestra pequeña)' : 'Estable'}</div></div>
           </div>
         </div>
         <div class="player-section">
@@ -806,44 +804,52 @@
       `;
 
       if (perfil.esJugadorPrincipal) {
-        const tipoStats = temp.calcular_estadisticas_jugador_por_tipo_de_partido(nombreJugador);
-        const tipoCards = Object.entries(tipoStats).map(([tipo, data]) => {
-          const triplesPct = data.triples_intentados > 0 ? ((data.triples_anotados / data.triples_intentados) * 100) : 0;
-          return `
-            <div class="type-card">
-              <div class="title">${tipo}</div>
-              <div class="detail"><span>Puntos</span><span>${data.puntos}</span></div>
-              <div class="detail"><span>Reb / Ast / Tap</span><span>${data.rebotes} / ${data.asistencias} / ${data.tapones}</span></div>
-              <div class="detail"><span>Triples</span><span>${data.triples_anotados}/${data.triples_intentados} (${fmt1(triplesPct)}%)</span></div>
-              <div class="detail"><span>Minutos</span><span>${data.minutos}</span></div>
-            </div>
-          `;
-        }).join('');
-
         generalHtml += `
           <div class="player-section">
             <h3>Estadísticas avanzadas</h3>
             <div class="stats-grid">
-              <div class="stat-box"><div class="label">Puntos totales</div><div class="value">${stats.puntos_totales}</div></div>
-              <div class="stat-box"><div class="label">Puntos / partido</div><div class="value">${fmt1(stats.puntos_pp)}</div></div>
-              <div class="stat-box"><div class="label">Puntos / minuto</div><div class="value">${fmt1(stats.puntos_por_minuto)}</div></div>
-              <div class="stat-box"><div class="label">Triples anotados</div><div class="value">${stats.triples_anotados_totales}</div></div>
-              <div class="stat-box"><div class="label">Triples intentados</div><div class="value">${stats.triples_intentados_totales}</div></div>
-              <div class="stat-box"><div class="label">% triples</div><div class="value">${fmt1(stats.pct_triples)}%</div></div>
-              <div class="stat-box"><div class="label">Rebotes</div><div class="value">${stats.rebotes_totales}</div></div>
-              <div class="stat-box"><div class="label">Asistencias</div><div class="value">${stats.asistencias_totales}</div></div>
-              <div class="stat-box"><div class="label">Tapones</div><div class="value">${stats.tapones_totales}</div></div>
               <div class="stat-box"><div class="label">Minutos</div><div class="value">${stats.minutos_totales}</div></div>
               <div class="stat-box"><div class="label">Valoración</div><div class="value">${fmt1(stats.valoracion_total)}</div></div>
               <div class="stat-box"><div class="label">Contribución</div><div class="value">${fmt1(stats.contribucion_total)}</div></div>
+              <div class="stat-box"><div class="label">Puntos totales</div><div class="value">${stats.puntos_totales}</div></div>
+              <div class="stat-box"><div class="label">Rebotes</div><div class="value">${stats.rebotes_totales}</div></div>
+              <div class="stat-box"><div class="label">Asistencias</div><div class="value">${stats.asistencias_totales}</div></div>
+              <div class="stat-box"><div class="label">Triples anotados</div><div class="value">${stats.triples_anotados_totales}</div></div>
+              <div class="stat-box"><div class="label">Triples intentados</div><div class="value">${stats.triples_intentados_totales}</div></div>
+              <div class="stat-box"><div class="label">Tapones por partido</div><div class="value">${fmt1(stats.tapones_pp)}</div></div>
+              <div class="stat-box"><div class="label">Tapones</div><div class="value">${stats.tapones_totales}</div></div>
+              <div class="stat-box"><div class="label">Puntos por minuto</div><div class="value">${fmt1(stats.puntos_por_minuto)}</div></div>
             </div>
-          </div>
-          <div class="player-section">
-            <h3>Desglose por tipo de partido</h3>
-            <div class="player-type-cards">${tipoCards || '<div class="sub">Sin datos para este jugador.</div>'}</div>
           </div>
         `;
       }
+
+      const renderCategoryCards = (categoryStats, includeIndividualStats) => Object.entries(categoryStats).map(([tipo, data]) => `
+        <div class="type-card">
+          <div class="title">${tipo}</div>
+          <div class="detail"><span>${plural(data.partidos, 'Partido', 'Partidos')}</span><span>${data.partidos}</span></div>
+          <div class="detail"><span>Win rate</span><span>${fmtPct(data.win_rate)}</span></div>
+          <div class="detail"><span>+/- total</span><span>${data.mas_menos_total >= 0 ? '+' : ''}${fmt1(data.mas_menos_total)}</span></div>
+          <div class="detail"><span>+/- por partido</span><span>${data.mas_menos_pp >= 0 ? '+' : ''}${fmt1(data.mas_menos_pp)}</span></div>
+          ${includeIndividualStats ? `
+            <div class="detail"><span>Puntos / part.</span><span>${fmt1(data.puntos_pp)}</span></div>
+            <div class="detail"><span>Rebotes / part.</span><span>${fmt1(data.rebotes_pp)}</span></div>
+            <div class="detail"><span>Asistencias / part.</span><span>${fmt1(data.asistencias_pp)}</span></div>
+            <div class="detail"><span>Triples</span><span>${data.triples_anotados}/${data.triples_intentados} (${fmt1(data.triples_intentados ? data.triples_anotados / data.triples_intentados * 100 : 0)}%)</span></div>` : ''}
+        </div>`).join('');
+      const tipoStats = temp.calcular_estadisticas_jugador_por_tipo_de_partido(nombreJugador);
+      const orderedTipoStats = Object.fromEntries(['A 11 puntos', 'A 21 puntos', 'Otros'].filter(tipo => tipo in tipoStats).map(tipo => [tipo, tipoStats[tipo]]));
+      const tipoCards = renderCategoryCards(orderedTipoStats, perfil.esJugadorPrincipal);
+      const formatoCards = renderCategoryCards(temp.calcular_estadisticas_jugador_por_formato(nombreJugador), perfil.esJugadorPrincipal);
+      generalHtml += `
+        <div class="player-section">
+          <h3>Desglose por formato</h3>
+          <div class="player-type-cards">${formatoCards || '<div class="sub">Sin datos para este jugador.</div>'}</div>
+        </div>
+        <div class="player-section">
+          <h3>Desglose por tipo de partido</h3>
+          <div class="player-type-cards">${tipoCards || '<div class="sub">Sin datos para este jugador.</div>'}</div>
+        </div>`;
 
       texto.innerHTML = generalHtml;
     }
@@ -862,11 +868,11 @@
     // Eventos UI
     // ==========================
     function aplicarFiltros(){
-      const { formato, puntuacion } = getFiltrosActivos();
-      renderPartidos(formato, puntuacion);
-      renderTemporadaPorFormato(formato, puntuacion);
-      renderColectivasPorFormato(formato, puntuacion);
-      renderClutchPorFormato(formato, puntuacion);
+      const { formato, puntuacion, jugador } = getFiltrosActivos();
+      renderPartidos(formato, puntuacion, jugador);
+      renderTemporadaPorFormato(formato, puntuacion, jugador);
+      renderColectivasPorFormato(formato, puntuacion, jugador);
+      renderClutchPorFormato(formato, puntuacion, jugador);
 
       const selectedPlayer = el('perfilJugador').value;
       if(selectedPlayer){
@@ -891,16 +897,17 @@
         const id=btn.dataset.tab;
         document.querySelectorAll('[id^="tab-"]').forEach(v=> v.hidden = (v.id!==id));
         if (id === 'tab-jugadores') {
-          if (jugadorSeleccionadoActual) {
-            document.getElementById('vistaIndiceJugadores').hidden = true;
-            document.getElementById('vistaPerfilJugador').hidden = false;
-          } else {
-            document.getElementById('vistaIndiceJugadores').hidden = false;
-            document.getElementById('vistaPerfilJugador').hidden = true;
-          }
+          jugadorSeleccionadoActual = null;
+          document.getElementById('vistaIndiceJugadores').hidden = false;
+          document.getElementById('vistaPerfilJugador').hidden = true;
         }
         aplicarFiltros();
     })
+    });
+
+    document.addEventListener('click', (event) => {
+      const link = event.target.closest('.player-link');
+      if (link) abrirPerfilJugador(link.dataset.player);
     });
 
     el('selFormato').addEventListener('change', ()=>{
@@ -913,23 +920,8 @@
 
     el('perfilJugador').addEventListener('change', ()=>{
       const selectedPlayer = el('perfilJugador').value;
-      const { formato, puntuacion } = getFiltrosActivos();
-      
-      if(selectedPlayer){
-        renderPlayerStats(selectedPlayer, formato, puntuacion);
-      } else {
-        el('perfilJugadorStats').innerHTML = '';
-      }
-    });
-
-    el('btnVolverJugadores')?.addEventListener('click', () => {
-      jugadorSeleccionadoActual = null;
-      const vistaIndice = el('vistaIndiceJugadores');
-      const vistaPerfil = el('vistaPerfilJugador');
-      vistaIndice.hidden = false;
-      vistaPerfil.hidden = true;
-      const { formato, puntuacion } = getFiltrosActivos();
-      renderIndiceJugadores(formato, puntuacion);
+      aplicarFiltros();
+      if (!selectedPlayer) el('perfilJugadorStats').innerHTML = '';
     });
 
     el('btnEstimado').addEventListener('click', ()=>{
