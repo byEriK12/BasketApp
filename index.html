@@ -52,6 +52,58 @@
     .kpi .box{background:#0f1521;border:1px solid #22314b;border-radius:14px;padding:12px}
     .kpi .box .label{font-size:12px;color:#94a8c6}
     .kpi .box .value{font-size:20px;margin-top:4px}
+
+    .player-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:14px}
+    .player-card{display:flex;flex-direction:column;gap:10px;align-items:flex-start;padding:14px;border:1px solid #22314b;border-radius:14px;background:linear-gradient(180deg,#101725,#0d1624);cursor:pointer;transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease}
+    .player-card:hover{transform:translateY(-1px);border-color:#34507c;box-shadow:0 8px 22px rgba(79,156,255,.12)}
+    .player-card-header{display:flex;align-items:center;gap:12px;width:100%}
+    .player-avatar{width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid #22314b;background:#0f1521;flex-shrink:0}
+    .player-card-name{font-size:18px;font-weight:700;margin:0}
+    .player-card-meta{font-size:12px;color:var(--muted)}
+    .player-card-stats{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:4px}
+    .player-card-stat{padding:8px 10px;border:1px dashed #22314b;border-radius:10px;background:#0f1521}
+    .player-card-stat .label{display:block;font-size:11px;color:#8fa6c2;text-transform:uppercase;letter-spacing:.08em}
+    .player-card-stat .value{display:block;font-size:15px;font-weight:700;margin-top:4px}
+
+    .player-profile-shell{display:flex;flex-direction:column;gap:18px}
+    .player-hero{position:relative;display:flex;align-items:flex-end;gap:18px;padding:20px 18px;border:1px solid #22314b;border-radius:16px;background:linear-gradient(180deg,#101725,#0b1018);overflow:hidden}
+    .player-hero::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at top left, rgba(79,156,255,.18), transparent 32%);pointer-events:none}
+    .player-logo{width:56px;height:56px;border-radius:12px;border:1px solid #22314b;background:#0f1521;color:#cfe1ff;display:flex;align-items:center;justify-content:center;font-size:22px;position:relative;z-index:1}
+    .player-logo img{width:100%;height:100%;object-fit:cover;border-radius:12px}
+    .player-main-photo{position:relative;z-index:1;width:140px;height:140px;border-radius:50%;object-fit:cover;border:3px solid #22314b;background:#0f1521;box-shadow:0 14px 30px rgba(0,0,0,.3)}
+    .player-hero-copy{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;gap:8px;min-width:0}
+    .player-hero-meta{font-size:12px;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;font-weight:700}
+    .player-hero-name{margin:0;font-size:clamp(2.2rem,5vw,4rem);line-height:0.95;font-weight:900;text-transform:uppercase;letter-spacing:-.04em}
+    .player-hero-actions{display:flex;justify-content:flex-end;align-items:center}
+    .player-favorite{padding:8px 12px;border-radius:999px;border:1px solid #2b3b56;background:#101b2f;color:#dfeaff;font-weight:600}
+
+    .player-summary-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    @media (max-width:700px){.player-summary-strip{grid-template-columns:1fr}}
+    .player-summary-item{padding:12px 14px;border:1px solid #22314b;border-radius:12px;background:#0f1521;display:flex;flex-direction:column;gap:6px}
+    .player-summary-label{font-size:11px;color:#8fa6c2;text-transform:uppercase;letter-spacing:.1em}
+    .player-summary-value{font-size:clamp(1.6rem,3vw,2.6rem);font-weight:800;line-height:1}
+
+    .bio-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    @media (max-width:700px){.bio-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .bio-item{padding:12px 10px;border:1px solid #22314b;border-radius:12px;background:#0f1521}
+    .bio-label{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#8fa6c2}
+    .bio-value{font-size:16px;font-weight:700;margin-top:8px;word-break:break-word}
+
+    .player-section{padding:14px;border:1px solid #22314b;border-radius:14px;background:#101725}
+    .player-section h3{margin:0 0 12px;font-size:16px;color:#dfeaff}
+    .stats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    @media (max-width:700px){.stats-grid{grid-template-columns:1fr 1fr}}
+    .stat-box{padding:12px;border:1px dashed #22314b;border-radius:10px;background:#0f1521}
+    .stat-box .label{font-size:11px;color:#8fa6c2;text-transform:uppercase;letter-spacing:.1em}
+    .stat-box .value{font-size:20px;font-weight:800;margin-top:8px}
+
+    .player-type-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+    .type-card{padding:10px;border:1px dashed #22314b;border-radius:10px;background:#0f1521}
+    .type-card .title{font-size:12px;color:var(--accent);font-weight:700;margin-bottom:8px}
+    .type-card .detail{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px dashed #22314b;font-size:12px}
+    .type-card .detail:first-of-type{border-top:none}
+
+    .secondary-btn{padding:8px 12px;border-radius:10px;background:#0f1521;border:1px solid #22314b;color:#e7eef6;cursor:pointer}
   </style>
 </head>
 <body>
@@ -76,7 +128,6 @@
             <option value="Todos" selected>Todos</option>
           </select>
         </div>
-        <!-- NUEVO SELECT DE PUNTUACIÓN -->
         <div>
           <label for="selPuntuacion">Puntuación</label>
           <select id="selPuntuacion">
@@ -87,28 +138,23 @@
           </select>
         </div>
         <div>
-          <div class="controls">
-            <div>
-              <div>
-                <label for="jugadorSelect">Jugador</label>
-                <select id="perfilJugador">
-                  <option value="">Selecciona un jugador</option>
-                </select>
-                <button onclick="populatePlayerDropdown()" style="margin-top:4px; font-size:12px; padding:4px 8px;">Actualizar lista</button>
-                <div id="perfilJugadorStats" class="sub" style="margin-top:8px"></div>
-              </div>
-            </div>
-            <div>
-              <label for="txtEquipo">Win rate de equipo (escribe nombres separados por coma)</label>
-              <input id="txtEquipo" type="text" placeholder="eric, llongueras, gomez" />
-              <div style="display:flex;gap:6px;margin-top:6px">
-                <button id="btnEstimado">Calcular win rate estimado</button>
-                <button id="btnEquipo">Calcular win rate de equipo</button>
-            </div>
-            <div id="outEstimado" class="sub"></div>
-            <div id="outEquipo" class="sub"></div>
+          <label for="perfilJugador">Jugador</label>
+          <select id="perfilJugador">
+            <option value="">Selecciona un jugador</option>
+          </select>
+          <button onclick="populatePlayerDropdown()" style="margin-top:4px; font-size:12px; padding:4px 8px;">Actualizar lista</button>
+          <div id="perfilJugadorStats" class="sub" style="margin-top:8px"></div>
         </div>
-        
+        <div>
+          <label for="txtEquipo">Win rate de equipo (nombres separados por coma)</label>
+          <input id="txtEquipo" type="text" placeholder="eric, llongueras, gomez" />
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <button id="btnEstimado">Calcular win rate estimado</button>
+            <button id="btnEquipo">Calcular win rate de equipo</button>
+          </div>
+          <div id="outEstimado" class="sub"></div>
+          <div id="outEquipo" class="sub"></div>
+        </div>
       </div>
     </aside>
 
@@ -119,6 +165,7 @@
         <button class="tab" data-tab="tab-temporada">Temporada</button>
         <button class="tab" data-tab="tab-colectivas">Colectivas</button>
         <button class="tab" data-tab="tab-clutch">Clutch</button>
+        <button class="tab" data-tab="tab-jugadores">Jugadores</button>
       </div>
 
       <!-- TAB PARTIDOS -->
@@ -174,6 +221,19 @@
         <div class="card">
           <h3>Win rate en partidos muy reñidos (perdedor > 75% pts del ganador)</h3>
           <div class="list" id="listWRClutch"></div>
+        </div>
+      </div>
+
+      <!-- TAB JUGADORES -->
+      <div id="tab-jugadores" hidden>
+        <div id="vistaIndiceJugadores" class="player-profile-shell">
+          <div class="sub" id="infoJugadores"></div>
+          <div id="gridJugadores" class="player-grid"></div>
+        </div>
+        <div id="vistaPerfilJugador" class="player-profile-shell" hidden>
+          <button id="btnVolverJugadores" class="secondary-btn" type="button">← Volver a jugadores</button>
+          <div id="perfilHero" class="player-hero"></div>
+          <div id="perfilTexto" class="player-profile-shell"></div>
         </div>
       </div>
     </section>
