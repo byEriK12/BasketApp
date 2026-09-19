@@ -172,7 +172,7 @@
         const n=this.partidos.length||1;
         return {
           jugadores_equipo, jugadores_rivales,
-          valoracion, contribucion,
+          valoracion, valoracion_por_partido: valoracion/n, contribucion,
           win_rate: win/n*100,
           mas_menos,
           puntos_por_minuto: ppm/n,
@@ -510,6 +510,7 @@
 
     const avDiv = el('avanzadas'); avDiv.innerHTML='';
     addRow(avDiv,'Valoración total', av.valoracion);
+    addRow(avDiv,'Valoración por partido', fmt1(av.valoracion_por_partido));
     const contribPct = av.puntos_totales_equipo? ((av.contribucion/av.puntos_totales_equipo)*100):0;
     addRow(avDiv,'Contribución total', `${av.contribucion} (${fmt1(contribPct)}%)`);
     addRow(avDiv,'+/- total', av.mas_menos);
@@ -689,9 +690,23 @@
         return;
       }
 
+      const statsPorJugador = new Map(jugadores.map(nombre => [nombre, temp.calcular_estadisticas_jugador(nombre)]));
+      const orden = el('selOrdenJugadores')?.value || 'alfabetico';
+      jugadores.sort((a, b) => {
+        if (orden === 'partidosAsc' || orden === 'partidosDesc') {
+          const diferencia = statsPorJugador.get(a).partidos_jugados - statsPorJugador.get(b).partidos_jugados;
+          return orden === 'partidosAsc' ? diferencia : -diferencia;
+        }
+        if (orden === 'winRateAsc' || orden === 'winRateDesc') {
+          const diferencia = statsPorJugador.get(a).win_rate - statsPorJugador.get(b).win_rate;
+          return orden === 'winRateAsc' ? diferencia : -diferencia;
+        }
+        return a.localeCompare(b);
+      });
+
       for (const nombre of jugadores) {
         const perfil = obtenerPerfil(nombre);
-        const stats = temp.calcular_estadisticas_jugador(nombre);
+        const stats = statsPorJugador.get(nombre);
         const card = document.createElement('div');
         card.className = 'player-card';
         card.dataset.player = nombre;
@@ -734,6 +749,11 @@
       const dorsal = valorVisible(perfil.dorsal);
       const posicion = valorVisible(perfil.posicion);
       const edadTexto = edad === null ? '-' : `${edad} años`;
+      const filtrosPerfil = [
+        formato !== 'Todos' ? formato : '',
+        puntuacion !== 'Todos' ? puntuacion : ''
+      ].filter(Boolean);
+      const filtroPerfilTexto = filtrosPerfil.length ? filtrosPerfil.join(' · ') : 'Todos los partidos';
 
       const metrics = perfil.esJugadorPrincipal
         ? [
@@ -750,6 +770,7 @@
           ];
 
       hero.innerHTML = `
+        <div class="player-filter-badge" title="${filtroPerfilTexto}">${filtroPerfilTexto}</div>
         <div class="player-logo">
           ${perfil.escudoUrl ? `<img src="${perfil.escudoUrl}" alt="${franquicia}" onerror="this.onerror=null;this.src='https://via.placeholder.com/80x80?text=🏀';">` : '🏀'}
         </div>
@@ -810,14 +831,15 @@
             <div class="stats-grid">
               <div class="stat-box"><div class="label">Minutos</div><div class="value">${stats.minutos_totales}</div></div>
               <div class="stat-box"><div class="label">Valoración</div><div class="value">${fmt1(stats.valoracion_total)}</div></div>
-              <div class="stat-box"><div class="label">Contribución</div><div class="value">${fmt1(stats.contribucion_total)}</div></div>
+              <div class="stat-box"><div class="label">Valoración por partido</div><div class="value">${fmt1(stats.valoracion_total / Math.max(stats.partidos_jugados, 1))}</div></div>
+              <div class="stat-box"><div class="label">Contribución</div><div class="value">${fmt1(stats.contribucion_total)} (${fmt1(stats.puntos_equipo_total ? stats.contribucion_total / stats.puntos_equipo_total * 100 : 0)}%)</div></div>
               <div class="stat-box"><div class="label">Puntos totales</div><div class="value">${stats.puntos_totales}</div></div>
               <div class="stat-box"><div class="label">Rebotes</div><div class="value">${stats.rebotes_totales}</div></div>
               <div class="stat-box"><div class="label">Asistencias</div><div class="value">${stats.asistencias_totales}</div></div>
               <div class="stat-box"><div class="label">Triples anotados</div><div class="value">${stats.triples_anotados_totales}</div></div>
               <div class="stat-box"><div class="label">Triples intentados</div><div class="value">${stats.triples_intentados_totales}</div></div>
-              <div class="stat-box"><div class="label">Tapones por partido</div><div class="value">${fmt1(stats.tapones_pp)}</div></div>
               <div class="stat-box"><div class="label">Tapones</div><div class="value">${stats.tapones_totales}</div></div>
+              <div class="stat-box"><div class="label">Tapones por partido</div><div class="value">${fmt1(stats.tapones_pp)}</div></div>
               <div class="stat-box"><div class="label">Puntos por minuto</div><div class="value">${fmt1(stats.puntos_por_minuto)}</div></div>
             </div>
           </div>
@@ -840,7 +862,9 @@
       const tipoStats = temp.calcular_estadisticas_jugador_por_tipo_de_partido(nombreJugador);
       const orderedTipoStats = Object.fromEntries(['A 11 puntos', 'A 21 puntos', 'Otros'].filter(tipo => tipo in tipoStats).map(tipo => [tipo, tipoStats[tipo]]));
       const tipoCards = renderCategoryCards(orderedTipoStats, perfil.esJugadorPrincipal);
-      const formatoCards = renderCategoryCards(temp.calcular_estadisticas_jugador_por_formato(nombreJugador), perfil.esJugadorPrincipal);
+      const formatoStats = temp.calcular_estadisticas_jugador_por_formato(nombreJugador);
+      const formatoOrdenado = Object.fromEntries(['2vs2', '3vs3', '4vs4', '5vs5'].filter(tipo => tipo in formatoStats).map(tipo => [tipo, formatoStats[tipo]]));
+      const formatoCards = renderCategoryCards(formatoOrdenado, perfil.esJugadorPrincipal);
       generalHtml += `
         <div class="player-section">
           <h3>Desglose por formato</h3>
@@ -922,6 +946,11 @@
       const selectedPlayer = el('perfilJugador').value;
       aplicarFiltros();
       if (!selectedPlayer) el('perfilJugadorStats').innerHTML = '';
+    });
+
+    el('selOrdenJugadores').addEventListener('change', ()=>{
+      const { formato, puntuacion } = getFiltrosActivos();
+      renderIndiceJugadores(formato, puntuacion);
     });
 
     el('btnEstimado').addEventListener('click', ()=>{
