@@ -389,13 +389,29 @@
         equipo: 'Salesians Sabadell',
         escudoUrl: 'https://via.placeholder.com/80x80?text=Logo',
         dorsal: '#12',
-        posicion: 'PF',
+        posicion: 'AP',
         alturaCm: 187,
         pesoKg: 79,
-        fechaNacimiento: '31/10/2004',
+        fechaNacimiento: '2004-10-31',
         fotoUrl: 'https://ui-avatars.com/api/?name=Eric&background=111&color=fff&size=400',
         esJugadorPrincipal: true // activa el bloque de stats avanzadas de Eric
-      }
+      },
+      raset: { nombreMostrado: 'Raset', dorsal: '#0', posicion: 'ES', alturaCm: 181, pesoKg: 89, fechaNacimiento: '2004-09-23' },
+      diaz: { nombreMostrado: 'Diaz', dorsal: '#25', posicion: 'AL', alturaCm: 183, pesoKg: 74, fechaNacimiento: '2004-11-16' },
+      pep: { nombreMostrado: 'Pep', dorsal: '#13', posicion: 'ES', alturaCm: 176, pesoKg: 72, fechaNacimiento: '2004-02-11' },
+      cavi: { nombreMostrado: 'Cavi', dorsal: '#5', posicion: 'AP', alturaCm: 190, pesoKg: 90, fechaNacimiento: '2004-07-21' },
+      grinyo: { nombreMostrado: 'Grinyo', dorsal: '#3', posicion: 'P', alturaCm: 191, pesoKg: 73, fechaNacimiento: '2004-07-20' },
+      moya: { nombreMostrado: 'Moya', dorsal: '#21', posicion: 'BA', alturaCm: 170, pesoKg: 68, fechaNacimiento: '2004-02-02' },
+      batalla: { nombreMostrado: 'Batalla', dorsal: '#34', posicion: 'AL', alturaCm: 179, pesoKg: 59, fechaNacimiento: '2004-10-21' },
+      jamo: { nombreMostrado: 'Jamo', dorsal: '#19', posicion: 'P', alturaCm: 198, pesoKg: 70, fechaNacimiento: '2004-08-02' },
+      llongueras: { nombreMostrado: 'Llongueras', dorsal: '#15', posicion: 'BA', alturaCm: 173, pesoKg: 70, fechaNacimiento: '2004-11-02' },
+      blasi: { nombreMostrado: 'Blasi', dorsal: '#28', posicion: 'ES', alturaCm: 175, pesoKg: 83, fechaNacimiento: '2004-04-02' },
+      ot: { nombreMostrado: 'Ot', dorsal: '#69', posicion: 'AL', alturaCm: 188, pesoKg: 80, fechaNacimiento: '2006-10-02' },
+      andreu: { nombreMostrado: 'Andreu', dorsal: '#30', posicion: 'ES', alturaCm: 175, pesoKg: 69, fechaNacimiento: '2005-04-20' },
+      arnau: { nombreMostrado: 'Arnau', dorsal: '#10', posicion: 'ES', alturaCm: 176, pesoKg: 73, fechaNacimiento: '2004-01-20' },
+      aleix: { nombreMostrado: 'Aleix', dorsal: '#4', posicion: 'BA', alturaCm: 178, pesoKg: 65, fechaNacimiento: '2005-04-30' },
+      gomez: { nombreMostrado: 'Gomez', dorsal: '#24', posicion: 'AL', alturaCm: 185, pesoKg: 78, fechaNacimiento: '2004-10-31' },
+      ert: { nombreMostrado: 'Ert', dorsal: '#68', posicion: 'AP', alturaCm: 188, pesoKg: 78, fechaNacimiento: '2004-06-28' }
     };
 
     function obtenerPerfil(nombre) {
@@ -676,7 +692,7 @@
     function renderIndiceJugadores(formato = 'Todos', puntuacion = 'Todos') {
       const partidosFiltrados = getPartidosFiltrados(formato, puntuacion);
       const temp = new Temporada(partidosFiltrados);
-      const jugadores = temp.obtener_todos_jugadores();
+      let jugadores = temp.obtener_todos_jugadores();
       const grid = el('gridJugadores');
       const info = el('infoJugadores');
 
@@ -692,6 +708,20 @@
 
       const statsPorJugador = new Map(jugadores.map(nombre => [nombre, temp.calcular_estadisticas_jugador(nombre)]));
       const orden = el('selOrdenJugadores')?.value || 'alfabetico';
+      const umbralPartidos = Number(el('umbralPartidosJugadores')?.value);
+      const umbralWinRate = Number(el('umbralWinRateJugadores')?.value);
+      if (Number.isFinite(umbralPartidos) && umbralPartidos >= 0) {
+        jugadores = jugadores.filter(nombre => statsPorJugador.get(nombre).partidos_jugados >= umbralPartidos);
+      }
+      if (Number.isFinite(umbralWinRate) && umbralWinRate >= 0) {
+        jugadores = jugadores.filter(nombre => statsPorJugador.get(nombre).win_rate >= umbralWinRate);
+      }
+      info.textContent = `Mostrando ${jugadores.length} jugadores en ${formato === 'Todos' ? 'todos los formatos' : formato} y ${puntuacion === 'Todos' ? 'todas las puntuaciones' : puntuacion}.`;
+      if (jugadores.length === 0) {
+        grid.innerHTML = '<div class="sub">No hay jugadores que cumplan este mínimo.</div>';
+        return;
+      }
+
       jugadores.sort((a, b) => {
         if (orden === 'partidosAsc' || orden === 'partidosDesc') {
           const diferencia = statsPorJugador.get(a).partidos_jugados - statsPorJugador.get(b).partidos_jugados;
@@ -949,9 +979,27 @@
     });
 
     el('selOrdenJugadores').addEventListener('change', ()=>{
+      const orden = el('selOrdenJugadores').value;
+      const umbralPartidos = el('umbralPartidosJugadores');
+      const umbralWinRate = el('umbralWinRateJugadores');
+      const admiteUmbral = orden !== 'alfabetico';
+      umbralPartidos.disabled = !admiteUmbral;
+      umbralWinRate.disabled = !admiteUmbral;
+      umbralPartidos.value = '';
+      umbralWinRate.value = '';
       const { formato, puntuacion } = getFiltrosActivos();
       renderIndiceJugadores(formato, puntuacion);
     });
+
+    const actualizarUmbralJugadores = ()=>{
+      const { formato, puntuacion } = getFiltrosActivos();
+      renderIndiceJugadores(formato, puntuacion);
+    };
+    el('umbralPartidosJugadores').addEventListener('input', actualizarUmbralJugadores);
+    el('umbralWinRateJugadores').addEventListener('input', actualizarUmbralJugadores);
+
+    el('umbralPartidosJugadores').value = '';
+    el('umbralWinRateJugadores').value = '';
 
     el('btnEstimado').addEventListener('click', ()=>{
     const equipo = el('txtEquipo').value.split(',').map(s=>s.trim()).filter(Boolean);

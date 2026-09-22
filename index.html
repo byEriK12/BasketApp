@@ -74,6 +74,10 @@
     .player-main-photo{position:relative;z-index:1;width:140px;height:140px;border-radius:50%;object-fit:cover;border:3px solid #22314b;background:#0f1521;box-shadow:0 14px 30px rgba(0,0,0,.3)}
     .player-hero-copy{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;gap:8px;min-width:0}
     .player-filter-badge{position:absolute;top:14px;right:14px;z-index:1;font-size:11px;color:#bcd0ee;background:#0f1521;border:1px solid #2a3b57;border-radius:999px;padding:5px 9px;max-width:45%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .player-sort-control{display:flex;align-items:center;gap:6px}
+    .player-sort-control select{width:auto;min-width:62px;padding:7px 9px;border-radius:9px}
+    .player-sort-control input{width:74px;padding:7px 8px;border-radius:9px}
+    .player-sort-control input:disabled{display:none}
     .player-hero-meta{font-size:12px;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;font-weight:700}
     .player-hero-name{margin:0;font-size:clamp(2.2rem,5vw,4rem);line-height:0.95;font-weight:900;text-transform:uppercase;letter-spacing:-.04em}
     .player-hero-actions{display:flex;justify-content:flex-end;align-items:center}
@@ -230,15 +234,17 @@
         <div id="vistaIndiceJugadores" class="player-profile-shell">
           <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap">
             <div class="sub" id="infoJugadores"></div>
-            <div>
-              <label for="selOrdenJugadores">Ordenar por</label>
-              <select id="selOrdenJugadores">
-                <option value="alfabetico">Nombre (A-Z)</option>
-                <option value="partidosAsc">Partidos jugados (creciente)</option>
-                <option value="partidosDesc">Partidos jugados (decreciente)</option>
-                <option value="winRateAsc">Win rate (creciente)</option>
-                <option value="winRateDesc">Win rate (decreciente)</option>
+            <div class="player-sort-control">
+              <label for="selOrdenJugadores">Ordenar</label>
+              <select id="selOrdenJugadores" aria-label="Ordenar jugadores">
+                <option value="alfabetico">A-Z</option>
+                <option value="partidosAsc">PJ &uarr;</option>
+                <option value="partidosDesc">PJ &darr;</option>
+                <option value="winRateAsc">WR &uarr;</option>
+                <option value="winRateDesc">WR &darr;</option>
               </select>
+              <input id="umbralPartidosJugadores" type="number" min="0" step="1" placeholder="PJ mín." aria-label="Partidos jugados mínimos" disabled>
+              <input id="umbralWinRateJugadores" type="number" min="0" max="100" step="any" placeholder="WR mín." aria-label="Win rate mínimo" disabled>
             </div>
           </div>
           <div id="gridJugadores" class="player-grid"></div>
