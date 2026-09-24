@@ -382,18 +382,21 @@
 
     const temporada = new Temporada(partidos);
 
+    // Los perfiles individuales pueden sobrescribir este valor con su propiedad "equipo".
+    const EQUIPO_POR_DEFECTO = 'Safa Sabadell';
+    const ESCUDO_POR_DEFECTO = 'images/safa.png';
     const perfilesJugadores = {
       eric: {
         // Edita estos valores a mano cuando tengas los datos reales del jugador.
         nombreMostrado: 'Eric',
         equipo: 'Salesians Sabadell',
-        escudoUrl: 'https://via.placeholder.com/80x80?text=Logo',
+        escudoUrl: 'images/salesians.png',
         dorsal: '#12',
         posicion: 'AP',
         alturaCm: 187,
         pesoKg: 79,
         fechaNacimiento: '2004-10-31',
-        fotoUrl: 'https://ui-avatars.com/api/?name=Eric&background=111&color=fff&size=400',
+        fotoUrl: 'images/Eric.jpg',
         esJugadorPrincipal: true // activa el bloque de stats avanzadas de Eric
       },
       raset: { nombreMostrado: 'Raset', dorsal: '#0', posicion: 'ES', alturaCm: 181, pesoKg: 89, fechaNacimiento: '2004-09-23' },
@@ -408,7 +411,7 @@
       blasi: { nombreMostrado: 'Blasi', dorsal: '#28', posicion: 'ES', alturaCm: 175, pesoKg: 83, fechaNacimiento: '2004-04-02' },
       ot: { nombreMostrado: 'Ot', dorsal: '#69', posicion: 'AL', alturaCm: 188, pesoKg: 80, fechaNacimiento: '2006-10-02' },
       andreu: { nombreMostrado: 'Andreu', dorsal: '#30', posicion: 'ES', alturaCm: 175, pesoKg: 69, fechaNacimiento: '2005-04-20' },
-      arnau: { nombreMostrado: 'Arnau', dorsal: '#10', posicion: 'ES', alturaCm: 176, pesoKg: 73, fechaNacimiento: '2004-01-20' },
+      arnau: { nombreMostrado: 'Arnau', equipo: 'UB MiR', escudoUrl: 'images/ubmir.png', dorsal: '#10', posicion: 'ES', alturaCm: 176, pesoKg: 73, fechaNacimiento: '2004-01-20' },
       aleix: { nombreMostrado: 'Aleix', dorsal: '#4', posicion: 'BA', alturaCm: 178, pesoKg: 65, fechaNacimiento: '2005-04-30' },
       gomez: { nombreMostrado: 'Gomez', dorsal: '#24', posicion: 'AL', alturaCm: 185, pesoKg: 78, fechaNacimiento: '2004-10-31' },
       ert: { nombreMostrado: 'Ert', dorsal: '#68', posicion: 'AP', alturaCm: 188, pesoKg: 78, fechaNacimiento: '2004-06-28' }
@@ -419,17 +422,18 @@
       const base = perfilesJugadores[key] || {};
       const nombreMostrado = base.nombreMostrado || nombre || 'Jugador';
       const fotoGenerica = `https://ui-avatars.com/api/?name=${encodeURIComponent((nombreMostrado || 'Jugador').split(/\s+/).slice(0, 2).join(' '))}&background=111&color=fff&size=400`;
+      const fotoLocal = `images/${encodeURIComponent(nombreMostrado)}.jpg`;
 
       return {
         nombreMostrado,
-        equipo: base.equipo || 'Pickup Squad',
-        escudoUrl: base.escudoUrl || 'https://via.placeholder.com/80x80?text=🏀',
+        equipo: base.equipo || EQUIPO_POR_DEFECTO,
+        escudoUrl: base.escudoUrl || ESCUDO_POR_DEFECTO,
         dorsal: base.dorsal || '#--',
         posicion: base.posicion || 'Jugador',
         alturaCm: base.alturaCm ?? null,
         pesoKg: base.pesoKg ?? null,
         fechaNacimiento: base.fechaNacimiento || null,
-        fotoUrl: base.fotoUrl || fotoGenerica,
+        fotoUrl: base.fotoUrl || fotoLocal,
         esJugadorPrincipal: !!base.esJugadorPrincipal
       };
     }
@@ -801,10 +805,10 @@
 
       hero.innerHTML = `
         <div class="player-filter-badge" title="${filtroPerfilTexto}">${filtroPerfilTexto}</div>
+        <img class="player-main-photo" src="${perfil.fotoUrl}" alt="${perfil.nombreMostrado}" onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name=${encodeURIComponent((perfil.nombreMostrado || nombreJugador).split(/\s+/).slice(0,2).join(' '))}&background=111&color=fff&size=400';">
         <div class="player-logo">
           ${perfil.escudoUrl ? `<img src="${perfil.escudoUrl}" alt="${franquicia}" onerror="this.onerror=null;this.src='https://via.placeholder.com/80x80?text=🏀';">` : '🏀'}
         </div>
-        <img class="player-main-photo" src="${perfil.fotoUrl}" alt="${perfil.nombreMostrado}" onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name=${encodeURIComponent((perfil.nombreMostrado || nombreJugador).split(/\s+/).slice(0,2).join(' '))}&background=111&color=fff&size=400';">
         <div class="player-hero-copy">
           <div class="player-hero-meta">${franquicia} | ${dorsal} | ${posicion}</div>
           <h2 class="player-hero-name">${perfil.nombreMostrado}</h2>
