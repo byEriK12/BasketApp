@@ -21,10 +21,11 @@
     .panel{background:var(--card);border:1px solid #22314b;border-radius:16px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
     .panel h2{font-size:16px;margin:0 0 10px;color:#cfe1ff}
     .panel .sub{font-size:12px;color:var(--muted);margin-top:4px}
+    .stats-scope{display:block;margin:0 0 12px;padding:10px 12px;border:1px solid #34507c;border-radius:10px;background:#142036;color:#cfe1ff!important;font-size:13px!important;font-weight:600}
 
     .controls{display:grid;gap:10px}
     label{font-size:12px;color:var(--muted)}
-    select, input[type="text"], input[type="number"]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid #2a3b57;background:#0f1521;color:var(--text);outline:none}
+    select, input[type="text"], input[type="number"], input[type="search"]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid #2a3b57;background:#0f1521;color:var(--text);outline:none}
     button{appearance:none;border:1px solid #2a3b57;background:linear-gradient(180deg,#142036,#10192b);color:#eaf2ff;padding:10px 12px;border-radius:12px;cursor:pointer;transition:transform .04s ease, box-shadow .2s}
     button:hover{box-shadow:0 6px 18px rgba(79,156,255,.25)}
     button:active{transform:translateY(1px)}
@@ -77,7 +78,8 @@
     .player-sort-control{display:flex;align-items:center;gap:6px}
     .player-sort-control select{width:auto;min-width:62px;padding:7px 9px;border-radius:9px}
     .player-sort-control input{width:74px;padding:7px 8px;border-radius:9px}
-    .player-sort-control input:disabled{display:none}
+    .player-sort-control input[type="search"]{width:120px}
+    .player-sort-control input:disabled{visibility:hidden;pointer-events:none}
     .player-hero-meta{font-size:12px;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;font-weight:700}
     .player-hero-name{margin:0;font-size:clamp(2.2rem,5vw,4rem);line-height:0.95;font-weight:900;text-transform:uppercase;letter-spacing:-.04em}
     .player-hero-actions{display:flex;justify-content:flex-end;align-items:center}
@@ -110,6 +112,27 @@
     .secondary-btn{padding:8px 12px;border-radius:10px;background:#0f1521;border:1px solid #22314b;color:#e7eef6;cursor:pointer}
     .player-link{padding:0;border:0;background:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;text-decoration-color:transparent}
     .player-link:hover{text-decoration-color:currentColor;box-shadow:none}
+    .collective-chart{margin-top:14px;padding:14px;border:1px solid #22314b;border-radius:16px;background:linear-gradient(180deg,#101725,#0d1624)}
+    .collective-chart-header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+    .collective-chart-header h3{margin:0 0 4px;font-size:15px}
+    .chart-switcher{display:flex;gap:6px;flex-wrap:wrap}
+    .chart-switcher button{padding:7px 9px;border-radius:9px;font-size:12px}
+    .chart-switcher button.active{background:#34507c;border-color:#4f9cff;color:#fff}
+    .chart-scroll{overflow-x:auto;border:1px solid #1e2d44;border-radius:12px;background:#0b111b}
+    #perfilChart{display:block;width:100%;min-width:620px;height:360px}
+    .chart-legend{display:flex;gap:8px 14px;flex-wrap:wrap;margin-top:12px}
+    .chart-legend-item{display:inline-flex;align-items:center;gap:6px;color:#cfe1ff;font-size:12px}
+    .chart-legend-swatch{width:10px;height:10px;border-radius:50%;flex:none}
+    .chart-empty{padding:34px 12px;text-align:center;color:var(--muted);font-size:13px}
+    .chart-player-picker{display:grid;gap:6px;margin-bottom:12px}
+    .chart-player-picker label{color:#cfe1ff}
+    .chart-player-results{display:grid;gap:4px;max-height:150px;overflow-y:auto}
+    .chart-player-option,.chart-player-selected{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:7px 9px;border:1px solid #22314b;border-radius:9px;background:#0f1521;color:#cfe1ff;text-align:left;font-size:12px}
+    .chart-player-option:hover{border-color:#4f9cff;background:#142036;box-shadow:none}
+    .chart-player-selected{width:auto;display:inline-flex;background:#142036;border-color:#34507c}
+    .chart-player-selected button{padding:0 2px;border:0;background:none;color:#91a3b0;font-size:15px;line-height:1;box-shadow:none}
+    .chart-player-selected button:hover{color:#fff;box-shadow:none}
+    .chart-player-selected-list{display:flex;gap:6px;flex-wrap:wrap}
   </style>
 </head>
 <body>
@@ -166,21 +189,51 @@
     <!-- LADO DERECHO: CONTENIDO PRINCIPAL -->
     <section class="panel">
       <div class="tabs">
-        <button class="tab active" data-tab="tab-partidos">Partidos</button>
+        <button class="tab active" data-tab="tab-jugadores">Jugadores</button>
+        <button class="tab" data-tab="tab-partidos">Partidos</button>
         <button class="tab" data-tab="tab-temporada">Temporada</button>
         <button class="tab" data-tab="tab-colectivas">Colectivas</button>
         <button class="tab" data-tab="tab-clutch">Clutch</button>
-        <button class="tab" data-tab="tab-jugadores">Jugadores</button>
+      </div>
+
+      <!-- TAB JUGADORES -->
+      <div id="tab-jugadores">
+        <div id="vistaIndiceJugadores" class="player-profile-shell">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap">
+            <div class="sub" id="infoJugadores"></div>
+            <div class="player-sort-control">
+              <label for="buscarJugador">Buscar</label>
+              <input id="buscarJugador" type="search" placeholder="Nombre" aria-label="Buscar jugador por nombre">
+              <label for="selOrdenJugadores">Ordenar</label>
+              <select id="selOrdenJugadores" aria-label="Ordenar jugadores">
+                <option value="alfabetico">A-Z</option>
+                <option value="partidosAsc">PJ &uarr;</option>
+                <option value="partidosDesc">PJ &darr;</option>
+                <option value="winRateAsc">WR &uarr;</option>
+                <option value="winRateDesc">WR &darr;</option>
+              </select>
+              <input id="umbralPartidosJugadores" type="number" min="0" step="1" placeholder="PJ mín." aria-label="Partidos jugados mínimos" disabled>
+              <input id="umbralWinRateJugadores" type="number" min="0" max="100" step="any" placeholder="WR mín." aria-label="Win rate mínimo" disabled>
+            </div>
+          </div>
+          <div id="gridJugadores" class="player-grid"></div>
+        </div>
+        <div id="vistaPerfilJugador" class="player-profile-shell" hidden>
+          <div id="perfilHero" class="player-hero"></div>
+          <div id="perfilTexto" class="player-profile-shell"></div>
+        </div>
       </div>
 
       <!-- TAB PARTIDOS -->
-      <div id="tab-partidos">
+      <div id="tab-partidos" hidden>
         <div class="sub" id="infoFormato"></div>
+        <div class="sub" id="infoEstadisticasPartidos">Las estadísticas individuales mostradas son de Eric.</div>
         <div id="gridPartidos" class="cards" style="margin-top:12px"></div>
       </div>
 
       <!-- TAB TEMPORADA -->
       <div id="tab-temporada" hidden>
+        <div class="sub" id="infoEstadisticasTemporada">Las estadísticas individuales mostradas corresponden a Eric.</div>
         <div class="kpi">
           <div class="box"><div class="label">Partidos</div><div class="value" id="kpiPartidos">-</div></div>
           <div class="box"><div class="label">Puntos equipo</div><div class="value" id="kpiPtosEquipo">-</div></div>
@@ -229,31 +282,6 @@
         </div>
       </div>
 
-      <!-- TAB JUGADORES -->
-      <div id="tab-jugadores" hidden>
-        <div id="vistaIndiceJugadores" class="player-profile-shell">
-          <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap">
-            <div class="sub" id="infoJugadores"></div>
-            <div class="player-sort-control">
-              <label for="selOrdenJugadores">Ordenar</label>
-              <select id="selOrdenJugadores" aria-label="Ordenar jugadores">
-                <option value="alfabetico">A-Z</option>
-                <option value="partidosAsc">PJ &uarr;</option>
-                <option value="partidosDesc">PJ &darr;</option>
-                <option value="winRateAsc">WR &uarr;</option>
-                <option value="winRateDesc">WR &darr;</option>
-              </select>
-              <input id="umbralPartidosJugadores" type="number" min="0" step="1" placeholder="PJ mín." aria-label="Partidos jugados mínimos" disabled>
-              <input id="umbralWinRateJugadores" type="number" min="0" max="100" step="any" placeholder="WR mín." aria-label="Win rate mínimo" disabled>
-            </div>
-          </div>
-          <div id="gridJugadores" class="player-grid"></div>
-        </div>
-        <div id="vistaPerfilJugador" class="player-profile-shell" hidden>
-          <div id="perfilHero" class="player-hero"></div>
-          <div id="perfilTexto" class="player-profile-shell"></div>
-        </div>
-      </div>
     </section>
   </main>
 

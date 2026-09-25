@@ -574,6 +574,78 @@
     }
     }
 
+    let metricaGraficoColectivas = 'masMenosTotal';
+
+    function renderGraficoPerfil(nombreActual, temp, nombresComparacion = []){
+    const chart = el('perfilChart');
+    const legend = el('perfilChartLegend');
+    if (!chart || !legend) return;
+
+    const metricas = {
+      masMenosTotal: { label: '+/- total', suffix: '', value: data => data.masMenos, decimals: 1 },
+      winRate: { label: 'Win rate', suffix: '%', value: data => data.partidos ? data.victorias / data.partidos * 100 : 0, decimals: 1 },
+      masMenosPP: { label: '+/- por partido', suffix: '', value: data => data.partidos ? data.masMenos / data.partidos : 0, decimals: 2 }
+    };
+    const metrica = metricas[metricaGraficoColectivas];
+    const nombres = [nombreActual, ...nombresComparacion.filter(nombre => norm(nombre) !== norm(nombreActual))]
+      .filter((nombre, index, arr) => arr.findIndex(item => norm(item) === norm(nombre)) === index);
+
+    legend.innerHTML = '';
+    chart.innerHTML = '';
+    if (nombres.length === 0 || temp.partidos.length === 0) {
+      chart.setAttribute('viewBox', '0 0 900 160');
+      chart.innerHTML = '<text x="450" y="82" text-anchor="middle" fill="#91a3b0" font-size="13">No hay suficientes datos para dibujar la evolución.</text>';
+      return;
+    }
+    if (chart.tagName !== 'svg') return;
+
+    const colores = ['#4f9cff', '#39d98a', '#ffb454', '#ff6b6b', '#c792ea', '#61d4d4', '#f78cba', '#d7e36f', '#f28f6b', '#9db7ff'];
+    const series = nombres.map((nombre, index) => {
+      const datos = { masMenos: 0, victorias: 0, partidos: 0 };
+      const puntos = temp.partidos.map((partido, partidoIndex) => {
+        const enEquipo = partido.jugadores_equipo.some(j => norm(j) === norm(nombre));
+        const enRivales = partido.jugadores_rivales.some(j => norm(j) === norm(nombre));
+        if (!enEquipo && !enRivales) return null;
+        datos.partidos++;
+        datos.victorias += enEquipo === partido.resultado ? 1 : 0;
+        datos.masMenos += partido.calcular_mas_menos() * (enEquipo ? 1 : -1);
+        return { x: partidoIndex + 1, y: metrica.value(datos), partido: partidoIndex + 1 };
+      }).filter(Boolean);
+      return { nombre, color: colores[index % colores.length], puntos };
+    });
+
+    const width = 900, height = 320;
+    const margin = { top: 18, right: 22, bottom: 42, left: 52 };
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
+    const valores = series.flatMap(serie => serie.puntos.map(punto => punto.y));
+    let min = Math.min(...valores), max = Math.max(...valores);
+    if (min === max) { min -= 1; max += 1; }
+    const padding = (max - min) * 0.1;
+    min -= padding; max += padding;
+    const x = partido => margin.left + ((partido - 1) / Math.max(temp.partidos.length - 1, 1)) * innerWidth;
+    const y = valor => margin.top + (1 - (valor - min) / (max - min)) * innerHeight;
+    const formatValue = valor => `${valor.toFixed(metrica.decimals)}${metrica.suffix}`;
+    const ticks = 4;
+    const grid = Array.from({ length: ticks + 1 }, (_, index) => {
+      const valor = min + ((max - min) * index / ticks);
+      const yPos = y(valor);
+      return `<line x1="${margin.left}" y1="${yPos}" x2="${width - margin.right}" y2="${yPos}" stroke="#1e2d44" />
+        <text x="${margin.left - 8}" y="${yPos + 4}" text-anchor="end" fill="#91a3b0" font-size="11">${formatValue(valor)}</text>`;
+    }).join('');
+    const paths = series.map((serie, index) => {
+      const path = serie.puntos.map((punto, index) => `${index ? 'L' : 'M'} ${x(punto.x)} ${y(punto.y)}`).join(' ');
+      const puntos = serie.puntos.map(punto => `<circle cx="${x(punto.x)}" cy="${y(punto.y)}" r="3.5" fill="${serie.color}"><title>${serie.nombre} · Partido ${punto.partido}: ${formatValue(punto.y)}</title></circle>`).join('');
+      return `<path d="${path}" fill="none" stroke="${serie.color}" stroke-width="${index === 0 ? '3.5' : '2.5'}" stroke-linecap="round" stroke-linejoin="round" />${puntos}`;
+    }).join('');
+    const xLabels = [1, Math.ceil(temp.partidos.length / 2), temp.partidos.length]
+      .filter((partido, index, arr) => arr.indexOf(partido) === index)
+      .map(partido => `<text x="${x(partido)}" y="${height - 14}" text-anchor="middle" fill="#91a3b0" font-size="11">P${partido}</text>`).join('');
+    chart.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    chart.innerHTML = `${grid}<line x1="${margin.left}" y1="${margin.top + innerHeight}" x2="${width - margin.right}" y2="${margin.top + innerHeight}" stroke="#34507c" />${paths}${xLabels}`;
+    legend.innerHTML = series.map(serie => `<span class="chart-legend-item"><span class="chart-legend-swatch" style="background:${serie.color}"></span>${serie.nombre}</span>`).join('');
+    }
+
     function renderColectivasPorFormato(formato = 'Todos', puntuacion = 'Todos', jugador = ''){
     const temp = new Temporada(getPartidosFiltrados(formato, puntuacion, jugador));
     const mmt = temp.calcular_mas_menos_total_jugadores();
@@ -640,7 +712,9 @@
       el('vistaPerfilJugador').hidden = false;
       const { formato, puntuacion, jugador } = getFiltrosActivos();
       renderPerfilDetallado(nombre, formato, puntuacion);
-      el('vistaPerfilJugador').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      requestAnimationFrame(() => {
+        el('vistaPerfilJugador').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     }
 
     function renderPlayerStats(nombreJugador, formato = 'Todos', puntuacion = 'Todos'){
@@ -693,6 +767,16 @@
       statsDiv.innerHTML = html;
     }
 
+    function actualizarContextoEstadisticas(jugador) {
+      const mensaje = jugador && norm(jugador) === 'eric'
+        ? 'Mostrando estadísticas de Eric.'
+        : 'Las estadísticas individuales mostradas corresponden a Eric.';
+      ['Partidos', 'Temporada'].forEach(tab => {
+        const contexto = el(`infoEstadisticas${tab}`);
+        if (contexto) contexto.textContent = mensaje;
+      });
+    }
+
     function renderIndiceJugadores(formato = 'Todos', puntuacion = 'Todos') {
       const partidosFiltrados = getPartidosFiltrados(formato, puntuacion);
       const temp = new Temporada(partidosFiltrados);
@@ -719,6 +803,10 @@
       }
       if (Number.isFinite(umbralWinRate) && umbralWinRate >= 0) {
         jugadores = jugadores.filter(nombre => statsPorJugador.get(nombre).win_rate >= umbralWinRate);
+      }
+      const busqueda = norm(el('buscarJugador')?.value);
+      if (busqueda) {
+        jugadores = jugadores.filter(nombre => norm(nombre).includes(busqueda));
       }
       info.textContent = `Mostrando ${jugadores.length} jugadores en ${formato === 'Todos' ? 'todos los formatos' : formato} y ${puntuacion === 'Todos' ? 'todas las puntuaciones' : puntuacion}.`;
       if (jugadores.length === 0) {
@@ -769,9 +857,12 @@
     }
 
     function renderPerfilDetallado(nombreJugador, formato = 'Todos', puntuacion = 'Todos') {
+      metricaGraficoColectivas = 'masMenosTotal';
       const perfil = obtenerPerfil(nombreJugador);
       const partidosFiltrados = getPartidosFiltrados(formato, puntuacion, nombreJugador);
+      const partidosParaGrafica = getPartidosFiltrados(formato, puntuacion);
       const temp = new Temporada(partidosFiltrados);
+      const tempParaGrafica = new Temporada(partidosParaGrafica);
       const stats = temp.calcular_estadisticas_jugador(nombreJugador);
       const hero = el('perfilHero');
       const texto = el('perfilTexto');
@@ -907,9 +998,73 @@
         <div class="player-section">
           <h3>Desglose por tipo de partido</h3>
           <div class="player-type-cards">${tipoCards || '<div class="sub">Sin datos para este jugador.</div>'}</div>
+        </div>
+        <div class="player-section collective-chart">
+          <div class="collective-chart-header">
+            <div>
+              <h3>Evolución por partido</h3>
+              <div class="sub">La línea destacada es ${perfil.nombreMostrado}. Puedes añadir jugadores para comparar.</div>
+            </div>
+            <div class="chart-switcher" role="group" aria-label="Métrica del gráfico">
+              <button type="button" class="active" data-profile-chart-metric="masMenosTotal">+/- total</button>
+              <button type="button" data-profile-chart-metric="masMenosPP">+/- por partido</button>
+              <button type="button" data-profile-chart-metric="winRate">Win rate</button>
+            </div>
+          </div>
+          <div class="chart-player-picker">
+            <label for="perfilChartBuscarJugador">Comparar con otros jugadores</label>
+            <input id="perfilChartBuscarJugador" type="search" placeholder="Escribe un nombre para añadirlo" autocomplete="off">
+            <div id="perfilChartResultados" class="chart-player-results" hidden></div>
+            <div id="perfilChartSeleccionados" class="chart-player-selected-list"></div>
+          </div>
+          <div class="chart-scroll">
+            <svg id="perfilChart" role="img" aria-label="Evolución de estadísticas del perfil"></svg>
+          </div>
+          <div id="perfilChartLegend" class="chart-legend"></div>
         </div>`;
 
       texto.innerHTML = generalHtml;
+      const chartSearch = el('perfilChartBuscarJugador');
+      const chartResults = el('perfilChartResultados');
+      const chartSelected = el('perfilChartSeleccionados');
+      const jugadoresDisponibles = tempParaGrafica.obtener_todos_jugadores()
+        .filter(jugador => norm(jugador) !== norm(nombreJugador));
+      const seleccionados = [];
+      const renderPerfilChart = () => renderGraficoPerfil(nombreJugador, tempParaGrafica, seleccionados);
+      const renderComparador = () => {
+        const query = norm(chartSearch.value);
+        const resultados = jugadoresDisponibles.filter(jugador => query && norm(jugador).includes(query) && !seleccionados.some(item => norm(item) === norm(jugador)));
+        chartResults.innerHTML = resultados.length
+          ? resultados.map(jugador => `<button type="button" class="chart-player-option" data-add-player="${jugador}">${jugador}<span>+</span></button>`).join('')
+          : '';
+        chartResults.hidden = resultados.length === 0;
+        chartSelected.innerHTML = seleccionados.map(jugador => `<span class="chart-player-selected">${jugador}<button type="button" aria-label="Quitar ${jugador}" data-remove-player="${jugador}">×</button></span>`).join('');
+      };
+      chartSearch.addEventListener('input', renderComparador);
+      chartResults.addEventListener('click', event => {
+        const button = event.target.closest('[data-add-player]');
+        if (!button) return;
+        seleccionados.push(button.dataset.addPlayer);
+        chartSearch.value = '';
+        renderComparador();
+        renderPerfilChart();
+      });
+      chartSelected.addEventListener('click', event => {
+        const button = event.target.closest('[data-remove-player]');
+        if (!button) return;
+        const index = seleccionados.findIndex(jugador => jugador === button.dataset.removePlayer);
+        if (index !== -1) seleccionados.splice(index, 1);
+        renderComparador();
+        renderPerfilChart();
+      });
+      document.querySelectorAll('[data-profile-chart-metric]').forEach(button => {
+        button.addEventListener('click', () => {
+          metricaGraficoColectivas = button.dataset.profileChartMetric;
+          document.querySelectorAll('[data-profile-chart-metric]').forEach(item => item.classList.toggle('active', item === button));
+          renderPerfilChart();
+        });
+      });
+      renderPerfilChart();
     }
 
     function mostrarIndiceJugadores() {
@@ -927,6 +1082,7 @@
     // ==========================
     function aplicarFiltros(){
       const { formato, puntuacion, jugador } = getFiltrosActivos();
+      actualizarContextoEstadisticas(jugador);
       renderPartidos(formato, puntuacion, jugador);
       renderTemporadaPorFormato(formato, puntuacion, jugador);
       renderColectivasPorFormato(formato, puntuacion, jugador);
@@ -1001,6 +1157,7 @@
     };
     el('umbralPartidosJugadores').addEventListener('input', actualizarUmbralJugadores);
     el('umbralWinRateJugadores').addEventListener('input', actualizarUmbralJugadores);
+    el('buscarJugador').addEventListener('input', actualizarUmbralJugadores);
 
     el('umbralPartidosJugadores').value = '';
     el('umbralWinRateJugadores').value = '';
