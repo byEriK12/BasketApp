@@ -362,6 +362,56 @@
     function equalSets(a,b){ if(a.size!==b.size) return false; for(const v of a) if(!b.has(v)) return false; return true; }
     const partidos = partidosRaw.map(p=> new Partido(p));
 
+    function obtenerRegistrosDiaz(formato = 'Todos', puntuacion = 'Todos') {
+      return estadisticasDiazRaw.map(registro => {
+        const partidoRaw = partidosRaw[registro.partido - 1];
+        const partido = partidos[registro.partido - 1];
+        if (!partidoRaw || !partido) return null;
+        if (formato !== 'Todos' && partido.formato !== formato) return null;
+        if (puntuacion !== 'Todos' && getPuntuacionCategoria(partido) !== puntuacion) return null;
+        const enEquipo = partidoRaw.jugadores_equipo.some(jugador => norm(jugador) === 'diaz');
+        const enRivales = partidoRaw.jugadores_rivales.some(jugador => norm(jugador) === 'diaz');
+        if (!enEquipo && !enRivales) return null;
+        return { partido, registro, enEquipo };
+      }).filter(Boolean);
+    }
+
+    function calcularEstadisticasDiaz(formato = 'Todos', puntuacion = 'Todos') {
+      const registros = obtenerRegistrosDiaz(formato, puntuacion);
+      const stats = {
+        partidos_jugados: registros.length, victorias: 0, puntos_totales: 0,
+        asistencias_totales: 0, rebotes_totales: 0, tapones_totales: 0,
+        triples_intentados_totales: 0, triples_anotados_totales: 0, minutos_totales: 0,
+        mas_menos_total: 0, valoracion_total: 0, contribucion_total: 0, puntos_equipo_total: 0
+      };
+      for (const { partido, registro, enEquipo } of registros) {
+        const gano = enEquipo === partido.resultado;
+        if (gano) stats.victorias++;
+        const masMenos = partido.calcular_mas_menos() * (enEquipo ? 1 : -1);
+        stats.mas_menos_total += masMenos;
+        stats.puntos_equipo_total += enEquipo ? partido.puntos_totales : partido.puntos_rivales;
+        stats.puntos_totales += registro.puntos;
+        stats.asistencias_totales += registro.asistencias;
+        stats.rebotes_totales += registro.rebotes;
+        stats.tapones_totales += registro.tapones;
+        stats.triples_intentados_totales += registro.triples_intentados;
+        stats.triples_anotados_totales += registro.triples_anotados;
+        stats.minutos_totales += registro.minutos;
+        stats.valoracion_total += registro.puntos + registro.rebotes + registro.asistencias + registro.tapones - 3 * (registro.triples_intentados - registro.triples_anotados) + masMenos;
+        stats.contribucion_total += registro.puntos + 2 * registro.asistencias;
+      }
+      const partidosJugados = Math.max(stats.partidos_jugados, 1);
+      stats.win_rate = stats.partidos_jugados ? stats.victorias / stats.partidos_jugados * 100 : 0;
+      stats.pct_triples = stats.triples_intentados_totales ? stats.triples_anotados_totales / stats.triples_intentados_totales * 100 : 0;
+      stats.puntos_pp = stats.puntos_totales / partidosJugados;
+      stats.rebotes_pp = stats.rebotes_totales / partidosJugados;
+      stats.asistencias_pp = stats.asistencias_totales / partidosJugados;
+      stats.tapones_pp = stats.tapones_totales / partidosJugados;
+      stats.mas_menos_pp = stats.mas_menos_total / partidosJugados;
+      stats.puntos_por_minuto = stats.minutos_totales ? stats.puntos_totales / stats.minutos_totales : 0;
+      return stats;
+    }
+
     function getPuntuacionCategoria(p) {
         const puntos = [p.puntos_totales, p.puntos_rivales];
         if (puntos.some(v => v >= 11 && v <= 13)) return 'A 11 puntos';
@@ -576,10 +626,11 @@
 
     let metricaGraficoColectivas = 'masMenosTotal';
 
-    function renderGraficoPerfil(nombreActual, temp, nombresComparacion = []){
-    const chart = el('perfilChart');
-    const legend = el('perfilChartLegend');
-    if (!chart || !legend) return;
+    function renderGraficoPerfil(nombreActual, temp, nombresComparacion = [], chartId = 'perfilChart', legendId = 'perfilChartLegend'){
+    const chart = el(chartId);
+    const legend = el(legendId);
+    let puntos_totales = 0, asistencias_totales = 0, rebotes_totales = 0, tapones_totales = 0; 
+    let triples_intentados_totales = 0, triples_anotados_totales = 0, minutos_totales = 0;
 
     const metricas = {
       masMenosTotal: { label: '+/- total', suffix: '', value: data => data.masMenos, decimals: 1 },
@@ -856,6 +907,189 @@
       }
     }
 
+    function calcularCategoriasDiaz(formato, puntuacion, clave) {
+      const categorias = {};
+      for (const registro of obtenerRegistrosDiaz(formato, puntuacion)) {
+        const tipo = clave === 'formato' ? registro.partido.formato : getPuntuacionCategoria(registro.partido);
+        if (!categorias[tipo]) categorias[tipo] = { partidos: 0, victorias: 0, mas_menos_total: 0, puntos: 0, rebotes: 0, asistencias: 0, triples_intentados: 0, triples_anotados: 0 };
+        const datos = categorias[tipo];
+        const { partido, registro: statsDiaz, enEquipo } = registro;
+        datos.partidos++;
+        datos.victorias += enEquipo === partido.resultado ? 1 : 0;
+        datos.mas_menos_total += partido.calcular_mas_menos() * (enEquipo ? 1 : -1);
+        datos.puntos += statsDiaz.puntos;
+        datos.rebotes += statsDiaz.rebotes;
+        datos.asistencias += statsDiaz.asistencias;
+        datos.triples_intentados += statsDiaz.triples_intentados;
+        datos.triples_anotados += statsDiaz.triples_anotados;
+      }
+      for (const datos of Object.values(categorias)) {
+        datos.win_rate = datos.victorias / datos.partidos * 100;
+        datos.mas_menos_pp = datos.mas_menos_total / datos.partidos;
+        datos.puntos_pp = datos.puntos / datos.partidos;
+        datos.rebotes_pp = datos.rebotes / datos.partidos;
+        datos.asistencias_pp = datos.asistencias / datos.partidos;
+      }
+      return categorias;
+    }
+
+    function renderPerfilDiaz(nombreJugador, formato, puntuacion, texto) {
+      const stats = calcularEstadisticasDiaz(formato, puntuacion);
+      const perfil = obtenerPerfil(nombreJugador);
+      const tempGeneral = new Temporada(getPartidosFiltrados(formato, puntuacion, nombreJugador));
+      const tempParaGrafica = new Temporada(getPartidosFiltrados(formato, puntuacion));
+      const statsGeneral = tempGeneral.calcular_estadisticas_jugador(nombreJugador);
+      const resumen = [
+        ['Partidos jugados', statsGeneral.partidos_jugados],
+        ['Partidos ganados', statsGeneral.victorias],
+        ['Partidos perdidos', statsGeneral.partidos_jugados - statsGeneral.victorias],
+        ['Win rate', fmtPct(statsGeneral.win_rate)]
+      ];
+      const categoryCards = categories => Object.entries(categories).map(([tipo, data]) => `
+        <div class="type-card">
+          <div class="title">${tipo}</div>
+          <div class="detail"><span>${plural(data.partidos, 'Partido', 'Partidos')}</span><span>${data.partidos}</span></div>
+          <div class="detail"><span>Win rate</span><span>${fmtPct(data.win_rate)}</span></div>
+          <div class="detail"><span>+/- por partido</span><span>${data.mas_menos_pp >= 0 ? '+' : ''}${fmt1(data.mas_menos_pp)}</span></div>
+          <div class="detail"><span>Puntos / part.</span><span>${fmt1(data.puntos_pp)}</span></div>
+          <div class="detail"><span>Rebotes / part.</span><span>${fmt1(data.rebotes_pp)}</span></div>
+          <div class="detail"><span>Asistencias / part.</span><span>${fmt1(data.asistencias_pp)}</span></div>
+          <div class="detail"><span>Triples</span><span>${data.triples_anotados}/${data.triples_intentados} (${fmt1(data.triples_intentados ? data.triples_anotados / data.triples_intentados * 100 : 0)}%)</span></div>
+        </div>`).join('');
+      const categoriasFormato = calcularCategoriasDiaz(formato, puntuacion, 'formato');
+      const categoriasPuntuacion = calcularCategoriasDiaz(formato, puntuacion, 'puntuacion');
+      const categoryCardsGenerales = categories => Object.entries(categories).map(([tipo, data]) => `
+        <div class="type-card">
+          <div class="title">${tipo}</div>
+          <div class="detail"><span>${plural(data.partidos, 'Partido', 'Partidos')}</span><span>${data.partidos}</span></div>
+          <div class="detail"><span>Win rate</span><span>${fmtPct(data.win_rate)}</span></div>
+          <div class="detail"><span>+/- total</span><span>${data.mas_menos_total >= 0 ? '+' : ''}${fmt1(data.mas_menos_total)}</span></div>
+          <div class="detail"><span>+/- por partido</span><span>${data.mas_menos_pp >= 0 ? '+' : ''}${fmt1(data.mas_menos_pp)}</span></div>
+        </div>`).join('');
+      const categoriasFormatoGenerales = tempGeneral.calcular_estadisticas_jugador_por_formato(nombreJugador);
+      const categoriasPuntuacionGenerales = tempGeneral.calcular_estadisticas_jugador_por_tipo_de_partido(nombreJugador);
+      const clutchList = tempGeneral.calcular_win_rate_clutch();
+      const clutchPlayer = clutchList.find(([jugador]) => norm(jugador) === norm(nombreJugador));
+      const clutchValue = clutchPlayer ? fmtPct(clutchPlayer[1]) : 'Sin datos suficientes';
+
+      texto.innerHTML = `
+        <div class="diaz-profile-front player-profile-shell">
+          <div class="player-hero-actions"><button type="button" class="secondary-btn" data-diaz-flip aria-pressed="false">Girar carta</button></div>
+          <div class="player-summary-strip">
+            ${resumen.map(([label, value]) => `<div class="player-summary-item"><div class="player-summary-label">${label}</div><div class="player-summary-value">${value}</div></div>`).join('')}
+          </div>
+          <div class="bio-grid">
+            <div class="bio-item"><div class="bio-label">Altura</div><div class="bio-value">${valorVisible(perfil.alturaCm ? `${perfil.alturaCm} cm` : '-')}</div></div>
+            <div class="bio-item"><div class="bio-label">Peso</div><div class="bio-value">${valorVisible(perfil.pesoKg ? `${perfil.pesoKg} kg` : '-')}</div></div>
+            <div class="bio-item"><div class="bio-label">Edad</div><div class="bio-value">${valorVisible(calcularEdad(perfil.fechaNacimiento) === null ? '-' : `${calcularEdad(perfil.fechaNacimiento)} años`)}</div></div>
+            <div class="bio-item"><div class="bio-label">Fecha de nacimiento</div><div class="bio-value">${valorVisible(perfil.fechaNacimiento || '-')}</div></div>
+          </div>
+          <div class="player-section">
+            <h3>Impacto en el marcador</h3>
+            <div class="stats-grid"><div class="stat-box"><div class="label">+/- total</div><div class="value" style="color:${statsGeneral.mas_menos_total >= 0 ? 'var(--ok)' : 'var(--bad)'}">${statsGeneral.mas_menos_total >= 0 ? '+' : ''}${fmt1(statsGeneral.mas_menos_total)}</div></div><div class="stat-box"><div class="label">+/- por partido</div><div class="value" style="color:${statsGeneral.mas_menos_pp >= 0 ? 'var(--ok)' : 'var(--bad)'}">${statsGeneral.mas_menos_pp >= 0 ? '+' : ''}${fmt1(statsGeneral.mas_menos_pp)}</div></div></div>
+          </div>
+          <div class="player-section">
+            <h3>Rendimiento clutch</h3>
+            <div class="stats-grid"><div class="stat-box"><div class="label">Win rate clutch</div><div class="value">${clutchValue}</div></div><div class="stat-box"><div class="label">Partidos clutch</div><div class="value">${clutchPlayer ? clutchPlayer[2] : statsGeneral.partidos_jugados < 5 ? 0 : 'Sin datos'}</div></div><div class="stat-box"><div class="label">Criterio</div><div class="value">Min. 5</div></div></div>
+          </div>
+          <div class="player-section"><h3>Desglose por formato</h3><div class="player-type-cards">${categoryCardsGenerales(categoriasFormatoGenerales) || '<div class="sub">Sin datos para este jugador.</div>'}</div></div>
+          <div class="player-section"><h3>Desglose por tipo de partido</h3><div class="player-type-cards">${categoryCardsGenerales(categoriasPuntuacionGenerales) || '<div class="sub">Sin datos para este jugador.</div>'}</div></div>
+          <div class="player-section collective-chart">
+            <div class="collective-chart-header">
+              <div>
+                <h3>Evolución por partido</h3>
+                <div class="sub">La línea destacada es ${perfil.nombreMostrado}. Puedes añadir jugadores para comparar.</div>
+              </div>
+              <div class="chart-switcher" role="group" aria-label="Métrica del gráfico">
+                <button type="button" class="active" data-diaz-chart-metric="masMenosTotal">+/- total</button>
+                <button type="button" data-diaz-chart-metric="masMenosPP">+/- por partido</button>
+                <button type="button" data-diaz-chart-metric="winRate">Win rate</button>
+              </div>
+            </div>
+            <div class="chart-player-picker">
+              <label for="diazChartBuscarJugador">Comparar con otros jugadores</label>
+              <input id="diazChartBuscarJugador" type="search" placeholder="Escribe un nombre para añadirlo" autocomplete="off">
+              <div id="diazChartResultados" class="chart-player-results" hidden></div>
+              <div id="diazChartSeleccionados" class="chart-player-selected-list"></div>
+            </div>
+            <div class="chart-scroll">
+              <svg id="diazChart" role="img" aria-label="Evolución de estadísticas del perfil"></svg>
+            </div>
+            <div id="diazChartLegend" class="chart-legend"></div>
+          </div>
+        </div>
+        <div class="diaz-profile-back player-profile-shell" hidden>
+          <div class="player-hero-actions"><button type="button" class="secondary-btn" data-diaz-flip aria-pressed="true">Volver al perfil</button></div>
+          <div class="stats-scope">Estadísticas individuales contabilizadas a partir del partido 146 del total (${partidosRaw.length}).</div>
+          <div class="player-section"><h3>Estadísticas avanzadas</h3><div class="stats-grid">
+            <div class="stat-box"><div class="label">Minutos</div><div class="value">${stats.minutos_totales}</div></div>
+            <div class="stat-box"><div class="label">Valoración</div><div class="value">${fmt1(stats.valoracion_total)}</div></div>
+            <div class="stat-box"><div class="label">Valoración por partido</div><div class="value">${fmt1(stats.valoracion_total / Math.max(stats.partidos_jugados, 1))}</div></div>
+            <div class="stat-box"><div class="label">Puntos totales</div><div class="value">${stats.puntos_totales}</div></div>
+            <div class="stat-box"><div class="label">Puntos por partido</div><div class="value">${fmt1(stats.puntos_pp)}</div></div>
+            <div class="stat-box"><div class="label">Rebotes por partido</div><div class="value">${fmt1(stats.rebotes_pp)}</div></div>
+            <div class="stat-box"><div class="label">Asistencias por partido</div><div class="value">${fmt1(stats.asistencias_pp)}</div></div>
+            <div class="stat-box"><div class="label">Triples</div><div class="value">${stats.triples_anotados_totales}/${stats.triples_intentados_totales} (${fmt1(stats.pct_triples)}%)</div></div>
+            <div class="stat-box"><div class="label">Tapones</div><div class="value">${stats.tapones_totales}</div></div>
+          </div></div>
+          <div class="player-section"><h3>Desglose por formato</h3><div class="player-type-cards">${categoryCards(categoriasFormato) || '<div class="sub">Sin datos para este jugador.</div>'}</div></div>
+          <div class="player-section"><h3>Desglose por tipo de partido</h3><div class="player-type-cards">${categoryCards(categoriasPuntuacion) || '<div class="sub">Sin datos para este jugador.</div>'}</div></div>
+        </div>`;
+      const buttons = texto.querySelectorAll('[data-diaz-flip]');
+      const front = texto.querySelector('.diaz-profile-front');
+      const back = texto.querySelector('.diaz-profile-back');
+      buttons.forEach(button => button.addEventListener('click', () => {
+        const mostrandoStats = back.hidden;
+        front.hidden = mostrandoStats;
+        back.hidden = !mostrandoStats;
+        buttons.forEach(item => {
+          item.textContent = mostrandoStats ? 'Volver al perfil' : 'Girar carta';
+          item.setAttribute('aria-pressed', String(mostrandoStats));
+        });
+      }));
+      const chartSearch = el('diazChartBuscarJugador');
+      const chartResults = el('diazChartResultados');
+      const chartSelected = el('diazChartSeleccionados');
+      const jugadoresDisponibles = tempParaGrafica.obtener_todos_jugadores()
+        .filter(jugador => norm(jugador) !== norm(nombreJugador));
+      const seleccionados = [];
+      const renderPerfilChart = () => renderGraficoPerfil(nombreJugador, tempParaGrafica, seleccionados, 'diazChart', 'diazChartLegend');
+      const renderComparador = () => {
+        const query = norm(chartSearch.value);
+        const resultados = jugadoresDisponibles.filter(jugador => query && norm(jugador).includes(query) && !seleccionados.some(item => norm(item) === norm(jugador)));
+        chartResults.innerHTML = resultados.length
+          ? resultados.map(jugador => `<button type="button" class="chart-player-option" data-diaz-add-player="${jugador}">${jugador}<span>+</span></button>`).join('')
+          : '';
+        chartResults.hidden = resultados.length === 0;
+        chartSelected.innerHTML = seleccionados.map(jugador => `<span class="chart-player-selected">${jugador}<button type="button" aria-label="Quitar ${jugador}" data-diaz-remove-player="${jugador}">×</button></span>`).join('');
+      };
+      chartSearch.addEventListener('input', renderComparador);
+      chartResults.addEventListener('click', event => {
+        const option = event.target.closest('[data-diaz-add-player]');
+        if (!option) return;
+        seleccionados.push(option.dataset.diazAddPlayer);
+        chartSearch.value = '';
+        renderComparador();
+        renderPerfilChart();
+      });
+      chartSelected.addEventListener('click', event => {
+        const remove = event.target.closest('[data-diaz-remove-player]');
+        if (!remove) return;
+        const index = seleccionados.findIndex(jugador => jugador === remove.dataset.diazRemovePlayer);
+        if (index !== -1) seleccionados.splice(index, 1);
+        renderComparador();
+        renderPerfilChart();
+      });
+      document.querySelectorAll('[data-diaz-chart-metric]').forEach(chartButton => {
+        chartButton.addEventListener('click', () => {
+          metricaGraficoColectivas = chartButton.dataset.diazChartMetric;
+          document.querySelectorAll('[data-diaz-chart-metric]').forEach(item => item.classList.toggle('active', item === chartButton));
+          renderPerfilChart();
+        });
+      });
+      renderPerfilChart();
+    }
+
     function renderPerfilDetallado(nombreJugador, formato = 'Todos', puntuacion = 'Todos') {
       metricaGraficoColectivas = 'masMenosTotal';
       const perfil = obtenerPerfil(nombreJugador);
@@ -863,7 +1097,9 @@
       const partidosParaGrafica = getPartidosFiltrados(formato, puntuacion);
       const temp = new Temporada(partidosFiltrados);
       const tempParaGrafica = new Temporada(partidosParaGrafica);
-      const stats = temp.calcular_estadisticas_jugador(nombreJugador);
+      const esDiaz = norm(nombreJugador) === 'diaz';
+      const statsGenerales = temp.calcular_estadisticas_jugador(nombreJugador);
+      const stats = esDiaz ? calcularEstadisticasDiaz(formato, puntuacion) : statsGenerales;
       const hero = el('perfilHero');
       const texto = el('perfilTexto');
 
@@ -879,7 +1115,6 @@
         puntuacion !== 'Todos' ? puntuacion : ''
       ].filter(Boolean);
       const filtroPerfilTexto = filtrosPerfil.length ? filtrosPerfil.join(' · ') : 'Todos los partidos';
-
       const metrics = perfil.esJugadorPrincipal
         ? [
             { label: 'Puntos / part.', value: fmt1(stats.puntos_pp) },
@@ -888,10 +1123,10 @@
             { label: '% triples', value: `${fmt1(stats.pct_triples)}%` }
           ]
         : [
-            { label: plural(stats.partidos_jugados, 'Partido jugado', 'Partidos jugados'), value: stats.partidos_jugados },
-            { label: plural(stats.victorias, 'Partido ganado', 'Partidos ganados'), value: stats.victorias },
-            { label: plural(stats.partidos_jugados - stats.victorias, 'Partido perdido', 'Partidos perdidos'), value: stats.partidos_jugados - stats.victorias },
-            { label: 'Win rate', value: fmtPct(stats.win_rate) },
+            { label: plural(statsGenerales.partidos_jugados, 'Partido jugado', 'Partidos jugados'), value: statsGenerales.partidos_jugados },
+            { label: plural(statsGenerales.victorias, 'Partido ganado', 'Partidos ganados'), value: statsGenerales.victorias },
+            { label: plural(statsGenerales.partidos_jugados - statsGenerales.victorias, 'Partido perdido', 'Partidos perdidos'), value: statsGenerales.partidos_jugados - statsGenerales.victorias },
+            { label: 'Win rate', value: fmtPct(statsGenerales.win_rate) },
           ];
 
       hero.innerHTML = `
@@ -909,6 +1144,13 @@
       const clutchList = temp.calcular_win_rate_clutch();
       const clutchPlayer = clutchList.find(([jugador]) => norm(jugador) === norm(nombreJugador));
       const clutchValue = clutchPlayer ? fmtPct(clutchPlayer[1]) : 'Sin datos suficientes';
+      const registrosDiaz = esDiaz ? obtenerRegistrosDiaz(formato, puntuacion) : [];
+      const partidosDiaz = registrosDiaz.map(({ registro }) => registro.partido);
+      const diazAlcanceTexto = partidosDiaz.length === 0
+        ? 'ningún partido con este filtro'
+        : partidosDiaz.length === 1
+          ? `el partido ${partidosDiaz[0]} del total (${partidosRaw.length})`
+          : `los partidos ${partidosDiaz[0]} a ${partidosDiaz[partidosDiaz.length - 1]} del total (${partidosRaw.length})`;
 
       const bioGrid = [
         ['Altura', perfil.alturaCm ? `${perfil.alturaCm} cm` : '-'],
@@ -927,37 +1169,43 @@
         ${perfil.esJugadorPrincipal ? `<div class="player-section">
           <h3>General</h3>
           <div class="stats-grid">
-            <div class="stat-box"><div class="label">${plural(stats.partidos_jugados, 'Partido jugado', 'Partidos jugados')}</div><div class="value">${stats.partidos_jugados}</div></div>
-            <div class="stat-box"><div class="label">${plural(stats.victorias, 'Partido ganado', 'Partidos ganados')}</div><div class="value">${stats.victorias}</div></div>
-            <div class="stat-box"><div class="label">Win rate</div><div class="value" style="color:${stats.win_rate >= 50 ? 'var(--ok)' : 'var(--bad)'}">${fmtPct(stats.win_rate)}</div></div>
+            <div class="stat-box"><div class="label">${plural(statsGenerales.partidos_jugados, 'Partido jugado', 'Partidos jugados')}</div><div class="value">${statsGenerales.partidos_jugados}</div></div>
+            <div class="stat-box"><div class="label">${plural(statsGenerales.victorias, 'Partido ganado', 'Partidos ganados')}</div><div class="value">${statsGenerales.victorias}</div></div>
+            <div class="stat-box"><div class="label">Win rate</div><div class="value" style="color:${statsGenerales.win_rate >= 50 ? 'var(--ok)' : 'var(--bad)'}">${fmtPct(statsGenerales.win_rate)}</div></div>
           </div>
         </div>` : ''}
         <div class="player-section">
           <h3>Impacto en el marcador</h3>
           <div class="stats-grid">
-            <div class="stat-box"><div class="label">+/- total</div><div class="value" style="color:${stats.mas_menos_total >= 0 ? 'var(--ok)' : 'var(--bad)'}">${stats.mas_menos_total >= 0 ? '+' : ''}${fmt1(stats.mas_menos_total)}</div></div>
-            <div class="stat-box"><div class="label">+/- por partido</div><div class="value" style="color:${stats.mas_menos_pp >= 0 ? 'var(--ok)' : 'var(--bad)'}">${stats.mas_menos_pp >= 0 ? '+' : ''}${fmt1(stats.mas_menos_pp)}</div></div>
+            <div class="stat-box"><div class="label">+/- total</div><div class="value" style="color:${statsGenerales.mas_menos_total >= 0 ? 'var(--ok)' : 'var(--bad)'}">${statsGenerales.mas_menos_total >= 0 ? '+' : ''}${fmt1(statsGenerales.mas_menos_total)}</div></div>
+            <div class="stat-box"><div class="label">+/- por partido</div><div class="value" style="color:${statsGenerales.mas_menos_pp >= 0 ? 'var(--ok)' : 'var(--bad)'}">${statsGenerales.mas_menos_pp >= 0 ? '+' : ''}${fmt1(statsGenerales.mas_menos_pp)}</div></div>
           </div>
         </div>
         <div class="player-section">
           <h3>Rendimiento clutch</h3>
           <div class="stats-grid">
             <div class="stat-box"><div class="label">Win rate clutch</div><div class="value">${clutchValue}</div></div>
-            <div class="stat-box"><div class="label">Partidos clutch</div><div class="value">${clutchPlayer ? clutchPlayer[2] : stats.partidos_jugados < 5 ? 0 : 'Sin datos'}</div></div>
+            <div class="stat-box"><div class="label">Partidos clutch</div><div class="value">${clutchPlayer ? clutchPlayer[2] : statsGenerales.partidos_jugados < 5 ? 0 : 'Sin datos'}</div></div>
             <div class="stat-box"><div class="label">Criterio</div><div class="value">Min. 5</div></div>
           </div>
         </div>
       `;
 
-      if (perfil.esJugadorPrincipal) {
+      if (perfil.esJugadorPrincipal || esDiaz) {
         generalHtml += `
           <div class="player-section">
-            <h3>Estadísticas avanzadas</h3>
+            <h3>Estadísticas avanzadas${esDiaz ? ` <span style="font-size:12px;color:var(--muted);font-weight:400;letter-spacing:0;">(Díaz: ${stats.partidos_jugados} partidos contabilizados, ${diazAlcanceTexto})</span>` : ''}</h3>
             <div class="stats-grid">
               <div class="stat-box"><div class="label">Minutos</div><div class="value">${stats.minutos_totales}</div></div>
               <div class="stat-box"><div class="label">Valoración</div><div class="value">${fmt1(stats.valoracion_total)}</div></div>
               <div class="stat-box"><div class="label">Valoración por partido</div><div class="value">${fmt1(stats.valoracion_total / Math.max(stats.partidos_jugados, 1))}</div></div>
               <div class="stat-box"><div class="label">Contribución</div><div class="value">${fmt1(stats.contribucion_total)} (${fmt1(stats.puntos_equipo_total ? stats.contribucion_total / stats.puntos_equipo_total * 100 : 0)}%)</div></div>
+              ${esDiaz ? `
+                <div class="stat-box"><div class="label">Puntos por partido</div><div class="value">${fmt1(stats.puntos_pp)}</div></div>
+                <div class="stat-box"><div class="label">Rebotes por partido</div><div class="value">${fmt1(stats.rebotes_pp)}</div></div>
+                <div class="stat-box"><div class="label">Asistencias por partido</div><div class="value">${fmt1(stats.asistencias_pp)}</div></div>
+                <div class="stat-box"><div class="label">Porcentaje de triples</div><div class="value">${fmt1(stats.pct_triples)}%</div></div>
+              ` : ''}
               <div class="stat-box"><div class="label">Puntos totales</div><div class="value">${stats.puntos_totales}</div></div>
               <div class="stat-box"><div class="label">Rebotes</div><div class="value">${stats.rebotes_totales}</div></div>
               <div class="stat-box"><div class="label">Asistencias</div><div class="value">${stats.asistencias_totales}</div></div>

@@ -726,5 +726,46 @@
     formato:"3vs3", resultado:false, puntos_totales:8, puntos_rivales:11, minutos:15,
     puntos:4, asistencias:1, rebotes:5, tapones:2, triples_intentados:1, triples_anotados:0,
     jugadores_equipo:["Eric","Ot","Cavi"], jugadores_rivales:["Arnau","Diaz","Jamo"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:12, puntos_rivales:0, minutos:10,
+    puntos:7, asistencias:1, rebotes:4, tapones:0, triples_intentados:1, triples_anotados:1,
+    jugadores_equipo:["Eric","Nicole","Diaz"], jugadores_rivales:["Ert","Jamo","Cavi"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:6, minutos:15,
+    puntos:4, asistencias:1, rebotes:3, tapones:0, triples_intentados:1, triples_anotados:0,
+    jugadores_equipo:["Eric","Cavi","Jamo"], jugadores_rivales:["Ert","Diaz","Nicole"]
+  },
+  {
+    formato:"3vs3", resultado:false, puntos_totales:6, puntos_rivales:11, minutos:15,
+    puntos:4, asistencias:0, rebotes:3, tapones:0, triples_intentados:1, triples_anotados:0,
+    jugadores_equipo:["Eric","Nicole","Jamo"], jugadores_rivales:["Ert","Diaz","Cavi"]
+  },
+  {
+    formato:"3vs3", resultado:false, puntos_totales:10, puntos_rivales:12, minutos:20,
+    puntos:8, asistencias:1, rebotes:7, tapones:0, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Nicole","Ert"], jugadores_rivales:["Cavi","Diaz","Jamo"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:9, minutos:15,
+    puntos:6, asistencias:1, rebotes:6, tapones:0, triples_intentados:1, triples_anotados:0,
+    jugadores_equipo:["Eric","Jamo","Diaz"], jugadores_rivales:["Cavi","Nicole","Ert"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:6, minutos:15,
+    puntos:8, asistencias:0, rebotes:5, tapones:3, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Nicole","Cavi"], jugadores_rivales:["Jamo","Diaz","Ert"]
   }
+];
+
+// Estadisticas individuales de Diaz. Cada registro corresponde al partido comun indicado.
+// Los ceros son valores provisionales para completar manualmente.
+const estadisticasDiazRaw = [
+  { partido: 146, puntos: 2, asistencias: 2, rebotes: 1, tapones: 0, triples_intentados: 0, triples_anotados: 0, minutos: 10 },
+  { partido: 147, puntos: 2, asistencias: 0, rebotes: 2, tapones: 0, triples_intentados: 0, triples_anotados: 0, minutos: 15 },
+  { partido: 148, puntos: 5, asistencias: 2, rebotes: 5, tapones: 0, triples_intentados: 4, triples_anotados: 1, minutos: 15 },
+  { partido: 149, puntos: 4, asistencias: 1, rebotes: 4, tapones: 0, triples_intentados: 4, triples_anotados: 0, minutos: 20 },
+  { partido: 150, puntos: 5, asistencias: 3, rebotes: 5, tapones: 0, triples_intentados: 3, triples_anotados: 1, minutos: 15 },
+  { partido: 151, puntos: 2, asistencias: 2, rebotes: 4, tapones: 0, triples_intentados: 3, triples_anotados: 0, minutos: 15 }
 ];
