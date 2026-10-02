@@ -124,6 +124,94 @@
         return {estimado: null, faltan};
       }
 
+      calcular_mas_menos_por_partido_equipo(equipo){
+        const teamSet = new Set(equipo.map(norm));
+        let partidos_eq = 0, mas_menos = 0;
+        for(const p of this.partidos){
+          const eq = new Set(p.jugadores_equipo.map(norm));
+          const rv = new Set(p.jugadores_rivales.map(norm));
+          if(equalSets(teamSet, eq)){ partidos_eq++; mas_menos += p.calcular_mas_menos(); }
+          else if(equalSets(teamSet, rv)){ partidos_eq++; mas_menos -= p.calcular_mas_menos(); }
+        }
+        if(partidos_eq > 0) return {mas_menos: +(mas_menos / partidos_eq).toFixed(1), partidos: partidos_eq};
+        return {mensaje: 'No han jugado partidos juntos.'};
+      }
+
+      calcular_mas_menos_por_partido_estimado(equipo){
+        const mm = this.calcular_mas_menos_por_partido_jugadores();
+        const mmMap = Object.fromEntries(mm.map(([j, valor]) => [norm(j), valor]));
+        const pjMap = {};
+        for(const p of this.partidos){
+          for(const j of [...p.jugadores_equipo, ...p.jugadores_rivales]) pjMap[norm(j)] = (pjMap[norm(j)] || 0) + 1;
+        }
+        let suma = 0, total = 0, faltan = [];
+        for(const nombre of equipo){
+          const clave = norm(nombre);
+          if(clave in mmMap){ suma += mmMap[clave] * pjMap[clave]; total += pjMap[clave]; }
+          else faltan.push(nombre);
+        }
+        if(total > 0) return {estimado: +(suma / total).toFixed(1), faltan};
+        return {estimado: null, faltan};
+      }
+
+      calcular_rachas_jugador(nombreJugador){
+        const jugadorNorm = norm(nombreJugador);
+        let rachaVictorias = 0, rachaDerrotas = 0, actual = 0, tipoActual = '';
+        let victoriasSeguidas = 0, derrotasSeguidas = 0;
+        for(const p of this.partidos){
+          const enEquipo = p.jugadores_equipo.some(j => norm(j) === jugadorNorm);
+          const enRivales = p.jugadores_rivales.some(j => norm(j) === jugadorNorm);
+          if(!enEquipo && !enRivales) continue;
+          const gano = enEquipo === p.resultado;
+          if(gano){
+            victoriasSeguidas++;
+            derrotasSeguidas = 0;
+            rachaVictorias = Math.max(rachaVictorias, victoriasSeguidas);
+          }else{
+            derrotasSeguidas++;
+            victoriasSeguidas = 0;
+            rachaDerrotas = Math.max(rachaDerrotas, derrotasSeguidas);
+          }
+          const tipoPartido = gano ? 'victorias' : 'derrotas';
+          actual = tipoActual === tipoPartido ? actual + 1 : 1;
+          tipoActual = tipoPartido;
+        }
+        return {rachaVictorias, rachaDerrotas, actual, tipoActual};
+      }
+
+      calcular_perfil_equipo(nombreJugador){
+        const jugadorNorm = norm(nombreJugador);
+        const relaciones = {aliado: {}, lastre: {}, abuson: {}, nemesis: {}};
+        const registrar = (grupo, jugador, gano) => {
+          const clave = norm(jugador);
+          if(!relaciones[grupo][clave]) relaciones[grupo][clave] = {nombre: jugador, partidos: 0, victorias: 0};
+          relaciones[grupo][clave].partidos++;
+          if(gano) relaciones[grupo][clave].victorias++;
+        };
+        for(const p of this.partidos){
+          const enEquipo = p.jugadores_equipo.some(j => norm(j) === jugadorNorm);
+          const enRivales = p.jugadores_rivales.some(j => norm(j) === jugadorNorm);
+          if(!enEquipo && !enRivales) continue;
+          const companeros = enEquipo ? p.jugadores_equipo : p.jugadores_rivales;
+          const rivales = enEquipo ? p.jugadores_rivales : p.jugadores_equipo;
+          const gano = enEquipo === p.resultado;
+          companeros.filter(j => norm(j) !== jugadorNorm).forEach(j => registrar('aliado', j, gano));
+          rivales.forEach(j => registrar('abuson', j, gano));
+        }
+        const mejor = (grupo, ascendente) => {
+          const candidatos = Object.values(relaciones[grupo]).filter(item => item.partidos >= 5);
+          candidatos.forEach(item => item.win_rate = item.victorias / item.partidos * 100);
+          candidatos.sort((a, b) => ascendente ? a.win_rate - b.win_rate : b.win_rate - a.win_rate || b.partidos - a.partidos);
+          return candidatos[0] || null;
+        };
+        return {
+          aliado: mejor('aliado', false),
+          lastre: mejor('aliado', true),
+          abuson: mejor('abuson', false),
+          nemesis: mejor('abuson', true)
+        };
+      }
+
       filtrar_partidos_clutch(){
         const clutch=[];
         for(const p of this.partidos){
@@ -1144,6 +1232,8 @@
       const clutchList = temp.calcular_win_rate_clutch();
       const clutchPlayer = clutchList.find(([jugador]) => norm(jugador) === norm(nombreJugador));
       const clutchValue = clutchPlayer ? fmtPct(clutchPlayer[1]) : 'Sin datos suficientes';
+      const rachas = temp.calcular_rachas_jugador(nombreJugador);
+      const perfilEquipo = temp.calcular_perfil_equipo(nombreJugador);
       const registrosDiaz = esDiaz ? obtenerRegistrosDiaz(formato, puntuacion) : [];
       const partidosDiaz = registrosDiaz.map(({ registro }) => registro.partido);
       const diazAlcanceTexto = partidosDiaz.length === 0
@@ -1187,6 +1277,14 @@
             <div class="stat-box"><div class="label">Win rate clutch</div><div class="value">${clutchValue}</div></div>
             <div class="stat-box"><div class="label">Partidos clutch</div><div class="value">${clutchPlayer ? clutchPlayer[2] : statsGenerales.partidos_jugados < 5 ? 0 : 'Sin datos'}</div></div>
             <div class="stat-box"><div class="label">Criterio</div><div class="value">Min. 5</div></div>
+          </div>
+        </div>
+        <div class="player-section">
+          <h3>Rachas</h3>
+          <div class="streak-grid">
+            <div class="streak-box wins"><div class="label">Racha de victorias</div><div class="value">${rachas.rachaVictorias} partidos</div></div>
+            <div class="streak-box losses"><div class="label">Racha de derrotas</div><div class="value">${rachas.rachaDerrotas} partidos</div></div>
+            <div class="streak-box current"><div class="label">Racha vigente</div><div class="value">${rachas.actual ? `${rachas.actual} ${rachas.tipoActual === 'victorias' ? plural(rachas.actual, 'victoria', 'victorias') : plural(rachas.actual, 'derrota', 'derrotas')}` : 'Sin partidos'}</div></div>
           </div>
         </div>
       `;
@@ -1238,6 +1336,16 @@
       const formatoStats = temp.calcular_estadisticas_jugador_por_formato(nombreJugador);
       const formatoOrdenado = Object.fromEntries(['2vs2', '3vs3', '4vs4', '5vs5'].filter(tipo => tipo in formatoStats).map(tipo => [tipo, formatoStats[tipo]]));
       const formatoCards = renderCategoryCards(formatoOrdenado, perfil.esJugadorPrincipal);
+      const teamProfileCards = [
+        ['ally', 'Aliado', perfilEquipo.aliado],
+        ['burden', 'Lastre', perfilEquipo.lastre],
+        ['bully', 'Abusón', perfilEquipo.abuson],
+        ['nemesis', 'Némesis', perfilEquipo.nemesis]
+      ].map(([clase, titulo, dato]) => `
+        <div class="team-profile-card ${clase}">
+          <div class="title">${titulo}</div>
+          ${dato ? `<div class="player">${dato.nombre}</div><div class="detail">${fmtPct(dato.win_rate)} en ${dato.partidos} ${plural(dato.partidos, 'partido', 'partidos')}</div>` : '<div class="detail">Sin datos suficientes</div>'}
+        </div>`).join('');
       generalHtml += `
         <div class="player-section">
           <h3>Desglose por formato</h3>
@@ -1269,6 +1377,11 @@
             <svg id="perfilChart" role="img" aria-label="Evolución de estadísticas del perfil"></svg>
           </div>
           <div id="perfilChartLegend" class="chart-legend"></div>
+        </div>
+        <div class="player-section">
+          <h3>Perfil de equipo</h3>
+          <div class="sub" style="margin-bottom:12px">Compañeros y rivales con mejor o peor porcentaje de victorias en los partidos filtrados (mínimo de 5 partidos).</div>
+          <div class="team-profile-grid">${teamProfileCards}</div>
         </div>`;
 
       texto.innerHTML = generalHtml;
@@ -1436,6 +1549,28 @@
         el('outEquipo').textContent = `Win rate de equipo: ${fmtPct(resultado["win rate"])} (${resultado.partidos} partidos juntos)`;
     }
 });
+
+    el('btnEstimadoMasMenos').addEventListener('click', ()=>{
+      const equipo = el('txtEquipoMasMenos').value.split(',').map(s=>s.trim()).filter(Boolean);
+      if(equipo.length === 0){ el('outEstimadoMasMenos').textContent = 'Introduce al menos un nombre.'; return; }
+      const {estimado, faltan} = temporada.calcular_mas_menos_por_partido_estimado(equipo);
+      if(estimado !== null){
+        el('outEstimadoMasMenos').innerHTML = `+/- por partido estimado: <b>${estimado >= 0 ? '+' : ''}${fmt1(estimado)}</b>${faltan.length ? ` · Sin datos (≥ 5 pj): ${faltan.join(', ')}` : ''}`;
+      }else{
+        el('outEstimadoMasMenos').textContent = `No hay suficientes datos para estimar. ${faltan.length ? 'Faltan: ' + faltan.join(', ') : ''}`;
+      }
+    });
+
+    el('btnEquipoMasMenos').addEventListener('click', ()=>{
+      const equipo = el('txtEquipoMasMenos').value.split(',').map(s=>s.trim()).filter(Boolean);
+      if(equipo.length === 0){ el('outEquipoMasMenos').textContent = 'Introduce al menos un jugador.'; return; }
+      const resultado = temporada.calcular_mas_menos_por_partido_equipo(equipo);
+      if(resultado.mensaje){
+        el('outEquipoMasMenos').textContent = resultado.mensaje;
+      }else{
+        el('outEquipoMasMenos').textContent = `+/- por partido de equipo: ${resultado.mas_menos >= 0 ? '+' : ''}${fmt1(resultado.mas_menos)} (${resultado.partidos} partidos juntos)`;
+      }
+    });
 
     // ==========================
     // Inicial

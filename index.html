@@ -109,6 +109,26 @@
     .type-card .detail{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px dashed #22314b;font-size:12px}
     .type-card .detail:first-of-type{border-top:none}
 
+    .streak-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    @media (max-width:700px){.streak-grid{grid-template-columns:1fr}}
+    .streak-box{padding:14px;border-radius:12px;border:1px solid #2d405f;background:#0f1521}
+    .streak-box .label{font-size:11px;color:#8fa6c2;text-transform:uppercase;letter-spacing:.1em}
+    .streak-box .value{font-size:22px;font-weight:800;margin-top:8px}
+    .streak-box.wins{border-color:rgba(57,217,138,.45)} .streak-box.wins .value{color:var(--ok)}
+    .streak-box.losses{border-color:rgba(255,107,107,.45)} .streak-box.losses .value{color:var(--bad)}
+    .streak-box.current{border-color:rgba(255,180,84,.5)} .streak-box.current .value{color:#ffb454}
+    .team-profile-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    @media (max-width:900px){.team-profile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:520px){.team-profile-grid{grid-template-columns:1fr}}
+    .team-profile-card{padding:12px;border-radius:12px;background:#0f1521;border:1px solid #2d405f}
+    .team-profile-card .title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+    .team-profile-card .player{font-size:18px;font-weight:800;color:#fff}
+    .team-profile-card .detail{margin-top:6px;color:#bcd0ee;font-size:12px}
+    .team-profile-card.ally{border-color:rgba(57,217,138,.55)} .team-profile-card.ally .title{color:var(--ok)}
+    .team-profile-card.burden{border-color:rgba(255,107,107,.55)} .team-profile-card.burden .title{color:var(--bad)}
+    .team-profile-card.bully{border-color:rgba(255,180,84,.55)} .team-profile-card.bully .title{color:#ffb454}
+    .team-profile-card.nemesis{border-color:rgba(199,146,234,.6)} .team-profile-card.nemesis .title{color:#c792ea}
+
     .secondary-btn{padding:8px 12px;border-radius:10px;background:#0f1521;border:1px solid #22314b;color:#e7eef6;cursor:pointer}
     .player-link{padding:0;border:0;background:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;text-decoration-color:transparent}
     .player-link:hover{text-decoration-color:currentColor;box-shadow:none}
@@ -182,6 +202,16 @@
           </div>
           <div id="outEstimado" class="sub"></div>
           <div id="outEquipo" class="sub"></div>
+        </div>
+        <div>
+          <label for="txtEquipoMasMenos">+/- por partido de equipo (nombres separados por coma)</label>
+          <input id="txtEquipoMasMenos" type="text" placeholder="eric, llongueras, gomez" />
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <button id="btnEstimadoMasMenos">Calcular +/- estimado</button>
+            <button id="btnEquipoMasMenos">Calcular +/- de equipo</button>
+          </div>
+          <div id="outEstimadoMasMenos" class="sub"></div>
+          <div id="outEquipoMasMenos" class="sub"></div>
         </div>
       </div>
     </aside>
