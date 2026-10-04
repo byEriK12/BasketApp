@@ -83,6 +83,9 @@
     .player-hero-meta{font-size:12px;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;font-weight:700}
     .player-hero-name{margin:0;font-size:clamp(2.2rem,5vw,4rem);line-height:0.95;font-weight:900;text-transform:uppercase;letter-spacing:-.04em}
     .player-hero-actions{display:flex;justify-content:flex-end;align-items:center}
+    .profile-highlights-button{position:absolute;right:14px;bottom:14px;z-index:2;padding:7px 10px;border-radius:9px;background:#0f1521;border:1px solid #22314b;color:#91a3b0;font-size:12px;font-weight:700;cursor:pointer}
+    .profile-highlights-button.active{background:#34507c;border-color:#4f9cff;color:#fff}
+    .profile-highlights-button:hover{border-color:#4f9cff;box-shadow:0 6px 18px rgba(79,156,255,.2)}
     .player-summary-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
     @media (max-width:700px){.player-summary-strip{grid-template-columns:1fr}}
     .player-summary-item{padding:12px 14px;border:1px solid #22314b;border-radius:12px;background:#0f1521;display:flex;flex-direction:column;gap:6px}
@@ -153,6 +156,18 @@
     .chart-player-selected button{padding:0 2px;border:0;background:none;color:#91a3b0;font-size:15px;line-height:1;box-shadow:none}
     .chart-player-selected button:hover{color:#fff;box-shadow:none}
     .chart-player-selected-list{display:flex;gap:6px;flex-wrap:wrap}
+    .highlights-header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+    .highlights-header h3{margin:0 0 4px;font-size:18px;color:#dfeaff}
+    .highlights-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+    .highlight-card{padding:14px;border:1px solid #34507c;border-radius:12px;background:linear-gradient(180deg,#142036,#0f1521);min-height:112px;display:flex;flex-direction:column;justify-content:space-between}
+    .highlight-label{font-size:11px;color:#8fa6c2;text-transform:uppercase;letter-spacing:.1em}
+    .highlight-value{font-size:24px;font-weight:800;color:#fff;margin:10px 0 6px}
+    .highlight-match{font-size:12px;color:#bcd0ee}
+    .highlight-empty{font-size:13px;color:var(--muted);margin-top:18px}
+    .profile-details-view{display:flex;flex-direction:column;gap:18px}
+    .profile-highlights-view{display:flex;flex-direction:column;gap:24px}
+    .profile-details-view[hidden],.profile-highlights-view[hidden]{display:none}
+    @media (max-width:520px){.profile-highlights-button{position:static;align-self:flex-end}.player-hero{flex-wrap:wrap}}
   </style>
 </head>
 <body>

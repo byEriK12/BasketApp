@@ -349,22 +349,10 @@
 
       // Nuevo método para calcular estadísticas según el tipo de partido
         calcular_estadisticas_por_tipo_de_partido() {
-        // Si uno de los dos equipos acaba con 11, 12 o 13 puntos hay que guardar todas las stats sumadas y crear el tipo de partido a 11 puntos.
         if (this.partidos.length === 0) return {};
         const tipos = {};
         for (const p of this.partidos) {
-          let tipo;
-          if (p.puntos_totales === 11 || p.puntos_rivales === 11 || p.puntos_totales === 12 || p.puntos_rivales === 12 || p.puntos_totales === 13 || p.puntos_rivales === 13) {
-            tipo = 'A 11 puntos';
-          }
-          // Si uno de los dos equipos acaba con 21, 22 o 23 puntos hay que guardar todas las stats sumadas y crear el tipo de partido a 21 puntos.
-          else if (p.puntos_totales === 21 || p.puntos_rivales === 21 || p.puntos_totales === 22 || p.puntos_rivales === 22 || p.puntos_totales === 23 || p.puntos_rivales === 23) {
-            tipo = 'A 21 puntos';
-          }
-          // Si uno de los equipos acaba con un número diferente a los comentados hay que guardar las stats sumadas y crear el tipo de partido otros.
-          else {
-            tipo = 'Otros';
-          }
+            const tipo = getPuntuacionCategoria(p);
           if (!(tipo in tipos)) {
             tipos[tipo] = {
               partidos: 0,
@@ -502,8 +490,8 @@
 
     function getPuntuacionCategoria(p) {
         const puntos = [p.puntos_totales, p.puntos_rivales];
-        if (puntos.some(v => v >= 11 && v <= 13)) return 'A 11 puntos';
         if (puntos.some(v => v >= 21 && v <= 23)) return 'A 21 puntos';
+      if (puntos.some(v => v >= 11 && v <= 13)) return 'A 11 puntos';
         return 'Otros';
     }
 
@@ -516,6 +504,65 @@
           filtrados = filtrados.filter(p => [...p.jugadores_equipo, ...p.jugadores_rivales].some(j => norm(j) === jugadorNorm));
         }
         return filtrados;
+    }
+
+    function calcularHighlightsJugador(nombreJugador, formato = 'Todos', puntuacion = 'Todos') {
+      const jugadorNorm = norm(nombreJugador);
+      const registros = jugadorNorm === 'diaz'
+        ? obtenerRegistrosDiaz(formato, puntuacion).map(({ partido, registro, enEquipo }) => ({
+            partido,
+            numero: registro.partido,
+            enEquipo,
+            puntos: registro.puntos,
+            asistencias: registro.asistencias,
+            rebotes: registro.rebotes,
+            tapones: registro.tapones,
+            triplesIntentados: registro.triples_intentados,
+            triplesAnotados: registro.triples_anotados,
+            puntosEquipo: enEquipo ? partido.puntos_totales : partido.puntos_rivales
+          }))
+        : getPartidosFiltrados(formato, puntuacion, nombreJugador).map(partido => ({
+            partido,
+            numero: partidos.indexOf(partido) + 1,
+            enEquipo: partido.jugadores_equipo.some(jugador => norm(jugador) === jugadorNorm),
+            puntos: partido.puntos,
+            asistencias: partido.asistencias,
+            rebotes: partido.rebotes,
+            tapones: partido.tapones,
+            triplesIntentados: partido.triples_intentados,
+            triplesAnotados: partido.triples_anotados,
+            puntosEquipo: partido.jugadores_equipo.some(jugador => norm(jugador) === jugadorNorm)
+              ? partido.puntos_totales
+              : partido.puntos_rivales
+          }));
+
+      const destacados = registros.map(registro => {
+        const masMenos = registro.partido.calcular_mas_menos() * (registro.enEquipo ? 1 : -1);
+        const valoracion = registro.puntos + registro.rebotes + registro.asistencias + registro.tapones
+          - 3 * (registro.triplesIntentados - registro.triplesAnotados) + masMenos;
+        const contribucion = registro.puntos + 2 * registro.asistencias;
+        return {
+          ...registro,
+          valoracion,
+          contribucion,
+          contribucionPct: registro.puntosEquipo ? contribucion / registro.puntosEquipo * 100 : 0
+        };
+      });
+
+      const mejor = (clave) => destacados.reduce((actual, registro) => {
+        if (!actual) return registro;
+        return registro[clave] > actual[clave] ? registro : actual;
+      }, null);
+
+      return [
+        { label: 'Más puntos', clave: 'puntos', valor: registro => `${registro.puntos} pts` },
+        { label: 'Más asistencias', clave: 'asistencias', valor: registro => `${registro.asistencias} ast` },
+        { label: 'Más rebotes', clave: 'rebotes', valor: registro => `${registro.rebotes} reb` },
+        { label: 'Más tapones', clave: 'tapones', valor: registro => `${registro.tapones} blk` },
+        { label: 'Más triples anotados', clave: 'triplesAnotados', valor: registro => `${registro.triplesAnotados} tripl.` },
+        { label: 'Mejor valoración', clave: 'valoracion', valor: registro => `${fmt1(registro.valoracion)}` },
+        { label: 'Mejor contribución', clave: 'contribucion', valor: registro => `${fmt1(registro.contribucion)} (${fmt1(registro.contribucionPct)}%)` }
+      ].map(destacado => ({ ...destacado, registro: mejor(destacado.clave) }));
     }
 
     const temporada = new Temporada(partidos);
@@ -1227,6 +1274,7 @@
           <div class="player-hero-meta">${franquicia} | ${dorsal} | ${posicion}</div>
           <h2 class="player-hero-name">${perfil.nombreMostrado}</h2>
         </div>
+        ${perfil.esJugadorPrincipal || esDiaz ? '<button type="button" class="profile-highlights-button" data-profile-highlights>Highlights</button>' : ''}
       `;
 
       const clutchList = temp.calcular_win_rate_clutch();
@@ -1384,7 +1432,34 @@
           <div class="team-profile-grid">${teamProfileCards}</div>
         </div>`;
 
+      if (perfil.esJugadorPrincipal || esDiaz) {
+        const highlights = calcularHighlightsJugador(nombreJugador, formato, puntuacion);
+        const highlightsCards = highlights.map(highlight => {
+          const registro = highlight.registro;
+          return `<div class="highlight-card">
+            <div class="highlight-label">${highlight.label}</div>
+            ${registro ? `<div class="highlight-value">${highlight.valor(registro)}</div><div class="highlight-match">Partido ${registro.numero} · ${registro.partido.formato} · ${registro.partido.puntos_totales}-${registro.partido.puntos_rivales}</div>` : '<div class="highlight-empty">Sin datos con estos filtros</div>'}
+          </div>`;
+        }).join('');
+        generalHtml = `<div class="profile-details-view" data-profile-details>${generalHtml}</div>
+          <div class="profile-highlights-view" data-profile-highlights-view hidden>
+            <div class="highlights-header"><div><h3>Highlights de ${perfil.nombreMostrado}</h3><div class="sub">Mejor registro en ${filtroPerfilTexto.toLowerCase()}.</div></div></div>
+            <div class="highlights-grid">${highlightsCards}</div>
+          </div>`;
+      }
+
       texto.innerHTML = generalHtml;
+      const highlightsButton = hero.querySelector('[data-profile-highlights]');
+      const detailsView = texto.querySelector('[data-profile-details]');
+      const highlightsView = texto.querySelector('[data-profile-highlights-view]');
+      const toggleHighlights = mostrar => {
+        if (!detailsView || !highlightsView) return;
+        detailsView.hidden = mostrar;
+        highlightsView.hidden = !mostrar;
+        highlightsButton?.classList.toggle('active', mostrar);
+        highlightsButton?.setAttribute('aria-pressed', String(mostrar));
+      };
+      highlightsButton?.addEventListener('click', () => toggleHighlights(highlightsView.hidden));
       const chartSearch = el('perfilChartBuscarJugador');
       const chartResults = el('perfilChartResultados');
       const chartSelected = el('perfilChartSeleccionados');
