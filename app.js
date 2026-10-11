@@ -1407,7 +1407,7 @@
       if (perfil.esJugadorPrincipal || esDiaz) {
         generalHtml += `
           <div class="player-section">
-            <h3>Estadísticas avanzadas${esDiaz ? ` <span style="font-size:12px;color:var(--muted);font-weight:400;letter-spacing:0;">(Díaz: ${stats.partidos_jugados} partidos contabilizados, ${diazAlcanceTexto})</span>` : ''}</h3>
+            <h3>Estadísticas avanzadas${esDiaz ? ` <span style="font-size:12px;color:var(--muted);font-weight:400;letter-spacing:0;">(Diaz: ${stats.partidos_jugados} partidos contabilizados, ${diazAlcanceTexto})</span>` : ''}</h3>
             <div class="stats-grid">
               <div class="stat-box"><div class="label">Minutos</div><div class="value">${stats.minutos_totales}</div></div>
               <div class="stat-box"><div class="label">Valoración</div><div class="value">${fmt1(stats.valoracion_total)}</div></div>
@@ -1634,10 +1634,15 @@
         btn.classList.add('active');
         const id=btn.dataset.tab;
         document.querySelectorAll('[id^="tab-"]').forEach(v=> v.hidden = (v.id!==id));
+        document.querySelectorAll('.nav-link').forEach(item => item.classList.toggle('active', item.dataset.navTarget === id));
         if (id === 'tab-jugadores') {
           jugadorSeleccionadoActual = null;
           document.getElementById('vistaIndiceJugadores').hidden = false;
           document.getElementById('vistaPerfilJugador').hidden = true;
+        }
+        if (id === 'tab-simulacion') {
+          renderSimulationScreen();
+          return;
         }
         aplicarFiltros();
     })
@@ -1735,6 +1740,1087 @@
       }
     });
 
+    const SIMULATION_POOL = ["Aleix", "Arnau", "Cavi", "Diaz", "Eric", "Ert", "Grinyo", "Jamo"];
+    const SIMULATION_WIN_SCORE = 11;
+    const SIMULATION_MESSAGE_DELAY_MS = 5000;
+    const SIMULATION_CPU_DELAY_MS = 6000;
+    const SIMULATION_FOLLOWUP_DELAY_MS = 1200;
+    const SIMULATION_RESULT_DELAY_MS = 5000;
+    const SIMULATION_FEED_LIMIT = 5;
+    const SIMULATION_ATTRIBUTE_NAMES = [
+      "tiro_cercano","bandeja_en_carrera","tiro_media_distancia","triple","precision_pase","manejo_balon",
+      "defensa_interior","defensa_exterior","robo","tapon","rebote_ofensivo","rebote_defensivo",
+      "velocidad","agilidad","fuerza"
+    ];
+    const SIMULATION_PLAYER_ATTRS = {
+      Aleix: { tiro_cercano: 84, bandeja_en_carrera: 86, tiro_media_distancia: 75, triple: 67, precision_pase: 83, manejo_balon: 81, defensa_interior: 64, defensa_exterior: 79, robo: 60, tapon: 51, rebote_ofensivo: 59, rebote_defensivo: 68, velocidad: 85, agilidad: 84, fuerza: 62 },
+      Arnau: { tiro_cercano: 78, bandeja_en_carrera: 92, tiro_media_distancia: 76, triple: 84, precision_pase: 81, manejo_balon: 80, defensa_interior: 61, defensa_exterior: 82, robo: 75, tapon: 64, rebote_ofensivo: 63, rebote_defensivo: 73, velocidad: 79, agilidad: 89, fuerza: 68 },
+      Cavi: { tiro_cercano: 66, bandeja_en_carrera: 59, tiro_media_distancia: 63, triple: 61, precision_pase: 70, manejo_balon: 52, defensa_interior: 82, defensa_exterior: 74, robo: 71, tapon: 70, rebote_ofensivo: 81, rebote_defensivo: 88, velocidad: 78, agilidad: 68, fuerza: 84 },
+      Diaz: { tiro_cercano: 76, bandeja_en_carrera: 72, tiro_media_distancia: 66, triple: 63, precision_pase: 83, manejo_balon: 71, defensa_interior: 76, defensa_exterior: 84, robo: 82, tapon: 74, rebote_ofensivo: 87, rebote_defensivo: 86, velocidad: 80, agilidad: 78, fuerza: 74 },
+      Eric: { tiro_cercano: 87, bandeja_en_carrera: 75, tiro_media_distancia: 77, triple: 76, precision_pase: 89, manejo_balon: 83, defensa_interior: 80, defensa_exterior: 68, robo: 72, tapon: 85, rebote_ofensivo: 81, rebote_defensivo: 79, velocidad: 73, agilidad: 70, fuerza: 82 },
+      Ert: { tiro_cercano: 83, bandeja_en_carrera: 70, tiro_media_distancia: 71, triple: 73, precision_pase: 77, manejo_balon: 78, defensa_interior: 77, defensa_exterior: 64, robo: 65, tapon: 74, rebote_ofensivo: 73, rebote_defensivo: 70, velocidad: 72, agilidad: 70, fuerza: 79 },
+      Grinyo: { tiro_cercano: 62, bandeja_en_carrera: 60, tiro_media_distancia: 70, triple: 63, precision_pase: 70, manejo_balon: 49, defensa_interior: 71, defensa_exterior: 76, robo: 57, tapon: 55, rebote_ofensivo: 61, rebote_defensivo: 70, velocidad: 68, agilidad: 80, fuerza: 62 },
+      Jamo: { tiro_cercano: 68, bandeja_en_carrera: 69, tiro_media_distancia: 64, triple: 78, precision_pase: 76, manejo_balon: 59, defensa_interior: 81, defensa_exterior: 71, robo: 72, tapon: 82, rebote_ofensivo: 67, rebote_defensivo: 75, velocidad: 67, agilidad: 67, fuerza: 63 }
+    };
+
+    const SIMULATION_CSS = `
+      .sim-shell { display:flex; flex-direction:column; gap:14px; }
+      .sim-lobby, .sim-roster, .sim-game, .sim-finish { display:flex; flex-direction:column; gap:14px; }
+      .sim-hero { display:flex; justify-content:center; padding:14px 12px; }
+      .sim-main-button { min-width:180px; font-size:16px; font-weight:700; }
+      .sim-setup { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+      .sim-team { background:#101725; border:1px solid #22314b; border-radius:16px; padding:14px; }
+      .sim-team h3 { margin:0 0 12px; }
+      .sim-players { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; }
+      .sim-player-card { border:1px solid #22314b; border-radius:12px; background:#0f1521; padding:10px; display:flex; align-items:center; gap:10px; position:relative; overflow:visible; }
+      .sim-player-card img { width:42px; height:42px; border-radius:50%; object-fit:cover; border:2px solid #22314b; }
+      .sim-player-card .name { font-weight:700; text-transform:none; }
+      .sim-player-card .role { font-size:11px; color:#91a3b0; text-transform:none; }
+      .sim-tooltip { position:absolute; left:50%; top:auto; bottom:calc(100% + 10px); transform:translateX(-50%); background:#0d1520; border:1px solid #34507c; border-radius:12px; padding:10px; z-index:10; font-size:11px; color:#dfeaff; box-shadow:0 10px 20px rgba(0,0,0,.25); display:none; width:min(240px, 80vw); text-transform:none; }
+      .sim-player-card:hover .sim-tooltip, .sim-player-card:focus-within .sim-tooltip, .sim-player-card.active .sim-tooltip { display:block; }
+      .sim-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+      .sim-action-button { background:#0f1521; border:1px solid #2a3b57; color:#eaf2ff; border-radius:10px; padding:8px 10px; }
+      .sim-action-button.primary { background:linear-gradient(180deg,#4f9cff,#3e86e3); border-color:#3a74c4; color:#0b1220; }
+      .sim-scorebar { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:12px 16px; border-radius:14px; background:#0f1521; border:1px solid #22314b; }
+      .sim-scoreline { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:14px; flex:1; min-width:0; }
+      .sim-scoreline .sim-pill:last-child { justify-self:end; }
+      .sim-score { font-size:26px; font-weight:800; }
+      .sim-score small { font-size:12px; color:#91a3b0; }
+      .sim-status { display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:center; }
+      .sim-feed { background:#0f1521; border:1px solid #22314b; border-radius:12px; padding:14px; min-height:140px; display:flex; flex-direction:column; gap:8px; }
+      .sim-feed-item { border-left:2px solid #4f9cff; padding:8px 10px; background:#101725; border-radius:8px; }
+      .sim-feed-item.warning { border-left-color:#ffb454; }
+      .sim-feed-item small { display:block; margin-top:4px; color:#a7bedf; font-size:11px; }
+      .sim-live-grid { display:grid; grid-template-columns:1.5fr .9fr; gap:14px; }
+      .sim-decision-panel { background:#101725; border:1px solid #22314b; border-radius:16px; padding:14px; }
+      .sim-decision-panel h4 { margin:0 0 12px; }
+      .sim-right-panel { display:flex; flex-direction:column; gap:12px; }
+      .sim-pill { display:inline-flex; align-items:center; padding:4px 8px; border-radius:999px; background:#142036; color:#cfe1ff; font-size:12px; border:1px solid #2a3b57; }
+      .sim-result-card { background:#101725; border:1px solid #22314b; border-radius:16px; padding:18px; }
+      .sim-finish-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:8px; }
+      .sim-boxscore { margin-top:16px; }
+      .sim-boxscore-team { padding:12px; border:1px solid #2a3b57; border-radius:12px; background:#0f1521; }
+      .sim-boxscore-team + .sim-boxscore-team { margin-top:14px; border-top:3px solid #4f9cff; }
+      .sim-boxscore-team h4 { margin:0 0 8px; color:#dfeaff; }
+      .sim-boxscore table { width:100%; border-collapse:collapse; }
+      .sim-boxscore th, .sim-boxscore td { padding:8px 6px; text-align:left; border-bottom:1px solid #263753; font-size:12px; }
+      .sim-boxscore th { color:#8fa6c2; }
+      .sim-result-team { display:flex; flex-wrap:wrap; gap:8px; }
+      .sim-result-player { display:inline-flex; align-items:center; gap:6px; padding:6px 8px; border-radius:999px; background:#0f1521; border:1px solid #22314b; }
+      .sim-result-player.winner { border-color:#4f9cff; background:#142036; }
+      .sim-mvp { margin-top:12px; font-weight:700; color:#dfeaff; }
+      @media (max-width: 900px) { .sim-live-grid, .sim-setup, .sim-finish-grid { grid-template-columns:1fr; } }
+    `;
+
+    if (!document.getElementById('sim-style-root')) {
+      const simStyle = document.createElement('style');
+      simStyle.id = 'sim-style-root';
+      simStyle.textContent = SIMULATION_CSS;
+      document.head.appendChild(simStyle);
+    }
+
+    const simulationState = {
+      phase: 'lobby',
+      teams: { A: [], B: [] },
+      score: { A: 0, B: 0 },
+      possession: 'A',
+      activePlayer: null,
+      messageQueue: [],
+      messageTimeout: null,
+      userTurn: false,
+      winner: null,
+      matchups: { A: {}, B: {} },
+      mismatchActive: false,
+      boxScore: {},
+      currentEvent: '',
+      matchOver: false,
+      pendingCpuTimeout: null,
+      pendingFinishTimeout: null,
+      pendingFollowupTimeout: null
+    };
+
+    function shuffleArray(list) {
+      const clone = [...list];
+      for (let i = clone.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [clone[i], clone[j]] = [clone[j], clone[i]];
+      }
+      return clone;
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(Math.max(value, min), max);
+    }
+
+    function getSimulationStats(name) {
+      const safeName = String(name || '').trim();
+      const data = SIMULATION_PLAYER_ATTRS[safeName] || {};
+      return {
+        tiro_cercano: data.tiro_cercano || 60,
+        bandeja_en_carrera: data.bandeja_en_carrera || 60,
+        tiro_media_distancia: data.tiro_media_distancia || 60,
+        triple: data.triple || 60,
+        precision_pase: data.precision_pase || 60,
+        manejo_balon: data.manejo_balon || 60,
+        defensa_interior: data.defensa_interior || 60,
+        defensa_exterior: data.defensa_exterior || 60,
+        robo: data.robo || 60,
+        tapon: data.tapon || 60,
+        rebote_ofensivo: data.rebote_ofensivo || 60,
+        rebote_defensivo: data.rebote_defensivo || 60,
+        velocidad: data.velocidad || 60,
+        agilidad: data.agilidad || 60,
+        fuerza: data.fuerza || 60
+      };
+    }
+
+    function buildSimulationRoster() {
+      const shuffled = shuffleArray(SIMULATION_POOL);
+      const teamA = shuffled.slice(0, 3);
+      const teamB = shuffled.slice(3, 6);
+      return { teamA, teamB };
+    }
+
+    function getTeammates(team) {
+      return simulationState.teams[team] || [];
+    }
+
+    function getOpponents(team) {
+      return team === 'A' ? simulationState.teams.B : simulationState.teams.A;
+    }
+
+    function getPlayerPhoto(name) {
+      const playerName = String(name || '').trim() || 'Jugador';
+      const profile = obtenerPerfil(playerName);
+      const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent((profile.nombreMostrado || playerName).split(/[\s_]+/).slice(0, 2).join(' '))}&background=111826&color=ffffff&size=160`;
+      return profile.fotoUrl || fallback;
+    }
+
+    function humanizeShotType(shotType) {
+      const map = {
+        tiro_cercano: 'tiro cercano',
+        bandeja_en_carrera: 'bandeja',
+        tiro_media_distancia: 'tiro de media distancia',
+        triple: 'triple',
+        pase: 'pase',
+        pick_and_roll: 'pick and roll',
+        robo: 'robo',
+        tap: 'tapón',
+        rebote: 'rebote'
+      };
+      return map[shotType] || String(shotType || 'acción').replace(/_/g, ' ');
+    }
+
+    function getShotPhrase(shotType) {
+      const map = {
+        tiro_cercano: 'el tiro cercano',
+        bandeja_en_carrera: 'la bandeja',
+        tiro_media_distancia: 'el tiro de media distancia',
+        triple: 'el triple'
+      };
+      return map[shotType] || `la acción de ${humanizeShotType(shotType)}`;
+    }
+
+    function toPercent(value) {
+      return `${Math.max(0, Math.min(100, Number(value || 0))).toFixed(0)}%`;
+    }
+
+    function buildOutcomeText({ successChance = 0, failChance = 0, actionText = '', outcomeText = '' }) {
+      const safeSuccess = clamp(Number(successChance) || 0, 0, 100);
+      const safeFail = clamp(Number(failChance) || 0, 0, 100);
+      return `${actionText}${outcomeText ? ` ${outcomeText}` : ''} <small>(${toPercent(safeSuccess)} acierto · ${toPercent(safeFail)} fallo)</small>`;
+    }
+
+    function describeMarcaje(team, playerName) {
+      const defender = getDefenderForAttacker(team, playerName);
+      if (!defender) return 'Marcaje: sin rival';
+      return `${defender} marca a ${playerName}`;
+    }
+
+    function getPlayerTooltip(name) {
+      const stats = getSimulationStats(name);
+      return `
+        <div class="sim-tooltip">
+          <strong>${name}</strong>
+          <div style="margin-top:6px; display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+            ${SIMULATION_ATTRIBUTE_NAMES.map(attr => `<div><span style="color:#8fa6c2;">${attr.replace(/_/g,' ')}</span> <strong>${stats[attr]}</strong></div>`).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function startSimulationRoster() {
+      clearSimulationMessageTimer();
+      if (simulationState.pendingCpuTimeout) {
+        clearTimeout(simulationState.pendingCpuTimeout);
+        simulationState.pendingCpuTimeout = null;
+      }
+      if (simulationState.pendingFinishTimeout) {
+        clearTimeout(simulationState.pendingFinishTimeout);
+        simulationState.pendingFinishTimeout = null;
+      }
+      if (simulationState.pendingFollowupTimeout) {
+        clearTimeout(simulationState.pendingFollowupTimeout);
+        simulationState.pendingFollowupTimeout = null;
+      }
+      const { teamA, teamB } = buildSimulationRoster();
+      simulationState.teams = { A: teamA, B: teamB };
+      simulationState.score = { A: 0, B: 0 };
+      simulationState.possession = 'A';
+      simulationState.activePlayer = teamA[0];
+      simulationState.userTurn = true;
+      simulationState.winner = null;
+      simulationState.matchOver = false;
+      simulationState.mismatchActive = false;
+      simulationState.lastPass = null;
+      simulationState.boxScore = {};
+      for (const player of [...teamA, ...teamB]) {
+        simulationState.boxScore[player] = {
+          pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, oreb: 0, dreb: 0,
+          fgm: 0, fga: 0, tpm: 0, tpa: 0, fgp: 0, tpp: 0
+        };
+      }
+      simulationState.matchups = { A: {}, B: {} };
+      teamA.forEach((player, index) => { simulationState.matchups.A[player] = teamB[index] || teamB[0]; });
+      teamB.forEach((player, index) => { simulationState.matchups.B[player] = teamA[index] || teamA[0]; });
+      simulationState.phase = 'roster';
+      renderSimulationScreen();
+    }
+
+    function pushSimulationMessage(text, type = 'info') {
+      if (simulationState.messageQueue.length >= SIMULATION_FEED_LIMIT) {
+        simulationState.messageQueue = [];
+      }
+      simulationState.messageQueue.push({ text, type });
+      renderSimulationScreen();
+    }
+
+    function clearSimulationMessageTimer() {
+      if (simulationState.messageTimeout) {
+        clearTimeout(simulationState.messageTimeout);
+        simulationState.messageTimeout = null;
+      }
+    }
+
+    function triggerCpuTurn() {
+      if (simulationState.matchOver || simulationState.phase !== 'live') return;
+      if (simulationState.possession !== 'B') return;
+      simulationState.userTurn = false;
+      renderSimulationScreen();
+      if (simulationState.pendingCpuTimeout) {
+        clearTimeout(simulationState.pendingCpuTimeout);
+      }
+      simulationState.pendingCpuTimeout = setTimeout(() => {
+        if (simulationState.matchOver || simulationState.phase !== 'live') return;
+        const action = chooseCpuAction();
+        if (action.type === 'pass') {
+          resolvePass('B', action.from, action.to);
+        } else if (action.type === 'pick') {
+          resolvePickAndRoll('B', action.handler, action.blocker);
+        } else {
+          resolveShot('B', action.from, action.shotType);
+        }
+      }, SIMULATION_CPU_DELAY_MS);
+    }
+
+    function chooseCpuAction() {
+      const team = 'B';
+      const teammates = getTeammates(team);
+      const shooter = simulationState.activePlayer;
+      const randomRoll = Math.random();
+      if (randomRoll < 0.3) {
+        const recipients = teammates.filter(player => player !== shooter);
+        return { type: 'pass', from: shooter, to: recipients[Math.floor(Math.random() * recipients.length)] };
+      }
+      if (randomRoll < 0.6) {
+        const blocker = teammates.filter(player => player !== shooter)[Math.floor(Math.random() * (teammates.length - 1))];
+        return { type: 'pick', handler: shooter, blocker };
+      }
+      const shotTypes = ['tiro_cercano', 'bandeja_en_carrera', 'tiro_media_distancia', 'triple'];
+      return { type: 'shot', from: shooter, shotType: shotTypes[Math.floor(Math.random() * shotTypes.length)] };
+    }
+
+    function handleUserAction(actionType, payload) {
+      if (simulationState.matchOver || simulationState.userTurn === false || simulationState.phase !== 'live' || simulationState.pendingFollowupTimeout) return;
+      if (actionType === 'pass') {
+        resolvePass('A', payload.from, payload.to);
+      } else if (actionType === 'pick') {
+        resolvePickAndRoll('A', payload.handler, payload.blocker);
+      } else if (actionType === 'shot') {
+        resolveShot('A', payload.from, payload.shotType);
+      }
+    }
+
+    function beginMatch() {
+      simulationState.phase = 'live';
+      simulationState.possession = 'A';
+      simulationState.activePlayer = simulationState.teams.A[0];
+      simulationState.userTurn = true;
+      simulationState.winner = null;
+      clearSimulationMessageTimer();
+      simulationState.messageQueue = [];
+      pushSimulationMessage('¡Comienza el partido! El equipo A toma la primera posesión.', 'info');
+      renderSimulationScreen();
+    }
+
+    function resetSimulationStateForNewMatch() {
+      simulationState.score = { A: 0, B: 0 };
+      simulationState.possession = 'A';
+      simulationState.activePlayer = null;
+      simulationState.userTurn = true;
+      simulationState.winner = null;
+      simulationState.matchOver = false;
+      simulationState.mismatchActive = false;
+      simulationState.lastPass = null;
+      simulationState.boxScore = {};
+      simulationState.messageQueue = [];
+      simulationState.matchups = { A: {}, B: {} };
+      clearSimulationMessageTimer();
+      if (simulationState.pendingCpuTimeout) {
+        clearTimeout(simulationState.pendingCpuTimeout);
+        simulationState.pendingCpuTimeout = null;
+      }
+      if (simulationState.pendingFinishTimeout) {
+        clearTimeout(simulationState.pendingFinishTimeout);
+        simulationState.pendingFinishTimeout = null;
+      }
+      if (simulationState.pendingFollowupTimeout) {
+        clearTimeout(simulationState.pendingFollowupTimeout);
+        simulationState.pendingFollowupTimeout = null;
+      }
+    }
+
+    function scheduleSimulationFollowup(callback) {
+      if (simulationState.pendingFollowupTimeout) {
+        clearTimeout(simulationState.pendingFollowupTimeout);
+      }
+      simulationState.pendingFollowupTimeout = setTimeout(() => {
+        simulationState.pendingFollowupTimeout = null;
+        if (simulationState.phase === 'live' && !simulationState.matchOver) {
+          callback();
+        }
+      }, SIMULATION_FOLLOWUP_DELAY_MS);
+    }
+
+    function updateBoxScore(playerName, statKey, value = 1) {
+      if (!simulationState.boxScore[playerName]) {
+        simulationState.boxScore[playerName] = {
+          pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, oreb: 0, dreb: 0,
+          fgm: 0, fga: 0, tpm: 0, tpa: 0, fgp: 0, tpp: 0
+        };
+      }
+      simulationState.boxScore[playerName][statKey] += value;
+    }
+
+    function registerAttempt(playerName, shotType) {
+      const entry = simulationState.boxScore[playerName];
+      if (!entry) return;
+      entry.fga += 1;
+      if (shotType === 'triple') {
+        entry.tpa += 1;
+      }
+    }
+
+    function registerMadeShot(playerName, shotType, points) {
+      const entry = simulationState.boxScore[playerName];
+      if (!entry) return;
+      entry.fgm += 1;
+      entry.pts += points;
+      if (shotType === 'triple') {
+        entry.tpm += 1;
+      }
+    }
+
+    function assignAssist(passFrom, scorer) {
+      if (!passFrom || !scorer || passFrom === scorer) return;
+      updateBoxScore(passFrom, 'ast', 1);
+    }
+
+    function completeTurnAfterAction(team, reasonText) {
+      if (simulationState.matchOver) return;
+      if (simulationState.possession === team) {
+        simulationState.userTurn = team === 'A';
+      } else {
+        const nextTeam = team === 'A' ? 'B' : 'A';
+        simulationState.possession = nextTeam;
+        simulationState.userTurn = nextTeam === 'A';
+      }
+      if (reasonText) {
+        pushSimulationMessage(reasonText, 'warning');
+      }
+      renderSimulationScreen();
+      if (simulationState.userTurn === false && !simulationState.matchOver) {
+        triggerCpuTurn();
+      }
+    }
+
+    function checkForMatchWin() {
+      if (simulationState.score.A >= SIMULATION_WIN_SCORE || simulationState.score.B >= SIMULATION_WIN_SCORE) {
+        simulationState.matchOver = true;
+        simulationState.winner = simulationState.score.A >= SIMULATION_WIN_SCORE ? 'A' : 'B';
+        pushSimulationMessage(`¡Equipo ${simulationState.winner === 'A' ? 'A' : 'B'} ha ganado el partido!`, 'info');
+        renderSimulationScreen();
+        simulationState.pendingFinishTimeout = setTimeout(() => {
+          simulationState.pendingFinishTimeout = null;
+          simulationState.phase = 'finished';
+          renderSimulationScreen();
+        }, SIMULATION_RESULT_DELAY_MS);
+      }
+    }
+
+    function getDefenderForAttacker(team, attacker) {
+      const assigned = team === 'A' ? simulationState.matchups.A[attacker] : simulationState.matchups.B[attacker];
+      return assigned || (team === 'A' ? simulationState.teams.B[0] : simulationState.teams.A[0]);
+    }
+
+    function computeTurnoverProbability(attackerName, defenderName) {
+      const atk = getSimulationStats(attackerName);
+      const def = getSimulationStats(defenderName);
+      const P_atq = (0.50 * atk.manejo_balon) + (0.30 * atk.agilidad) + (0.20 * atk.velocidad);
+      const P_def = (0.45 * def.robo) + (0.35 * def.agilidad) + (0.20 * def.velocidad);
+      const delta = P_def - P_atq;
+      const prob = 0.05 + (delta * 0.0010);
+      return clamp(prob, 0.015, 0.10);
+    }
+
+    function resolveTurnover(team, attackerName, defenderName, lossChance) {
+      const scoreEntry = simulationState.boxScore[attackerName];
+      if (scoreEntry) scoreEntry.tov += 1;
+      const defEntry = simulationState.boxScore[defenderName];
+      if (defEntry) defEntry.stl += 1;
+      const nextTeam = team === 'A' ? 'B' : 'A';
+      simulationState.possession = nextTeam;
+      simulationState.activePlayer = defenderName;
+      simulationState.userTurn = nextTeam === 'A';
+      pushSimulationMessage(buildOutcomeText({
+        successChance: (1 - lossChance) * 100,
+        failChance: lossChance * 100,
+        actionText: `${attackerName} pierde el balón. ${defenderName} recupera y saca.`,
+        outcomeText: `${describeMarcaje(nextTeam, defenderName)}.`
+      }), 'warning');
+      renderSimulationScreen();
+      if (!simulationState.matchOver && simulationState.userTurn === false) {
+        triggerCpuTurn();
+      }
+    }
+
+    function tryBeforeAction(team, attackerName) {
+      if (team === 'A' && simulationState.userTurn === false) {
+        return false;
+      }
+      const defenderName = getDefenderForAttacker(team, attackerName);
+      const lossChance = computeTurnoverProbability(attackerName, defenderName);
+      if (Math.random() < lossChance) {
+        resolveTurnover(team, attackerName, defenderName, lossChance);
+        return true;
+      }
+      return false;
+    }
+
+    function resolvePass(team, fromName, toName) {
+      if (team !== simulationState.possession) return;
+      const pressureDefenderName = getDefenderForAttacker(team, fromName);
+      const lossChance = computeTurnoverProbability(fromName, pressureDefenderName);
+      if (tryBeforeAction(team, fromName)) {
+        return;
+      }
+      const passer = getSimulationStats(fromName);
+      const defenderName = getDefenderForAttacker(team, toName);
+      const defender = getSimulationStats(defenderName);
+      const delta = passer.precision_pase - ((0.60 * defender.robo) + (0.40 * defender.agilidad));
+      const successChance = clamp(0.88 + (delta * 0.0025), 0.75, 0.97);
+      const overallSuccessChance = (1 - lossChance) * successChance;
+      const overallFailChance = 1 - overallSuccessChance;
+      if (Math.random() < successChance) {
+        simulationState.activePlayer = toName;
+        simulationState.possession = team;
+        simulationState.userTurn = team === 'A';
+        simulationState.lastPass = { team, player: fromName };
+        pushSimulationMessage(buildOutcomeText({
+          successChance: overallSuccessChance * 100,
+          failChance: overallFailChance * 100,
+          actionText: `${fromName} pasa a ${toName}.`
+        }), 'info');
+        renderSimulationScreen();
+      } else {
+        const defEntry = simulationState.boxScore[defenderName];
+        if (defEntry) defEntry.stl += 1;
+        const passEntry = simulationState.boxScore[fromName];
+        if (passEntry) passEntry.tov += 1;
+        simulationState.possession = team === 'A' ? 'B' : 'A';
+        simulationState.activePlayer = defenderName;
+        simulationState.userTurn = simulationState.possession === 'A';
+        pushSimulationMessage(buildOutcomeText({
+          successChance: overallSuccessChance * 100,
+          failChance: overallFailChance * 100,
+          actionText: `${fromName} pierde el pase. ${defenderName} intercepta y recupera.`
+        }), 'warning');
+      }
+      if (simulationState.userTurn === false && !simulationState.matchOver) {
+        triggerCpuTurn();
+      }
+    }
+
+    function resolvePickAndRoll(team, handlerName, blockerName) {
+      if (team !== simulationState.possession) return;
+      if (tryBeforeAction(team, handlerName)) {
+        return;
+      }
+      const handler = getSimulationStats(handlerName);
+      const blocker = getSimulationStats(blockerName);
+      const defensor = getSimulationStats(getDefenderForAttacker(team, handlerName));
+      const manejo = (0.40 * handler.manejo_balon) + (0.30 * handler.velocidad) + (0.30 * handler.agilidad);
+      const atq = (0.75 * manejo) + (0.25 * blocker.fuerza);
+      const def = (0.35 * defensor.defensa_exterior) + (0.25 * defensor.agilidad) + (0.20 * defensor.velocidad) + (0.20 * defensor.fuerza);
+      const delta = atq - def;
+      const switchChance = clamp(0.60 + (delta * 0.003), 0.30, 0.85);
+      const failChance = clamp(1 - switchChance, 0.15, 0.70);
+      const handlerDefender = getDefenderForAttacker(team, handlerName);
+      const blockerDefender = getDefenderForAttacker(team, blockerName);
+      simulationState.mismatchActive = Math.random() < switchChance;
+      simulationState.activePlayer = handlerName;
+      if (simulationState.mismatchActive) {
+        simulationState.matchups[team][handlerName] = blockerDefender;
+        simulationState.matchups[team][blockerName] = handlerDefender;
+        pushSimulationMessage(buildOutcomeText({
+          successChance: switchChance * 100,
+          failChance: failChance * 100,
+          actionText: `Pick and roll: ${handlerName} gana ventaja y cambian las marcas.`,
+          outcomeText: `${blockerDefender} pasa a marcar a ${handlerName} y ${handlerDefender} pasa a marcar a ${blockerName}.`
+        }), 'info');
+      } else {
+        pushSimulationMessage(buildOutcomeText({
+          successChance: switchChance * 100,
+          failChance: failChance * 100,
+          actionText: `Pick and roll: los defensores ${handlerDefender} y ${blockerDefender} impiden cambiar las marcas.`,
+          outcomeText: `${handlerDefender} sigue marcando a ${handlerName} y ${blockerDefender} sigue marcando a ${blockerName}.`
+        }), 'info');
+      }
+      simulationState.userTurn = team === 'A';
+      renderSimulationScreen();
+      if (simulationState.userTurn === false && !simulationState.matchOver) {
+        triggerCpuTurn();
+      }
+    }
+
+    function resolveShot(team, shooterName, shotType) {
+      if (team !== simulationState.possession) return;
+      if (tryBeforeAction(team, shooterName)) {
+        return;
+      }
+      const shooter = getSimulationStats(shooterName);
+      const defenderName = getDefenderForAttacker(team, shooterName);
+      const defender = getSimulationStats(defenderName);
+      const shotAttrMap = {
+        tiro_cercano: 'tiro_cercano',
+        bandeja_en_carrera: 'bandeja_en_carrera',
+        tiro_media_distancia: 'tiro_media_distancia',
+        triple: 'triple'
+      };
+      const shotAttr = shotAttrMap[shotType] || 'tiro_cercano';
+      const defenseKey = (shotType === 'tiro_cercano' || shotType === 'bandeja_en_carrera') ? 'defensa_interior' : 'defensa_exterior';
+      const blockProb = clamp(0.04 + ((defender.tapon - shooter[shotAttr]) * 0.0015), 0.005, 0.12);
+      const baseMap = {
+        tiro_cercano: 0.60,
+        bandeja_en_carrera: 0.55,
+        tiro_media_distancia: 0.45,
+        triple: 0.38
+      };
+      const clampMap = {
+        tiro_cercano: [0.35, 0.85],
+        bandeja_en_carrera: [0.30, 0.80],
+        tiro_media_distancia: [0.22, 0.70],
+        triple: [0.18, 0.60]
+      };
+      const base = baseMap[shotType] || 0.60;
+      const delta = shooter[shotAttr] - defender[defenseKey];
+      const shotChance = clamp(base + (delta * 0.004), clampMap[shotType][0], clampMap[shotType][1]);
+      const missChance = clamp(1 - shotChance, 0.15, 0.70);
+      registerAttempt(shooterName, shotType);
+      if (Math.random() < blockProb) {
+        const blockEntry = simulationState.boxScore[defenderName];
+        if (blockEntry) blockEntry.blk += 1;
+        pushSimulationMessage(buildOutcomeText({
+          successChance: shotChance * 100,
+          failChance: missChance * 100,
+          actionText: `${shooterName} intenta ${getShotPhrase(shotType)}.`
+        }), 'warning');
+        scheduleSimulationFollowup(() => {
+          pushSimulationMessage(buildOutcomeText({
+            successChance: blockProb * 100,
+            failChance: (1 - blockProb) * 100,
+            actionText: `${defenderName} tapona ${getShotPhrase(shotType)} de ${shooterName}.`
+          }), 'warning');
+          resolveLooseBallAfterBlock(team, shooterName, defenderName, shotType);
+        });
+        return;
+      }
+      const made = Math.random() < shotChance;
+      const points = shotType === 'triple' ? 3 : 2;
+      if (made) {
+        simulationState.score[team] += points;
+        registerMadeShot(shooterName, shotType, points);
+        if (simulationState.possession === 'A' && simulationState.activePlayer !== shooterName) {
+          simulationState.activePlayer = shooterName;
+        }
+        const lastPass = simulationState.lastPass && simulationState.lastPass.team === team ? simulationState.lastPass.player : null;
+        if (lastPass && lastPass !== shooterName) {
+          assignAssist(lastPass, shooterName);
+        }
+        pushSimulationMessage(buildOutcomeText({
+          successChance: shotChance * 100,
+          failChance: missChance * 100,
+          actionText: `¡${points} puntos anotados por ${shooterName}!`,
+          outcomeText: `Intento de ${humanizeShotType(shotType)} contra ${defenderName}.`
+        }), 'info');
+        checkForMatchWin();
+        if (!simulationState.matchOver) {
+          // Make it, take it: same team keeps possession after scoring.
+          simulationState.possession = team;
+          simulationState.activePlayer = shooterName;
+          simulationState.userTurn = team === 'A';
+          renderSimulationScreen();
+          if (simulationState.userTurn === false) {
+            triggerCpuTurn();
+          }
+        }
+      } else {
+        pushSimulationMessage(buildOutcomeText({
+          successChance: shotChance * 100,
+          failChance: missChance * 100,
+          actionText: `${shooterName} falla ${getShotPhrase(shotType)}.`,
+          outcomeText: `${defenderName} le defiende y controla la zona.`
+        }), 'warning');
+        scheduleSimulationFollowup(() => resolveRebound(team, shooterName, defenderName, shotType));
+      }
+    }
+
+    function resolveLooseBallAfterBlock(team, shooterName, defenderName, shotType) {
+      const defender = getSimulationStats(defenderName);
+      const attacker = getSimulationStats(shooterName);
+      const defScore = (0.40 * defender.velocidad) + (0.35 * defender.agilidad) + (0.25 * defender.rebote_defensivo);
+      const atkScore = (0.40 * attacker.velocidad) + (0.35 * attacker.agilidad) + (0.25 * attacker.rebote_ofensivo);
+      const delta = defScore - atkScore;
+      const recoveryChance = clamp(0.65 + (delta * 0.003), 0.45, 0.85);
+      const defenseWins = Math.random() < recoveryChance;
+      if (defenseWins) {
+        simulationState.possession = team === 'A' ? 'B' : 'A';
+        simulationState.activePlayer = defenderName;
+        updateBoxScore(defenderName, 'stl', 1);
+        pushSimulationMessage(buildOutcomeText({
+          successChance: recoveryChance * 100,
+          failChance: (1 - recoveryChance) * 100,
+          actionText: `${defenderName} gana el balón suelto tras taponar ${getShotPhrase(shotType)} de ${shooterName}.`,
+          outcomeText: `${describeMarcaje(team === 'A' ? 'B' : 'A', defenderName)}.`
+        }), 'warning');
+      } else {
+        simulationState.possession = team;
+        simulationState.activePlayer = shooterName;
+        pushSimulationMessage(buildOutcomeText({
+          successChance: recoveryChance * 100,
+          failChance: (1 - recoveryChance) * 100,
+          actionText: `${shooterName} retiene el balón suelto tras intentar ${getShotPhrase(shotType)} y sigue atacando.`,
+          outcomeText: `${describeMarcaje(team, shooterName)}.`
+        }), 'info');
+      }
+      simulationState.userTurn = simulationState.possession === 'A';
+      renderSimulationScreen();
+      if (simulationState.userTurn === false && !simulationState.matchOver) {
+        triggerCpuTurn();
+      }
+    }
+
+    function resolveRebound(team, shooterName, defenderName, shotType) {
+      const defTeam = team === 'A' ? 'B' : 'A';
+      const attacker = getSimulationStats(shooterName);
+      const defender = getSimulationStats(defenderName);
+      const reboundDef = (0.50 * defender.rebote_defensivo) + (0.30 * defender.fuerza) + (0.20 * defender.agilidad);
+      const reboundAtq = (0.50 * attacker.rebote_ofensivo) + (0.30 * attacker.fuerza) + (0.20 * attacker.agilidad);
+      const delta = reboundDef - reboundAtq;
+      const defChance = clamp(0.75 + (delta * 0.003), 0.55, 0.90);
+      const offChance = clamp(1 - defChance, 0.10, 0.45);
+      if (Math.random() < 0.04) {
+        simulationState.possession = defTeam;
+        simulationState.activePlayer = getDefenderForAttacker(defTeam, simulationState.teams[defTeam][0]);
+        pushSimulationMessage(buildOutcomeText({
+          successChance: 4,
+          failChance: 96,
+          actionText: `Balón fuera después de que ${shooterName} fallara ${getShotPhrase(shotType)}.`,
+          outcomeText: `${describeMarcaje(defTeam, simulationState.activePlayer)}.`
+        }), 'warning');
+        simulationState.userTurn = simulationState.possession === 'A';
+        renderSimulationScreen();
+        if (simulationState.userTurn === false && !simulationState.matchOver) {
+          triggerCpuTurn();
+        }
+        return;
+      }
+      const defenseWins = Math.random() < defChance;
+      if (defenseWins) {
+        const reboundPlayer = getWeightedPlayer(team === 'A' ? simulationState.teams.B : simulationState.teams.A, 'def');
+        updateBoxScore(reboundPlayer, 'dreb', 1);
+        updateBoxScore(reboundPlayer, 'reb', 1);
+        simulationState.possession = defTeam;
+        simulationState.activePlayer = reboundPlayer;
+        simulationState.userTurn = defTeam === 'A';
+        pushSimulationMessage(buildOutcomeText({
+          successChance: defChance * 100,
+          failChance: offChance * 100,
+          actionText: `${reboundPlayer} captura el rebote defensivo después de que ${shooterName} fallara ${getShotPhrase(shotType)}.`,
+          outcomeText: `${describeMarcaje(defTeam, reboundPlayer)}.`
+        }), 'info');
+      } else {
+        const reboundPlayer = getWeightedPlayer(team === 'A' ? simulationState.teams.A : simulationState.teams.B, 'off');
+        updateBoxScore(reboundPlayer, 'oreb', 1);
+        updateBoxScore(reboundPlayer, 'reb', 1);
+        simulationState.possession = team;
+        simulationState.activePlayer = reboundPlayer;
+        simulationState.userTurn = team === 'A';
+        pushSimulationMessage(buildOutcomeText({
+          successChance: (1 - defChance) * 100,
+          failChance: defChance * 100,
+          actionText: `${reboundPlayer} consigue el rebote ofensivo después de que ${shooterName} fallara ${getShotPhrase(shotType)}.`,
+          outcomeText: `${describeMarcaje(team, reboundPlayer)}.`
+        }), 'info');
+      }
+      renderSimulationScreen();
+      if (simulationState.userTurn === false && !simulationState.matchOver) {
+        triggerCpuTurn();
+      }
+    }
+
+    function getWeightedPlayer(teamPlayers, mode) {
+      const weights = teamPlayers.map(name => {
+        const stats = getSimulationStats(name);
+        const weight = mode === 'def'
+          ? (0.50 * stats.rebote_defensivo) + (0.30 * stats.fuerza) + (0.20 * stats.agilidad)
+          : (0.50 * stats.rebote_ofensivo) + (0.30 * stats.fuerza) + (0.20 * stats.agilidad);
+        return { name, weight };
+      });
+      const total = weights.reduce((sum, item) => sum + item.weight, 0);
+      let cursor = Math.random() * total;
+      for (const item of weights) {
+        cursor -= item.weight;
+        if (cursor <= 0) {
+          return item.name;
+        }
+      }
+      return weights[weights.length - 1].name;
+    }
+
+    function renderSimulationScreen() {
+      const root = document.getElementById('sim-content');
+      if (!root) return;
+
+      if (simulationState.phase === 'lobby') {
+        root.innerHTML = `
+          <div class="sim-shell">
+            <div class="sim-lobby">
+              <div class="sim-hero">
+                <button type="button" class="sim-main-button btn-accent" id="sim-start-btn">Jugar</button>
+              </div>
+              <div class="sim-setup">
+                <div class="sim-team">
+                  <h3>Formato</h3>
+                  <div class="sim-pill">3 vs 3</div>
+                </div>
+                <div class="sim-team">
+                  <h3>Victoria</h3>
+                  <div class="sim-pill">A 11 puntos</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        const startBtn = document.getElementById('sim-start-btn');
+        if (startBtn) startBtn.addEventListener('click', startSimulationRoster);
+        return;
+      }
+
+      if (simulationState.phase === 'roster') {
+        const teamA = simulationState.teams.A || [];
+        const teamB = simulationState.teams.B || [];
+        root.innerHTML = `
+          <div class="sim-shell">
+            <div class="sim-roster">
+              <div class="sim-setup">
+                <div class="sim-team">
+                  <h3>Equipo A</h3>
+                  <div class="sim-players">
+                    ${teamA.map(player => `
+                      <div class="sim-player-card" tabindex="0">
+                        <img src="${getPlayerPhoto(player)}" alt="${player}" />
+                        <div>
+                          <div class="name">${player}</div>
+                          <div class="role">Atacante</div>
+                        </div>
+                        ${getPlayerTooltip(player)}
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+                <div class="sim-team">
+                  <h3>Equipo B</h3>
+                  <div class="sim-players">
+                    ${teamB.map(player => `
+                      <div class="sim-player-card" tabindex="0">
+                        <img src="${getPlayerPhoto(player)}" alt="${player}" />
+                        <div>
+                          <div class="name">${player}</div>
+                          <div class="role">CPU</div>
+                        </div>
+                        ${getPlayerTooltip(player)}
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
+              <div class="sim-actions">
+                <button type="button" class="sim-action-button primary" id="sim-begin-match">Iniciar Partido</button>
+                <button type="button" class="sim-action-button" id="sim-reroll">Volver a generar equipos</button>
+                <button type="button" class="sim-action-button" id="sim-back-lobby">Volver / Salir</button>
+              </div>
+            </div>
+          </div>
+        `;
+        document.getElementById('sim-begin-match')?.addEventListener('click', beginMatch);
+        document.getElementById('sim-reroll')?.addEventListener('click', startSimulationRoster);
+        document.getElementById('sim-back-lobby')?.addEventListener('click', () => { simulationState.phase = 'lobby'; renderSimulationScreen(); });
+        return;
+      }
+
+      if (simulationState.phase === 'live') {
+        const teamA = simulationState.teams.A || [];
+        const teamB = simulationState.teams.B || [];
+        const shotChoices = [
+          ['tiro_cercano', 'Tiro Cercano'],
+          ['bandeja_en_carrera', 'Bandeja'],
+          ['tiro_media_distancia', 'Media Distancia'],
+          ['triple', 'Triple']
+        ];
+        const userPassOptions = teamA.filter(player => player !== simulationState.activePlayer);
+        const userPickOptions = teamA.filter(player => player !== simulationState.activePlayer);
+        const renderDecisionPanel = () => {
+          if (simulationState.pendingFollowupTimeout) {
+            return `
+              <div class="sim-decision-panel">
+                <h4>Se está resolviendo la jugada</h4>
+                <p class="sub">Espera al rebote o a la acción defensiva.</p>
+              </div>
+            `;
+          }
+          if (simulationState.possession !== 'A' || simulationState.matchOver) {
+            return `
+              <div class="sim-decision-panel">
+                <h4>${simulationState.possession === 'B' ? 'Turno de la CPU' : 'Espera'}</h4>
+                <p class="sub">${simulationState.possession === 'B' ? 'La CPU está atacando y tú defiendes.' : 'Pasa a la siguiente acción.'}</p>
+              </div>
+            `;
+          }
+          return `
+            <div class="sim-decision-panel">
+              <h4>Tu decisión</h4>
+              <div style="margin-bottom:12px">
+                <div class="sim-pill">Posee: ${simulationState.activePlayer || 'Sin balón'}</div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div>
+                  <div style="font-weight:700; margin-bottom:6px;">Pasar</div>
+                  <div class="sim-actions">
+                    ${userPassOptions.map(player => `<button type="button" class="sim-action-button" data-sim-pass="${player}">Pase a ${player}</button>`).join('')}
+                  </div>
+                </div>
+                <div>
+                  <div style="font-weight:700; margin-bottom:6px;">Tirar</div>
+                  <div class="sim-actions">
+                    ${shotChoices.map(([type, label]) => `<button type="button" class="sim-action-button" data-sim-shot="${type}">${label}</button>`).join('')}
+                  </div>
+                </div>
+                <div>
+                  <div style="font-weight:700; margin-bottom:6px;">Pick and Roll</div>
+                  <div class="sim-actions">
+                    ${userPickOptions.map(player => `<button type="button" class="sim-action-button" data-sim-pick="${player}">Bloquea con ${player}</button>`).join('')}
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        };
+
+        root.innerHTML = `
+          <div class="sim-shell">
+            <div class="sim-game">
+              <div class="sim-scorebar">
+                <div class="sim-scoreline">
+                  <span class="sim-pill">Equipo A</span>
+                  <span class="sim-score">${simulationState.score.A}<small> - </small>${simulationState.score.B}</span>
+                  <span class="sim-pill">Equipo B</span>
+                </div>
+                <div class="sim-status">
+                  <span class="sim-pill">Posee: ${simulationState.possession === 'A' ? 'A' : 'B'}</span>
+                  <span class="sim-pill">Jugador: ${simulationState.activePlayer || '-'}</span>
+                  <span class="sim-pill">Marcaje: ${simulationState.activePlayer ? describeMarcaje(simulationState.possession, simulationState.activePlayer) : 'Sin marca'}</span>
+                  <button type="button" class="sim-action-button" id="sim-exit-live">Salir del partido</button>
+                </div>
+              </div>
+              <div class="sim-live-grid">
+                <div class="sim-feed">
+                  <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+                    <strong>Play-by-play</strong>
+                  </div>
+                  ${(simulationState.messageQueue.length ? simulationState.messageQueue : [{ text: 'Esperando siguiente acción...', type: 'info'}]).map(item => `<div class="sim-feed-item ${item.type === 'warning' ? 'warning' : ''}">${item.text}</div>`).join('')}
+                </div>
+                <div class="sim-right-panel">
+                  ${renderDecisionPanel()}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('sim-exit-live')?.addEventListener('click', () => {
+          const shouldExit = window.confirm('¿Seguro que quieres salir del partido? Se reiniciará el marcador y la simulación.');
+          if (!shouldExit) return;
+          resetSimulationStateForNewMatch();
+          simulationState.phase = 'roster';
+          startSimulationRoster();
+        });
+        document.querySelectorAll('[data-sim-pass]').forEach(button => {
+          button.addEventListener('click', () => {
+            const toPlayer = button.getAttribute('data-sim-pass');
+            handleUserAction('pass', { from: simulationState.activePlayer, to: toPlayer });
+          });
+        });
+        document.querySelectorAll('[data-sim-shot]').forEach(button => {
+          button.addEventListener('click', () => {
+            const shotType = button.getAttribute('data-sim-shot');
+            handleUserAction('shot', { from: simulationState.activePlayer, shotType });
+          });
+        });
+        document.querySelectorAll('[data-sim-pick]').forEach(button => {
+          button.addEventListener('click', () => {
+            const blocker = button.getAttribute('data-sim-pick');
+            handleUserAction('pick', { handler: simulationState.activePlayer, blocker });
+          });
+        });
+        return;
+      }
+
+      if (simulationState.phase === 'finished') {
+        const winner = simulationState.winner === 'A' ? 'Equipo A' : 'Equipo B';
+        const winnerPlayers = simulationState.teams[simulationState.winner] || [];
+        const loserPlayers = simulationState.winner === 'A' ? simulationState.teams.B : simulationState.teams.A;
+        const mvp = [...simulationState.teams.A, ...simulationState.teams.B].reduce((best, player) => {
+          const stats = simulationState.boxScore[player] || { pts:0, reb:0, ast:0, stl:0, blk:0, tov:0 };
+          const rating = (stats.pts || 0) + (stats.reb || 0) + (stats.ast || 0) + (stats.stl || 0) + (stats.blk || 0) - (stats.tov || 0);
+          const points = stats.pts || 0;
+          if (!best || rating > best.rating || (rating === best.rating && points > best.points)) {
+            return { player, rating, points };
+          }
+          return best;
+        }, null);
+        const buildRows = (team) => {
+          const players = simulationState.teams[team] || [];
+          return players.map(player => {
+            const stats = simulationState.boxScore[player] || { pts:0, reb:0, ast:0, stl:0, blk:0, tov:0, fgm:0, fga:0, tpm:0, tpa:0 };
+            const reb = stats.reb || (stats.oreb || 0) + (stats.dreb || 0);
+            const fgp = stats.fga ? ((stats.fgm / stats.fga) * 100) : 0;
+            const tpp = stats.tpa ? ((stats.tpm / stats.tpa) * 100) : 0;
+            const rating = stats.pts + (stats.reb || 0) + stats.ast + stats.stl + stats.blk - stats.tov;
+            return `
+              <tr>
+                <td>${player}</td>
+                <td>${stats.pts}</td>
+                <td>${reb}</td>
+                <td>${stats.ast}</td>
+                <td>${stats.stl}</td>
+                <td>${stats.blk}</td>
+                <td>${stats.tov}</td>
+                <td>${stats.fgm}/${stats.fga} (${fgp.toFixed(1)}%)</td>
+                <td>${stats.tpm}/${stats.tpa} (${tpp.toFixed(1)}%)</td>
+                <td>${rating}</td>
+              </tr>
+            `;
+          }).join('');
+        };
+        root.innerHTML = `
+          <div class="sim-shell">
+            <div class="sim-finish">
+              <div class="sim-result-card">
+                <h2>¡${winner} ha ganado el partido!</h2>
+                <div class="sim-score" style="font-size:22px; margin-top:10px;">Equipo A ${simulationState.score.A} - ${simulationState.score.B} Equipo B</div>
+                <div class="sim-mvp">MVP: ${mvp ? `${mvp.player} (${mvp.rating} VAL)` : 'Sin datos'}</div>
+              </div>
+              <div class="sim-finish-grid">
+                <div class="sim-result-card">
+                  <h3>Jugadores del equipo ganador</h3>
+                  <div class="sim-result-team">
+                    ${winnerPlayers.map(player => `<span class="sim-result-player winner"><img src="${getPlayerPhoto(player)}" alt="${player}" style="width:28px;height:28px;border-radius:50%;"/> ${player}</span>`).join('')}
+                  </div>
+                </div>
+                <div class="sim-result-card">
+                  <h3>Jugadores del equipo perdedor</h3>
+                  <div class="sim-result-team">
+                    ${loserPlayers.map(player => `<span class="sim-result-player"><img src="${getPlayerPhoto(player)}" alt="${player}" style="width:28px;height:28px;border-radius:50%;"/> ${player}</span>`).join('')}
+                  </div>
+                </div>
+              </div>
+              <div class="sim-result-card sim-boxscore">
+                <h3>Box Score</h3>
+                <div class="sim-boxscore-team">
+                  <h4>Equipo A · ${simulationState.score.A} puntos</h4>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Jugador</th>
+                        <th>PTS</th>
+                        <th>REB</th>
+                        <th>AST</th>
+                        <th>ROB</th>
+                        <th>TAP</th>
+                        <th>PER</th>
+                        <th>TC</th>
+                        <th>3P</th>
+                        <th>VAL</th>
+                      </tr>
+                    </thead>
+                    <tbody>${buildRows('A')}</tbody>
+                  </table>
+                </div>
+                <div class="sim-boxscore-team">
+                  <h4>Equipo B · ${simulationState.score.B} puntos</h4>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Jugador</th>
+                        <th>PTS</th>
+                        <th>REB</th>
+                        <th>AST</th>
+                        <th>ROB</th>
+                        <th>TAP</th>
+                        <th>PER</th>
+                        <th>TC</th>
+                        <th>3P</th>
+                        <th>VAL</th>
+                      </tr>
+                    </thead>
+                    <tbody>${buildRows('B')}</tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="sim-actions">
+                <button type="button" class="sim-action-button primary" id="sim-replay">Volver a jugar</button>
+                <button type="button" class="sim-action-button" id="sim-finish-lobby">Volver al lobby</button>
+              </div>
+            </div>
+          </div>
+        `;
+        document.getElementById('sim-replay')?.addEventListener('click', () => { startSimulationRoster(); });
+        document.getElementById('sim-finish-lobby')?.addEventListener('click', () => { simulationState.phase = 'lobby'; renderSimulationScreen(); });
+        return;
+      }
+    }
+
     // ==========================
     // Inicial
     // ==========================
@@ -1747,5 +2833,7 @@
       renderClutchPorFormato(formato, puntuacion);
       populatePlayerDropdown();
       renderIndiceJugadores(formato, puntuacion);
+      simulationState.phase = 'lobby';
+      renderSimulationScreen();
     }, 100);
 
