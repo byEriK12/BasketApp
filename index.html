@@ -111,6 +111,21 @@
     .type-card .title{font-size:12px;color:var(--accent);font-weight:700;margin-bottom:8px}
     .type-card .detail{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px dashed #22314b;font-size:12px}
     .type-card .detail:first-of-type{border-top:none}
+    .attribute-group{border-style:solid}
+    .attribute-group .title{display:flex;align-items:center;gap:8px;color:currentColor}
+    .attribute-group .title::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}
+    .attribute-row{padding:7px 0;border-top:1px solid #22314b}
+    .attribute-row:first-of-type{border-top:none}
+    .attribute-label{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#dfeaff}
+    .attribute-label strong{font-size:13px;color:#fff}
+    .attribute-bar{height:7px;margin-top:6px;border-radius:999px;background:#182235;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
+    .attribute-bar span{display:block;height:100%;border-radius:inherit;background:currentColor;box-shadow:0 0 10px currentColor;transition:width .35s ease}
+    .attribute-group-finalizacion{border-color:rgba(79,156,255,.65);color:#4f9cff}
+    .attribute-group-tiro{border-color:rgba(57,217,138,.65);color:#39d98a}
+    .attribute-group-pase{border-color:rgba(255,180,84,.7);color:#ffb454}
+    .attribute-group-defensa{border-color:rgba(255,107,107,.7);color:#ff6b6b}
+    .attribute-group-rebote{border-color:rgba(199,146,234,.75);color:#c792ea}
+    .attribute-group-fisico{border-color:rgba(255,221,87,.75);color:#ffdd57}
 
     .streak-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
     @media (max-width:700px){.streak-grid{grid-template-columns:1fr}}

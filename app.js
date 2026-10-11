@@ -871,6 +871,73 @@
     // ==========================
     // Estadísticas por jugador
     // ==========================
+    const atributosJugadores = {
+      Eric: {
+        finalizacion: [['Tiro Cercano', 87], ['Bandeja en Carrera', 75]],
+        tiro: [['Tiro de Media Distancia', 77], ['Triple', 76]],
+        pase: [['Precisión de Pase', 89], ['Manejo de Balón', 83]],
+        defensa: [['Defensa Interior', 80], ['Defensa Exterior', 68], ['Robo', 72], ['Tapón', 85]],
+        rebote: [['Rebote Ofensivo', 81], ['Rebote Defensivo', 79]],
+        fisico: [['Velocidad', 73], ['Agilidad', 70], ['Fuerza', 82]]
+      },
+      Diaz: {
+        finalizacion: [['Tiro Cercano', 76], ['Bandeja en Carrera', 72]],
+        tiro: [['Tiro de Media Distancia', 66], ['Triple', 63]],
+        pase: [['Precisión de Pase', 83], ['Manejo de Balón', 71]],
+        defensa: [['Defensa Interior', 76], ['Defensa Exterior', 84], ['Robo', 82], ['Tapón', 74]],
+        rebote: [['Rebote Ofensivo', 87], ['Rebote Defensivo', 86]],
+        fisico: [['Velocidad', 80], ['Agilidad', 78], ['Fuerza', 74]]
+      },
+      Jamo: {
+        finalizacion: [['Tiro Cercano', 68], ['Bandeja en Carrera', 69]],
+        tiro: [['Tiro de Media Distancia', 64], ['Triple', 78]],
+        pase: [['Precisión de Pase', 76], ['Manejo de Balón', 59]],
+        defensa: [['Defensa Interior', 81], ['Defensa Exterior', 71], ['Robo', 72], ['Tapón', 82]],
+        rebote: [['Rebote Ofensivo', 67], ['Rebote Defensivo', 75]],
+        fisico: [['Velocidad', 67], ['Agilidad', 67], ['Fuerza', 63]]
+      },
+      Ert: {
+        finalizacion: [['Tiro Cercano', 83], ['Bandeja en Carrera', 70]],
+        tiro: [['Tiro de Media Distancia', 71], ['Triple', 73]],
+        pase: [['Precisión de Pase', 77], ['Manejo de Balón', 78]],
+        defensa: [['Defensa Interior', 77], ['Defensa Exterior', 64], ['Robo', 65], ['Tapón', 74]],
+        rebote: [['Rebote Ofensivo', 73], ['Rebote Defensivo', 70]],
+        fisico: [['Velocidad', 72], ['Agilidad', 70], ['Fuerza', 79]]
+      },
+      Arnau: {
+        finalizacion: [['Tiro Cercano', 78], ['Bandeja en Carrera', 92]],
+        tiro: [['Tiro de Media Distancia', 76], ['Triple', 84]],
+        pase: [['Precisión de Pase', 81], ['Manejo de Balón', 80]],
+        defensa: [['Defensa Interior', 61], ['Defensa Exterior', 82], ['Robo', 75], ['Tapón', 64]],
+        rebote: [['Rebote Ofensivo', 63], ['Rebote Defensivo', 73]],
+        fisico: [['Velocidad', 79], ['Agilidad', 89], ['Fuerza', 68]]
+      },
+      Cavi: {
+        finalizacion: [['Tiro Cercano', 66], ['Bandeja en Carrera', 59]],
+        tiro: [['Tiro de Media Distancia', 63], ['Triple', 61]],
+        pase: [['Precisión de Pase', 70], ['Manejo de Balón', 52]],
+        defensa: [['Defensa Interior', 82], ['Defensa Exterior', 74], ['Robo', 71], ['Tapón', 70]],
+        rebote: [['Rebote Ofensivo', 81], ['Rebote Defensivo', 88]],
+        fisico: [['Velocidad', 78], ['Agilidad', 68], ['Fuerza', 84]]
+      },
+      Aleix: {
+        finalizacion: [['Tiro Cercano', 84], ['Bandeja en Carrera', 86]],
+        tiro: [['Tiro de Media Distancia', 75], ['Triple', 67]],
+        pase: [['Precisión de Pase', 83], ['Manejo de Balón', 81]],
+        defensa: [['Defensa Interior', 64], ['Defensa Exterior', 79], ['Robo', 60], ['Tapón', 51]],
+        rebote: [['Rebote Ofensivo', 59], ['Rebote Defensivo', 68]],
+        fisico: [['Velocidad', 85], ['Agilidad', 84], ['Fuerza', 62]]
+      },
+      Grinyo: {
+        finalizacion: [['Tiro Cercano', 62], ['Bandeja en Carrera', 60]],
+        tiro: [['Tiro de Media Distancia', 70], ['Triple', 63]],
+        pase: [['Precisión de Pase', 70], ['Manejo de Balón', 49]],
+        defensa: [['Defensa Interior', 71], ['Defensa Exterior', 76], ['Robo', 57], ['Tapón', 55]],
+        rebote: [['Rebote Ofensivo', 61], ['Rebote Defensivo', 70]],
+        fisico: [['Velocidad', 68], ['Agilidad', 80], ['Fuerza', 62]]
+      }
+    };
+
     function populatePlayerDropdown(){
       const jugadores = temporada.obtener_todos_jugadores();
       const select = el('perfilJugador');
@@ -1387,13 +1454,30 @@
       const teamProfileCards = [
         ['ally', 'Aliado', perfilEquipo.aliado],
         ['burden', 'Lastre', perfilEquipo.lastre],
-        ['bully', 'Abusón', perfilEquipo.abuson],
+        ['bully', 'Víctima', perfilEquipo.abuson],
         ['nemesis', 'Némesis', perfilEquipo.nemesis]
       ].map(([clase, titulo, dato]) => `
         <div class="team-profile-card ${clase}">
           <div class="title">${titulo}</div>
           ${dato ? `<div class="player">${dato.nombre}</div><div class="detail">${fmtPct(dato.win_rate)} en ${dato.partidos} ${plural(dato.partidos, 'partido', 'partidos')}</div>` : '<div class="detail">Sin datos suficientes</div>'}
         </div>`).join('');
+      const atributos = atributosJugadores[nombreJugador];
+      const attributeGroups = atributos ? [
+        ['finalizacion', 'Finalización', atributos.finalizacion],
+        ['tiro', 'Tiro', atributos.tiro],
+        ['pase', 'Creación de juego', atributos.pase],
+        ['defensa', 'Defensa', atributos.defensa],
+        ['rebote', 'Rebote', atributos.rebote],
+        ['fisico', 'Físico', atributos.fisico]
+      ].map(([clase, titulo, items]) => `
+        <div class="type-card attribute-group attribute-group-${clase}">
+          <div class="title">${titulo}</div>
+          ${items.map(([label, value]) => `
+            <div class="attribute-row">
+              <div class="attribute-label"><span>${label}</span><strong>${value}</strong></div>
+              <div class="attribute-bar" role="progressbar" aria-label="${label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${value}"><span style="width:${value}%"></span></div>
+            </div>`).join('')}
+        </div>`).join('') : '<div class="sub">Sin atributos individuales disponibles.</div>';
       generalHtml += `
         <div class="player-section">
           <h3>Desglose por formato</h3>
@@ -1430,6 +1514,10 @@
           <h3>Perfil de equipo</h3>
           <div class="sub" style="margin-bottom:12px">Compañeros y rivales con mejor o peor porcentaje de victorias en los partidos filtrados (mínimo de 5 partidos).</div>
           <div class="team-profile-grid">${teamProfileCards}</div>
+        </div>
+        <div class="player-section">
+          <h3>Atributos individuales</h3>
+          <div class="player-type-cards">${attributeGroups}</div>
         </div>`;
 
       if (perfil.esJugadorPrincipal || esDiaz) {
