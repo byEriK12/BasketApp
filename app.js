@@ -1742,8 +1742,14 @@
 
     const SIMULATION_POOL = ["Aleix", "Arnau", "Cavi", "Diaz", "Eric", "Ert", "Grinyo", "Jamo"];
     const SIMULATION_WIN_SCORE = 11;
-    const SIMULATION_FORMAT_OPTIONS = [{ value: '3vs3', label: '3 vs 3' }];
-    const SIMULATION_WIN_OPTIONS = [{ value: '11', label: 'A 11 puntos', score: 11 }];
+    const SIMULATION_FORMAT_OPTIONS = [
+      { value: '3vs3', label: '3 vs 3', playersPerTeam: 3 },
+      { value: '4vs4', label: '4 vs 4', playersPerTeam: 4 }
+    ];
+    const SIMULATION_WIN_OPTIONS = [
+      { value: '11', label: 'A 11 puntos', score: 11 },
+      { value: '21', label: 'A 21 puntos', score: 21 }
+    ];
     const SIMULATION_MESSAGE_DELAY_MS = 5000;
     const SIMULATION_CPU_DELAY_MS = 6000;
     const SIMULATION_FOLLOWUP_DELAY_MS = 1200;
@@ -1779,7 +1785,7 @@
       .sim-player-card .name { font-weight:700; text-transform:none; }
       .sim-player-card .role { font-size:11px; color:#91a3b0; text-transform:none; }
       .sim-player-card:hover, .sim-player-card.active { border-color:#4f9cff; }
-      .sim-tooltip { position:absolute; left:0; top:calc(100% + 8px); width:min(520px, 80vw); background:#0d1520; border:1px solid #34507c; border-radius:12px; padding:12px; z-index:20; font-size:11px; color:#dfeaff; box-shadow:0 10px 20px rgba(0,0,0,.25); text-transform:none; display:none; }
+      .sim-tooltip { position:fixed; left:50%; top:50%; transform:translate(-50%, -50%); width:min(560px, calc(100vw - 24px)); max-height:calc(100vh - 32px); overflow-y:auto; background:#0d1520; border:1px solid #34507c; border-radius:12px; padding:9px; z-index:100; font-size:10px; color:#dfeaff; box-shadow:0 18px 50px rgba(0,0,0,.5); text-transform:none; display:none; }
       .sim-hover-summary { display:none; position:absolute; left:0; right:0; top:calc(100% + 8px); background:#0d1520; border:1px solid #34507c; border-radius:12px; padding:10px; z-index:19; box-shadow:0 10px 20px rgba(0,0,0,.25); }
       .sim-player-card:hover .sim-hover-summary { display:block; }
       .sim-player-card.active .sim-hover-summary { display:none; }
@@ -1799,6 +1805,16 @@
       .sim-hover-summary .sim-stat-row { gap:6px; }
       .sim-hover-summary .sim-stat-value { font-size:11px; }
       .sim-hover-summary .sim-stat-bar { height:4px; }
+      .sim-profile-attributes { display:grid; grid-template-columns:repeat(3, minmax(110px, 1fr)); gap:6px; }
+      .sim-profile-attributes .type-card { min-width:0; padding:8px; }
+      .sim-profile-attributes .type-card .title { font-size:11px; margin-bottom:5px; }
+      .sim-profile-attributes .attribute-row { padding:4px 0; }
+      .sim-profile-attributes .attribute-label { font-size:10px; }
+      .sim-profile-attributes .attribute-label strong { font-size:11px; }
+      .sim-profile-attributes .attribute-bar { height:5px; margin-top:4px; }
+      .sim-available { background:#101725; border:1px solid #22314b; border-radius:16px; padding:14px; }
+      .sim-available h3 { margin:0 0 12px; }
+      .sim-available-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; }
       .sim-stat-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:center; }
       .sim-stat-label { color:#cfe1ff; text-transform:capitalize; }
       .sim-stat-value { color:#fff; font-weight:700; }
@@ -1833,6 +1849,8 @@
       .sim-boxscore { margin-top:16px; }
       .sim-boxscore-team { padding:12px; border:1px solid #2a3b57; border-radius:12px; background:#0f1521; }
       .sim-boxscore-team + .sim-boxscore-team { margin-top:14px; border-top:3px solid #4f9cff; }
+      .sim-boxscore-team.winner { border-color:#46d39a; background:linear-gradient(135deg,rgba(70,211,154,.16),#0f1521 55%); box-shadow:inset 0 0 0 1px rgba(70,211,154,.22); }
+      .sim-boxscore-team.loser { border-color:#ff7468; background:linear-gradient(135deg,rgba(255,116,104,.14),#0f1521 55%); box-shadow:inset 0 0 0 1px rgba(255,116,104,.2); }
       .sim-boxscore-team h4 { margin:0 0 8px; color:#dfeaff; }
       .sim-boxscore table { width:100%; border-collapse:collapse; }
       .sim-boxscore th, .sim-boxscore td { padding:8px 6px; text-align:left; border-bottom:1px solid #263753; font-size:12px; }
@@ -1841,7 +1859,10 @@
       .sim-result-player { display:inline-flex; align-items:center; gap:6px; padding:6px 8px; border-radius:999px; background:#0f1521; border:1px solid #22314b; }
       .sim-result-player.winner { border-color:#4f9cff; background:#142036; }
       .sim-mvp { margin-top:12px; font-weight:700; color:#dfeaff; }
-      @media (max-width: 900px) { .sim-live-grid, .sim-setup, .sim-finish-grid { grid-template-columns:1fr; } .sim-config { grid-template-columns:1fr; } }
+      .sim-mvp-badge { display:inline-flex; align-items:center; margin-left:6px; padding:2px 5px; border-radius:5px; background:#f4c542; color:#221b00; font-size:10px; font-weight:800; vertical-align:middle; }
+      .sim-boxscore tr.mvp-row td { background:rgba(244,197,66,.12); border-bottom-color:rgba(244,197,66,.45); }
+      @media (max-width: 900px) { .sim-live-grid, .sim-setup, .sim-finish-grid { grid-template-columns:1fr; } .sim-config { grid-template-columns:1fr; } .sim-profile-attributes { grid-template-columns:repeat(2, minmax(145px, 1fr)); } }
+      @media (max-width: 520px) { .sim-profile-attributes { grid-template-columns:1fr; } }
     `;
 
     if (!document.getElementById('sim-style-root')) {
@@ -1909,8 +1930,10 @@
 
     function buildSimulationRoster() {
       const shuffled = shuffleArray(SIMULATION_POOL);
-      const teamA = shuffled.slice(0, 3);
-      const teamB = shuffled.slice(3, 6);
+      const format = SIMULATION_FORMAT_OPTIONS.find(option => option.value === simulationState.settings.format);
+      const playersPerTeam = format?.playersPerTeam || 3;
+      const teamA = shuffled.slice(0, playersPerTeam);
+      const teamB = shuffled.slice(playersPerTeam, playersPerTeam * 2);
       return { teamA, teamB };
     }
 
@@ -1991,12 +2014,20 @@
       return `${defender} marca a ${playerName}`;
     }
 
-    function getPlayerTooltip(name) {
+    function getPlayerTooltip(name, includeSummary = true) {
       const stats = getSimulationStats(name);
       const profile = obtenerPerfil(name);
       const rankedAttributes = Object.entries(stats).sort(([, first], [, second]) => second - first);
       const bestAttributes = rankedAttributes.slice(0, 3);
       const worstAttributes = rankedAttributes.slice(-3).reverse();
+      const attributeGroups = [
+        ['finalizacion', 'Finalización', [['tiro_cercano', 'Tiro cercano'], ['bandeja_en_carrera', 'Bandeja']]],
+        ['tiro', 'Tiro', [['tiro_media_distancia', 'Tiro de media distancia'], ['triple', 'Triple']]],
+        ['pase', 'Creación de juego', [['precision_pase', 'Precisión de pase'], ['manejo_balon', 'Manejo de balón']]],
+        ['defensa', 'Defensa', [['defensa_interior', 'Defensa interior'], ['defensa_exterior', 'Defensa exterior'], ['robo', 'Robo'], ['tapon', 'Tapón']]],
+        ['rebote', 'Rebote', [['rebote_ofensivo', 'Rebote ofensivo'], ['rebote_defensivo', 'Rebote defensivo']]],
+        ['fisico', 'Físico', [['velocidad', 'Velocidad'], ['agilidad', 'Agilidad'], ['fuerza', 'Fuerza']]]
+      ];
       const profileMeta = `
         <div class="sim-player-meta" aria-label="Altura, posición y peso">
           <span>${profile.alturaCm ? `${profile.alturaCm} cm` : '-'} · ${profile.posicion || '-'} · ${profile.pesoKg ? `${profile.pesoKg} kg` : '-'}</span>
@@ -2009,23 +2040,55 @@
           <div class="sim-stat-bar ${tone}"><span style="width:${value}%"></span></div>
         </div>
       `).join('');
+      const renderAttributeGroups = () => attributeGroups.map(([groupKey, title, attributes]) => `
+        <div class="type-card attribute-group attribute-group-${groupKey}">
+          <div class="title">${title}</div>
+          ${attributes.map(([attribute, label]) => `
+            <div class="attribute-row">
+              <div class="attribute-label"><span>${label}</span><strong>${stats[attribute]}</strong></div>
+              <div class="attribute-bar" role="progressbar" aria-label="${label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${stats[attribute]}"><span style="width:${stats[attribute]}%"></span></div>
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
       return `
-        <div class="sim-hover-summary">
+        ${includeSummary ? `<div class="sim-hover-summary">
           <div class="sim-tooltip-title"><strong>${name}</strong><span>Resumen</span></div>
           ${profileMeta}
           <div class="sim-stat-group">
             ${renderStatRows(bestAttributes, 'best')}
             ${renderStatRows(worstAttributes, 'worst')}
           </div>
-        </div>
+        </div>` : ''}
         <div class="sim-tooltip">
           <div class="sim-detail-panel">
             <div class="sim-tooltip-title"><strong>${name}</strong><span>Todos los atributos</span></div>
             ${profileMeta}
-            <div class="sim-stat-group">${renderStatRows(rankedAttributes, 'neutral')}</div>
+            <div class="sim-profile-attributes">${renderAttributeGroups()}</div>
           </div>
         </div>
       `;
+    }
+
+    function getAvailablePlayerMeta(name) {
+      const profile = obtenerPerfil(name);
+      return `${profile.posicion || '-'} · ${profile.alturaCm ? `${profile.alturaCm} cm` : '-'}`;
+    }
+
+    function bindSimulationPlayerCards() {
+      const root = document.getElementById('sim-content');
+      document.querySelectorAll('.sim-player-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const wasActive = card.classList.contains('active');
+          document.querySelectorAll('.sim-player-card.active').forEach(activeCard => activeCard.classList.remove('active'));
+          if (!wasActive) card.classList.add('active');
+        });
+      });
+      root?.addEventListener('click', event => {
+        if (!event.target.closest('.sim-player-card')) {
+          document.querySelectorAll('.sim-player-card.active').forEach(activeCard => activeCard.classList.remove('active'));
+        }
+      });
     }
 
     function startSimulationRoster() {
@@ -2236,8 +2299,11 @@
     function checkForMatchWin() {
       if (simulationState.score.A >= simulationState.settings.winScore || simulationState.score.B >= simulationState.settings.winScore) {
         simulationState.matchOver = true;
-        simulationState.winner = simulationState.score.A >= SIMULATION_WIN_SCORE ? 'A' : 'B';
-        pushSimulationMessage(`¡Equipo ${simulationState.winner === 'A' ? 'A' : 'B'} ha ganado el partido!`, 'info');
+        simulationState.winner = simulationState.score.A >= simulationState.settings.winScore ? 'A' : 'B';
+        simulationState.messageQueue.push({
+          text: `¡Equipo ${simulationState.winner === 'A' ? 'A' : 'B'} ha ganado el partido!`,
+          type: 'info'
+        });
         renderSimulationScreen();
         simulationState.pendingFinishTimeout = setTimeout(() => {
           simulationState.pendingFinishTimeout = null;
@@ -2262,6 +2328,15 @@
       return clamp(prob, 0.015, 0.10);
     }
 
+    function computePassTurnoverProbability(attackerName, defenderName) {
+      const atk = getSimulationStats(attackerName);
+      const def = getSimulationStats(defenderName);
+      const ballControl = (0.55 * atk.manejo_balon) + (0.25 * atk.agilidad) + (0.20 * atk.precision_pase);
+      const defensivePressure = (0.45 * def.robo) + (0.35 * def.agilidad) + (0.20 * def.velocidad);
+      const delta = defensivePressure - ballControl;
+      return clamp(0.025 + (delta * 0.0006), 0.008, 0.05);
+    }
+
     function resolveTurnover(team, attackerName, defenderName, lossChance) {
       const scoreEntry = simulationState.boxScore[attackerName];
       if (scoreEntry) scoreEntry.tov += 1;
@@ -2283,12 +2358,12 @@
       }
     }
 
-    function tryBeforeAction(team, attackerName) {
+    function tryBeforeAction(team, attackerName, probabilityCalculator = computeTurnoverProbability) {
       if (team === 'A' && simulationState.userTurn === false) {
         return false;
       }
       const defenderName = getDefenderForAttacker(team, attackerName);
-      const lossChance = computeTurnoverProbability(attackerName, defenderName);
+      const lossChance = probabilityCalculator(attackerName, defenderName);
       if (Math.random() < lossChance) {
         resolveTurnover(team, attackerName, defenderName, lossChance);
         return true;
@@ -2299,15 +2374,15 @@
     function resolvePass(team, fromName, toName) {
       if (team !== simulationState.possession) return;
       const pressureDefenderName = getDefenderForAttacker(team, fromName);
-      const lossChance = computeTurnoverProbability(fromName, pressureDefenderName);
-      if (tryBeforeAction(team, fromName)) {
+      const lossChance = computePassTurnoverProbability(fromName, pressureDefenderName);
+      if (tryBeforeAction(team, fromName, computePassTurnoverProbability)) {
         return;
       }
       const passer = getSimulationStats(fromName);
       const defenderName = getDefenderForAttacker(team, toName);
       const defender = getSimulationStats(defenderName);
       const delta = passer.precision_pase - ((0.60 * defender.robo) + (0.40 * defender.agilidad));
-      const successChance = clamp(0.88 + (delta * 0.0025), 0.75, 0.97);
+      const successChance = clamp(0.94 + (delta * 0.0018), 0.88, 0.99);
       const overallSuccessChance = (1 - lossChance) * successChance;
       const overallFailChance = 1 - overallSuccessChance;
       if (Math.random() < successChance) {
@@ -2520,7 +2595,7 @@
       const offChance = clamp(1 - defChance, 0.10, 0.45);
       if (Math.random() < 0.04) {
         simulationState.possession = defTeam;
-        simulationState.activePlayer = getDefenderForAttacker(defTeam, simulationState.teams[defTeam][0]);
+        simulationState.activePlayer = simulationState.teams[defTeam][0];
         pushSimulationMessage(buildOutcomeText({
           successChance: 4,
           failChance: 96,
@@ -2610,6 +2685,21 @@
                   </select>
                 </label>
               </div>
+              <div class="sim-available">
+                <h3>Jugadores disponibles</h3>
+                <div class="sim-available-grid">
+                  ${SIMULATION_POOL.map(player => `
+                    <div class="sim-player-card" tabindex="0">
+                      <img src="${getPlayerPhoto(player)}" alt="${player}" />
+                      <div>
+                        <div class="name">${player}</div>
+                        <div class="role">${getAvailablePlayerMeta(player)}</div>
+                      </div>
+                      ${getPlayerTooltip(player, false)}
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
             </div>
           </div>
         `;
@@ -2622,6 +2712,7 @@
           const option = SIMULATION_WIN_OPTIONS.find(item => item.value === event.target.value);
           if (option) simulationState.settings.winScore = option.score;
         });
+        bindSimulationPlayerCards();
         return;
       }
 
@@ -2674,13 +2765,7 @@
         document.getElementById('sim-begin-match')?.addEventListener('click', beginMatch);
         document.getElementById('sim-reroll')?.addEventListener('click', startSimulationRoster);
         document.getElementById('sim-back-lobby')?.addEventListener('click', () => { simulationState.phase = 'lobby'; renderSimulationScreen(); });
-        document.querySelectorAll('.sim-player-card').forEach(card => {
-          card.addEventListener('click', () => {
-            const wasActive = card.classList.contains('active');
-            document.querySelectorAll('.sim-player-card.active').forEach(activeCard => activeCard.classList.remove('active'));
-            if (!wasActive) card.classList.add('active');
-          });
-        });
+        bindSimulationPlayerCards();
         return;
       }
 
@@ -2823,8 +2908,8 @@
             const tpp = stats.tpa ? ((stats.tpm / stats.tpa) * 100) : 0;
             const rating = stats.pts + (stats.reb || 0) + stats.ast + stats.stl + stats.blk - stats.tov;
             return `
-              <tr>
-                <td>${player}</td>
+              <tr class="${mvp && mvp.player === player ? 'mvp-row' : ''}">
+                <td>${player}${mvp && mvp.player === player ? '<span class="sim-mvp-badge">MVP</span>' : ''}</td>
                 <td>${stats.pts}</td>
                 <td>${reb}</td>
                 <td>${stats.ast}</td>
@@ -2862,7 +2947,7 @@
               </div>
               <div class="sim-result-card sim-boxscore">
                 <h3>Box Score</h3>
-                <div class="sim-boxscore-team">
+                <div class="sim-boxscore-team ${simulationState.winner === 'A' ? 'winner' : 'loser'}">
                   <h4>Equipo A · ${simulationState.score.A} puntos</h4>
                   <table>
                     <thead>
@@ -2882,7 +2967,7 @@
                     <tbody>${buildRows('A')}</tbody>
                   </table>
                 </div>
-                <div class="sim-boxscore-team">
+                <div class="sim-boxscore-team ${simulationState.winner === 'B' ? 'winner' : 'loser'}">
                   <h4>Equipo B · ${simulationState.score.B} puntos</h4>
                   <table>
                     <thead>
