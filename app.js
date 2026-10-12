@@ -1742,11 +1742,13 @@
 
     const SIMULATION_POOL = ["Aleix", "Arnau", "Cavi", "Diaz", "Eric", "Ert", "Grinyo", "Jamo"];
     const SIMULATION_WIN_SCORE = 11;
+    const SIMULATION_FORMAT_OPTIONS = [{ value: '3vs3', label: '3 vs 3' }];
+    const SIMULATION_WIN_OPTIONS = [{ value: '11', label: 'A 11 puntos', score: 11 }];
     const SIMULATION_MESSAGE_DELAY_MS = 5000;
     const SIMULATION_CPU_DELAY_MS = 6000;
     const SIMULATION_FOLLOWUP_DELAY_MS = 1200;
     const SIMULATION_RESULT_DELAY_MS = 5000;
-    const SIMULATION_FEED_LIMIT = 5;
+    const SIMULATION_FEED_LIMIT = 4;
     const SIMULATION_ATTRIBUTE_NAMES = [
       "tiro_cercano","bandeja_en_carrera","tiro_media_distancia","triple","precision_pase","manejo_balon",
       "defensa_interior","defensa_exterior","robo","tapon","rebote_ofensivo","rebote_defensivo",
@@ -1772,12 +1774,42 @@
       .sim-team { background:#101725; border:1px solid #22314b; border-radius:16px; padding:14px; }
       .sim-team h3 { margin:0 0 12px; }
       .sim-players { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; }
-      .sim-player-card { border:1px solid #22314b; border-radius:12px; background:#0f1521; padding:10px; display:flex; align-items:center; gap:10px; position:relative; overflow:visible; }
+      .sim-player-card { border:1px solid #22314b; border-radius:12px; background:#0f1521; padding:10px; display:flex; align-items:center; gap:10px; position:relative; overflow:visible; cursor:pointer; }
       .sim-player-card img { width:42px; height:42px; border-radius:50%; object-fit:cover; border:2px solid #22314b; }
       .sim-player-card .name { font-weight:700; text-transform:none; }
       .sim-player-card .role { font-size:11px; color:#91a3b0; text-transform:none; }
-      .sim-tooltip { position:absolute; left:50%; top:auto; bottom:calc(100% + 10px); transform:translateX(-50%); background:#0d1520; border:1px solid #34507c; border-radius:12px; padding:10px; z-index:10; font-size:11px; color:#dfeaff; box-shadow:0 10px 20px rgba(0,0,0,.25); display:none; width:min(240px, 80vw); text-transform:none; }
-      .sim-player-card:hover .sim-tooltip, .sim-player-card:focus-within .sim-tooltip, .sim-player-card.active .sim-tooltip { display:block; }
+      .sim-player-card:hover, .sim-player-card.active { border-color:#4f9cff; }
+      .sim-tooltip { position:absolute; left:0; top:calc(100% + 8px); width:min(520px, 80vw); background:#0d1520; border:1px solid #34507c; border-radius:12px; padding:12px; z-index:20; font-size:11px; color:#dfeaff; box-shadow:0 10px 20px rgba(0,0,0,.25); text-transform:none; display:none; }
+      .sim-hover-summary { display:none; position:absolute; left:0; right:0; top:calc(100% + 8px); background:#0d1520; border:1px solid #34507c; border-radius:12px; padding:10px; z-index:19; box-shadow:0 10px 20px rgba(0,0,0,.25); }
+      .sim-player-card:hover .sim-hover-summary { display:block; }
+      .sim-player-card.active .sim-hover-summary { display:none; }
+      .sim-player-card:hover.active .sim-tooltip { display:block; }
+      .sim-detail-panel { display:none; }
+      .sim-player-card.active .sim-detail-panel { display:block; }
+      .sim-tooltip-title { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; font-size:13px; }
+      .sim-player-meta { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; color:#a7bedf; }
+      .sim-player-meta span { padding:4px 7px; border-radius:6px; background:#142036; border:1px solid #2a3b57; }
+      .sim-stat-group { display:grid; gap:6px; }
+      .sim-tooltip .sim-stat-group { grid-template-columns:repeat(2, minmax(0, 1fr)); column-gap:16px; }
+      .sim-hover-summary { padding:10px; font-size:11px; }
+      .sim-hover-summary .sim-tooltip-title { margin-bottom:6px; font-size:12px; }
+      .sim-hover-summary .sim-player-meta { gap:4px; margin-bottom:7px; font-size:10px; }
+      .sim-hover-summary .sim-player-meta span { padding:3px 5px; }
+      .sim-hover-summary .sim-stat-group { gap:4px; }
+      .sim-hover-summary .sim-stat-row { gap:6px; }
+      .sim-hover-summary .sim-stat-value { font-size:11px; }
+      .sim-hover-summary .sim-stat-bar { height:4px; }
+      .sim-stat-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:center; }
+      .sim-stat-label { color:#cfe1ff; text-transform:capitalize; }
+      .sim-stat-value { color:#fff; font-weight:700; }
+      .sim-stat-bar { grid-column:1 / -1; height:5px; border-radius:99px; background:#1a2941; overflow:hidden; }
+      .sim-stat-bar span { display:block; height:100%; border-radius:inherit; }
+      .sim-stat-bar.best span { background:#46d39a; }
+      .sim-stat-bar.worst span { background:#ff8b7b; }
+      .sim-stat-bar.neutral span { background:#4f9cff; }
+      .sim-config { display:grid; grid-template-columns:1fr 1fr; gap:12px; width:min(520px,100%); margin:0 auto; }
+      .sim-config label { display:grid; gap:6px; color:#a7bedf; font-size:12px; text-align:left; }
+      .sim-config select { width:100%; background:#0f1521; border:1px solid #2a3b57; color:#eaf2ff; border-radius:10px; padding:9px 10px; }
       .sim-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
       .sim-action-button { background:#0f1521; border:1px solid #2a3b57; color:#eaf2ff; border-radius:10px; padding:8px 10px; }
       .sim-action-button.primary { background:linear-gradient(180deg,#4f9cff,#3e86e3); border-color:#3a74c4; color:#0b1220; }
@@ -1809,7 +1841,7 @@
       .sim-result-player { display:inline-flex; align-items:center; gap:6px; padding:6px 8px; border-radius:999px; background:#0f1521; border:1px solid #22314b; }
       .sim-result-player.winner { border-color:#4f9cff; background:#142036; }
       .sim-mvp { margin-top:12px; font-weight:700; color:#dfeaff; }
-      @media (max-width: 900px) { .sim-live-grid, .sim-setup, .sim-finish-grid { grid-template-columns:1fr; } }
+      @media (max-width: 900px) { .sim-live-grid, .sim-setup, .sim-finish-grid { grid-template-columns:1fr; } .sim-config { grid-template-columns:1fr; } }
     `;
 
     if (!document.getElementById('sim-style-root')) {
@@ -1836,7 +1868,8 @@
       matchOver: false,
       pendingCpuTimeout: null,
       pendingFinishTimeout: null,
-      pendingFollowupTimeout: null
+      pendingFollowupTimeout: null,
+      settings: { format: '3vs3', winScore: SIMULATION_WIN_SCORE }
     };
 
     function shuffleArray(list) {
@@ -1921,6 +1954,27 @@
       return map[shotType] || `la acción de ${humanizeShotType(shotType)}`;
     }
 
+    function getAttributeLabel(attribute) {
+      const labels = {
+        tiro_cercano: 'Tiro cercano',
+        bandeja_en_carrera: 'Bandeja',
+        tiro_media_distancia: 'Tiro de media distancia',
+        triple: 'Triple',
+        precision_pase: 'Precisión de pase',
+        manejo_balon: 'Manejo de balón',
+        defensa_interior: 'Defensa interior',
+        defensa_exterior: 'Defensa exterior',
+        robo: 'Robo',
+        tapon: 'Tapón',
+        rebote_ofensivo: 'Rebote ofensivo',
+        rebote_defensivo: 'Rebote defensivo',
+        velocidad: 'Velocidad',
+        agilidad: 'Agilidad',
+        fuerza: 'Fuerza'
+      };
+      return labels[attribute] || attribute.replace(/_/g, ' ');
+    }
+
     function toPercent(value) {
       return `${Math.max(0, Math.min(100, Number(value || 0))).toFixed(0)}%`;
     }
@@ -1939,11 +1993,36 @@
 
     function getPlayerTooltip(name) {
       const stats = getSimulationStats(name);
+      const profile = obtenerPerfil(name);
+      const rankedAttributes = Object.entries(stats).sort(([, first], [, second]) => second - first);
+      const bestAttributes = rankedAttributes.slice(0, 3);
+      const worstAttributes = rankedAttributes.slice(-3).reverse();
+      const profileMeta = `
+        <div class="sim-player-meta" aria-label="Altura, posición y peso">
+          <span>${profile.alturaCm ? `${profile.alturaCm} cm` : '-'} · ${profile.posicion || '-'} · ${profile.pesoKg ? `${profile.pesoKg} kg` : '-'}</span>
+        </div>
+      `;
+      const renderStatRows = (attributes, tone) => attributes.map(([attribute, value]) => `
+        <div class="sim-stat-row">
+          <span class="sim-stat-label">${getAttributeLabel(attribute)}</span>
+          <span class="sim-stat-value">${value}</span>
+          <div class="sim-stat-bar ${tone}"><span style="width:${value}%"></span></div>
+        </div>
+      `).join('');
       return `
+        <div class="sim-hover-summary">
+          <div class="sim-tooltip-title"><strong>${name}</strong><span>Resumen</span></div>
+          ${profileMeta}
+          <div class="sim-stat-group">
+            ${renderStatRows(bestAttributes, 'best')}
+            ${renderStatRows(worstAttributes, 'worst')}
+          </div>
+        </div>
         <div class="sim-tooltip">
-          <strong>${name}</strong>
-          <div style="margin-top:6px; display:grid; grid-template-columns:1fr 1fr; gap:4px;">
-            ${SIMULATION_ATTRIBUTE_NAMES.map(attr => `<div><span style="color:#8fa6c2;">${attr.replace(/_/g,' ')}</span> <strong>${stats[attr]}</strong></div>`).join('')}
+          <div class="sim-detail-panel">
+            <div class="sim-tooltip-title"><strong>${name}</strong><span>Todos los atributos</span></div>
+            ${profileMeta}
+            <div class="sim-stat-group">${renderStatRows(rankedAttributes, 'neutral')}</div>
           </div>
         </div>
       `;
@@ -2155,7 +2234,7 @@
     }
 
     function checkForMatchWin() {
-      if (simulationState.score.A >= SIMULATION_WIN_SCORE || simulationState.score.B >= SIMULATION_WIN_SCORE) {
+      if (simulationState.score.A >= simulationState.settings.winScore || simulationState.score.B >= simulationState.settings.winScore) {
         simulationState.matchOver = true;
         simulationState.winner = simulationState.score.A >= SIMULATION_WIN_SCORE ? 'A' : 'B';
         pushSimulationMessage(`¡Equipo ${simulationState.winner === 'A' ? 'A' : 'B'} ha ganado el partido!`, 'info');
@@ -2519,21 +2598,30 @@
               <div class="sim-hero">
                 <button type="button" class="sim-main-button btn-accent" id="sim-start-btn">Jugar</button>
               </div>
-              <div class="sim-setup">
-                <div class="sim-team">
-                  <h3>Formato</h3>
-                  <div class="sim-pill">3 vs 3</div>
-                </div>
-                <div class="sim-team">
-                  <h3>Victoria</h3>
-                  <div class="sim-pill">A 11 puntos</div>
-                </div>
+              <div class="sim-config">
+                <label for="sim-format-select">Formato
+                  <select id="sim-format-select">
+                    ${SIMULATION_FORMAT_OPTIONS.map(option => `<option value="${option.value}" ${simulationState.settings.format === option.value ? 'selected' : ''}>${option.label}</option>`).join('')}
+                  </select>
+                </label>
+                <label for="sim-win-select">Victoria
+                  <select id="sim-win-select">
+                    ${SIMULATION_WIN_OPTIONS.map(option => `<option value="${option.value}" ${simulationState.settings.winScore === option.score ? 'selected' : ''}>${option.label}</option>`).join('')}
+                  </select>
+                </label>
               </div>
             </div>
           </div>
         `;
         const startBtn = document.getElementById('sim-start-btn');
         if (startBtn) startBtn.addEventListener('click', startSimulationRoster);
+        document.getElementById('sim-format-select')?.addEventListener('change', event => {
+          simulationState.settings.format = event.target.value;
+        });
+        document.getElementById('sim-win-select')?.addEventListener('change', event => {
+          const option = SIMULATION_WIN_OPTIONS.find(item => item.value === event.target.value);
+          if (option) simulationState.settings.winScore = option.score;
+        });
         return;
       }
 
@@ -2552,7 +2640,7 @@
                         <img src="${getPlayerPhoto(player)}" alt="${player}" />
                         <div>
                           <div class="name">${player}</div>
-                          <div class="role">Atacante</div>
+                          <div class="role">Jugador</div>
                         </div>
                         ${getPlayerTooltip(player)}
                       </div>
@@ -2578,7 +2666,7 @@
               <div class="sim-actions">
                 <button type="button" class="sim-action-button primary" id="sim-begin-match">Iniciar Partido</button>
                 <button type="button" class="sim-action-button" id="sim-reroll">Volver a generar equipos</button>
-                <button type="button" class="sim-action-button" id="sim-back-lobby">Volver / Salir</button>
+                <button type="button" class="sim-action-button" id="sim-back-lobby">Volver atrás</button>
               </div>
             </div>
           </div>
@@ -2586,6 +2674,13 @@
         document.getElementById('sim-begin-match')?.addEventListener('click', beginMatch);
         document.getElementById('sim-reroll')?.addEventListener('click', startSimulationRoster);
         document.getElementById('sim-back-lobby')?.addEventListener('click', () => { simulationState.phase = 'lobby'; renderSimulationScreen(); });
+        document.querySelectorAll('.sim-player-card').forEach(card => {
+          card.addEventListener('click', () => {
+            const wasActive = card.classList.contains('active');
+            document.querySelectorAll('.sim-player-card.active').forEach(activeCard => activeCard.classList.remove('active'));
+            if (!wasActive) card.classList.add('active');
+          });
+        });
         return;
       }
 
