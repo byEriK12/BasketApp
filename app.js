@@ -906,7 +906,7 @@
       },
       Arnau: {
         finalizacion: [['Tiro Cercano', 78], ['Bandeja en Carrera', 92]],
-        tiro: [['Tiro de Media Distancia', 76], ['Triple', 84]],
+        tiro: [['Tiro de Media Distancia', 78], ['Triple', 87]],
         pase: [['Precisión de Pase', 81], ['Manejo de Balón', 80]],
         defensa: [['Defensa Interior', 61], ['Defensa Exterior', 82], ['Robo', 75], ['Tapón', 64]],
         rebote: [['Rebote Ofensivo', 63], ['Rebote Defensivo', 73]],
@@ -1762,7 +1762,7 @@
     ];
     const SIMULATION_PLAYER_ATTRS = {
       Aleix: { tiro_cercano: 84, bandeja_en_carrera: 86, tiro_media_distancia: 75, triple: 67, precision_pase: 83, manejo_balon: 81, defensa_interior: 64, defensa_exterior: 79, robo: 60, tapon: 51, rebote_ofensivo: 59, rebote_defensivo: 68, velocidad: 85, agilidad: 84, fuerza: 62 },
-      Arnau: { tiro_cercano: 78, bandeja_en_carrera: 92, tiro_media_distancia: 76, triple: 84, precision_pase: 81, manejo_balon: 80, defensa_interior: 61, defensa_exterior: 82, robo: 75, tapon: 64, rebote_ofensivo: 63, rebote_defensivo: 73, velocidad: 79, agilidad: 89, fuerza: 68 },
+      Arnau: { tiro_cercano: 78, bandeja_en_carrera: 92, tiro_media_distancia: 78, triple: 87, precision_pase: 81, manejo_balon: 80, defensa_interior: 61, defensa_exterior: 82, robo: 75, tapon: 64, rebote_ofensivo: 63, rebote_defensivo: 73, velocidad: 79, agilidad: 89, fuerza: 68 },
       Cavi: { tiro_cercano: 66, bandeja_en_carrera: 59, tiro_media_distancia: 63, triple: 61, precision_pase: 70, manejo_balon: 52, defensa_interior: 82, defensa_exterior: 74, robo: 71, tapon: 70, rebote_ofensivo: 81, rebote_defensivo: 88, velocidad: 78, agilidad: 68, fuerza: 84 },
       Diaz: { tiro_cercano: 76, bandeja_en_carrera: 72, tiro_media_distancia: 66, triple: 63, precision_pase: 83, manejo_balon: 71, defensa_interior: 76, defensa_exterior: 84, robo: 82, tapon: 74, rebote_ofensivo: 87, rebote_defensivo: 86, velocidad: 80, agilidad: 78, fuerza: 74 },
       Eric: { tiro_cercano: 87, bandeja_en_carrera: 75, tiro_media_distancia: 77, triple: 76, precision_pase: 89, manejo_balon: 83, defensa_interior: 80, defensa_exterior: 68, robo: 72, tapon: 85, rebote_ofensivo: 81, rebote_defensivo: 79, velocidad: 73, agilidad: 70, fuerza: 82 },
