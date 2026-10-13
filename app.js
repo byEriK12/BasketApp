@@ -1742,6 +1742,7 @@
 
     const SIMULATION_POOL = ["Aleix", "Arnau", "Cavi", "Diaz", "Eric", "Ert", "Grinyo", "Jamo"];
     const SIMULATION_WIN_SCORE = 11;
+    const SIMULATION_ACCESS_PASSWORD = 'basketcadafinde';
     const SIMULATION_FORMAT_OPTIONS = [
       { value: '3vs3', label: '3 vs 3', playersPerTeam: 3 },
       { value: '4vs4', label: '4 vs 4', playersPerTeam: 4 }
@@ -1815,6 +1816,14 @@
       .sim-available { background:#101725; border:1px solid #22314b; border-radius:16px; padding:14px; }
       .sim-available h3 { margin:0 0 12px; }
       .sim-available-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; }
+      .sim-lock-screen { min-height:520px; display:flex; align-items:center; justify-content:center; padding:24px; border:1px solid #17202d; border-radius:16px; background:radial-gradient(circle at center, #111925 0%, #05070a 72%); color:#e7eef6; }
+      .sim-lock-card { width:min(420px, 100%); padding:28px; border:1px solid #27354a; border-radius:16px; background:rgba(5,8,12,.88); box-shadow:0 20px 60px rgba(0,0,0,.55); text-align:center; }
+      .sim-lock-icon { width:54px; height:54px; display:grid; place-items:center; margin:0 auto 14px; border:1px solid #34445d; border-radius:50%; color:#91a3b0; font-size:24px; }
+      .sim-lock-card h2 { margin:0 0 8px; font-size:22px; }
+      .sim-lock-card p { margin:0 0 18px; color:#91a3b0; font-size:13px; }
+      .sim-lock-form { display:flex; gap:8px; }
+      .sim-lock-form input { flex:1; min-width:0; }
+      .sim-lock-error { min-height:18px; margin-top:10px; color:#ff8b7b; font-size:12px; }
       .sim-stat-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:center; }
       .sim-stat-label { color:#cfe1ff; text-transform:capitalize; }
       .sim-stat-value { color:#fff; font-weight:700; }
@@ -1890,6 +1899,8 @@
       pendingCpuTimeout: null,
       pendingFinishTimeout: null,
       pendingFollowupTimeout: null,
+      accessGranted: false,
+      accessError: '',
       settings: { format: '3vs3', winScore: SIMULATION_WIN_SCORE }
     };
 
@@ -2662,9 +2673,47 @@
       return weights[weights.length - 1].name;
     }
 
+    function renderSimulationAccessGate(root) {
+      root.innerHTML = `
+        <div class="sim-lock-screen">
+          <div class="sim-lock-card">
+            <div class="sim-lock-icon" aria-hidden="true">&#128274;</div>
+            <h2>Simulación bloqueada</h2>
+            <p>Necesitas una contraseña para acceder a esta funcionalidad.</p>
+            <form class="sim-lock-form" id="sim-access-form">
+              <input id="sim-access-password" type="password" autocomplete="off" placeholder="Contraseña" aria-label="Contraseña" required />
+              <button type="submit" class="sim-action-button primary">Entrar</button>
+            </form>
+            <div class="sim-lock-error" role="alert">${simulationState.accessError}</div>
+          </div>
+        </div>
+      `;
+      document.getElementById('sim-access-form')?.addEventListener('submit', event => {
+        event.preventDefault();
+        const input = document.getElementById('sim-access-password');
+        if (input?.value === SIMULATION_ACCESS_PASSWORD) {
+          simulationState.accessGranted = true;
+          simulationState.accessError = '';
+          renderSimulationScreen();
+          return;
+        }
+        simulationState.accessError = 'Contraseña incorrecta.';
+        if (input) {
+          input.value = '';
+          input.focus();
+        }
+        renderSimulationAccessGate(root);
+      });
+      document.getElementById('sim-access-password')?.focus();
+    }
+
     function renderSimulationScreen() {
       const root = document.getElementById('sim-content');
       if (!root) return;
+      if (!simulationState.accessGranted) {
+        renderSimulationAccessGate(root);
+        return;
+      }
 
       if (simulationState.phase === 'lobby') {
         root.innerHTML = `
