@@ -1741,9 +1741,20 @@
     });
 
     const SIMULATION_POOL = ["Aleix", "Arnau", "Cavi", "Diaz", "Eric", "Ert", "Grinyo", "Jamo"];
+    const SUPABASE_URL = window.BASKET_SUPABASE_URL || '';
+    const SUPABASE_ANON_KEY = window.BASKET_SUPABASE_ANON_KEY || '';
+    const supabaseClient = SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null;
+    const ULTIMATE_ADMIN_EMAIL = 'eric.matasp12@gmail.com';
+    const ULTIMATE_CARD_CATALOG = SIMULATION_POOL.map(name => ({
+      id: name.toLowerCase(), name, overall: { Aleix: 75, Arnau: 74, Cavi: 77, Diaz: 76, Eric: 78, Ert: 75, Grinyo: 74, Jamo: 76 }[name],
+      price: 5000, image_path: `cards/${name}_Card.png`
+    }));
     const SIMULATION_WIN_SCORE = 11;
     const SIMULATION_ACCESS_PASSWORD = 'basketcadafinde';
     const SIMULATION_FORMAT_OPTIONS = [
+      { value: '2vs2', label: '2 vs 2', playersPerTeam: 2 },
       { value: '3vs3', label: '3 vs 3', playersPerTeam: 3 },
       { value: '4vs4', label: '4 vs 4', playersPerTeam: 4 }
     ];
@@ -1773,19 +1784,19 @@
     };
 
     const SIMULATION_CSS = `
-      .sim-shell { display:flex; flex-direction:column; gap:14px; }
+      .sim-shell { display:flex; flex-direction:column; gap:14px; color:#f4f7fb; }
       .sim-lobby, .sim-roster, .sim-game, .sim-finish { display:flex; flex-direction:column; gap:14px; }
       .sim-hero { display:flex; justify-content:center; padding:14px 12px; }
       .sim-main-button { min-width:180px; font-size:16px; font-weight:700; }
       .sim-setup { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-      .sim-team { background:#101725; border:1px solid #22314b; border-radius:16px; padding:14px; }
+      .sim-team { background:#102021; border:1px solid #315c59; border-radius:12px; padding:14px; }
       .sim-team h3 { margin:0 0 12px; }
       .sim-players { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; }
-      .sim-player-card { border:1px solid #22314b; border-radius:12px; background:#0f1521; padding:10px; display:flex; align-items:center; gap:10px; position:relative; overflow:visible; cursor:pointer; }
+      .sim-player-card { border:1px solid #315c59; border-radius:8px; background:#132628; padding:10px; display:flex; align-items:center; gap:10px; position:relative; overflow:visible; cursor:pointer; }
       .sim-player-card img { width:42px; height:42px; border-radius:50%; object-fit:cover; border:2px solid #22314b; }
       .sim-player-card .name { font-weight:700; text-transform:none; }
       .sim-player-card .role { font-size:11px; color:#91a3b0; text-transform:none; }
-      .sim-player-card:hover, .sim-player-card.active { border-color:#4f9cff; }
+      .sim-player-card:hover, .sim-player-card.active { border-color:#d9ff8d; }
       .sim-tooltip { position:fixed; left:50%; top:50%; transform:translate(-50%, -50%); width:min(560px, calc(100vw - 24px)); max-height:calc(100vh - 32px); overflow-y:auto; background:#0d1520; border:1px solid #34507c; border-radius:12px; padding:9px; z-index:100; font-size:10px; color:#dfeaff; box-shadow:0 18px 50px rgba(0,0,0,.5); text-transform:none; display:none; }
       .sim-hover-summary { display:none; position:absolute; left:0; right:0; top:calc(100% + 8px); background:#0d1520; border:1px solid #34507c; border-radius:12px; padding:10px; z-index:19; box-shadow:0 10px 20px rgba(0,0,0,.25); }
       .sim-player-card:hover .sim-hover-summary { display:block; }
@@ -1837,23 +1848,23 @@
       .sim-config select { width:100%; background:#0f1521; border:1px solid #2a3b57; color:#eaf2ff; border-radius:10px; padding:9px 10px; }
       .sim-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
       .sim-action-button { background:#0f1521; border:1px solid #2a3b57; color:#eaf2ff; border-radius:10px; padding:8px 10px; }
-      .sim-action-button.primary { background:linear-gradient(180deg,#4f9cff,#3e86e3); border-color:#3a74c4; color:#0b1220; }
-      .sim-scorebar { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:12px 16px; border-radius:14px; background:#0f1521; border:1px solid #22314b; }
+      .sim-action-button.primary { background:#d9ff8d; border-color:#d9ff8d; color:#102021; }
+      .sim-scorebar { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:12px 16px; border-radius:12px; background:#102021; border:1px solid #315c59; }
       .sim-scoreline { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:14px; flex:1; min-width:0; }
       .sim-scoreline .sim-pill:last-child { justify-self:end; }
       .sim-score { font-size:26px; font-weight:800; }
       .sim-score small { font-size:12px; color:#91a3b0; }
       .sim-status { display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:center; }
-      .sim-feed { background:#0f1521; border:1px solid #22314b; border-radius:12px; padding:14px; min-height:140px; display:flex; flex-direction:column; gap:8px; }
-      .sim-feed-item { border-left:2px solid #4f9cff; padding:8px 10px; background:#101725; border-radius:8px; }
+      .sim-feed { background:#102021; border:1px solid #315c59; border-radius:12px; padding:14px; min-height:140px; display:flex; flex-direction:column; gap:8px; }
+      .sim-feed-item { border-left:2px solid #d9ff8d; padding:8px 10px; background:#132628; border-radius:8px; }
       .sim-feed-item.warning { border-left-color:#ffb454; }
       .sim-feed-item small { display:block; margin-top:4px; color:#a7bedf; font-size:11px; }
       .sim-live-grid { display:grid; grid-template-columns:1.5fr .9fr; gap:14px; }
-      .sim-decision-panel { background:#101725; border:1px solid #22314b; border-radius:16px; padding:14px; }
+      .sim-decision-panel { background:#102021; border:1px solid #315c59; border-radius:12px; padding:14px; }
       .sim-decision-panel h4 { margin:0 0 12px; }
       .sim-right-panel { display:flex; flex-direction:column; gap:12px; }
       .sim-pill { display:inline-flex; align-items:center; padding:4px 8px; border-radius:999px; background:#142036; color:#cfe1ff; font-size:12px; border:1px solid #2a3b57; }
-      .sim-result-card { background:#101725; border:1px solid #22314b; border-radius:16px; padding:18px; }
+      .sim-result-card { background:#102021; border:1px solid #315c59; border-radius:12px; padding:18px; }
       .sim-finish-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:8px; }
       .sim-boxscore { margin-top:16px; }
       .sim-boxscore-team { padding:12px; border:1px solid #2a3b57; border-radius:12px; background:#0f1521; }
@@ -1870,6 +1881,91 @@
       .sim-mvp { margin-top:12px; font-weight:700; color:#dfeaff; }
       .sim-mvp-badge { display:inline-flex; align-items:center; margin-left:6px; padding:2px 5px; border-radius:5px; background:#f4c542; color:#221b00; font-size:10px; font-weight:800; vertical-align:middle; }
       .sim-boxscore tr.mvp-row td { background:rgba(244,197,66,.12); border-bottom-color:rgba(244,197,66,.45); }
+      .ut-shell { min-height:620px; padding:18px; color:#f4f7fb; background:linear-gradient(135deg,#08131a,#102b2c 52%,#191b23); border:1px solid #244b4b; border-radius:18px; }
+      .ut-header { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; padding-bottom:18px; border-bottom:1px solid #285050; }
+      .ut-brand { font-size:22px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:#d9ff8d; }
+      .ut-status { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; color:#c0d4d0; }
+      .ut-status span { padding:7px 9px; border:1px solid #315c59; border-radius:8px; background:#102021; }
+      .ut-nav { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:18px 0 22px; }
+      .ut-nav button { border-radius:8px; padding:12px; background:#122526; border-color:#315c59; text-transform:uppercase; font-size:11px; font-weight:800; letter-spacing:.08em; }
+      .ut-nav button.active { background:#d9ff8d; border-color:#d9ff8d; color:#102021; }
+      .ut-title-row { display:flex; align-items:end; justify-content:space-between; gap:12px; margin-bottom:16px; }
+      .ut-title-row h2 { margin:0; font-size:26px; letter-spacing:-.03em; }
+      .ut-title-row p { margin:4px 0 0; color:#9cbab3; font-size:13px; }
+      .ut-card-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; }
+      .ut-market-carousel { display:grid; grid-template-columns:38px minmax(0,1fr) 38px; align-items:center; gap:10px; width:100%; }
+      .ut-market-window { min-width:0; overflow:hidden; }
+      .ut-market-track { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+      .ut-market-arrow { display:grid; place-items:center; width:38px; height:38px; padding:0; border-radius:50%; background:#132628; color:#d9ff8d; border-color:#37605c; font-size:22px; }
+      .ut-market-arrow:hover { border-color:#d9ff8d; }
+      .ut-card { background:#132628; border:1px solid #37605c; border-radius:10px; padding:9px; cursor:pointer; transition:transform .15s ease,border-color .15s ease; }
+      .ut-card:hover { transform:translateY(-3px); border-color:#d9ff8d; }
+      .ut-card img { display:block; width:100%; aspect-ratio:2 / 3; object-fit:cover; border-radius:6px; background:#0a1215; }
+      .ut-card-info { display:flex; justify-content:space-between; gap:8px; align-items:center; padding-top:9px; font-size:12px; }
+      .ut-card-info strong { color:#fff; }
+      .ut-card-info small { color:#d9ff8d; font-weight:800; }
+      .ut-card button { width:100%; margin-top:9px; padding:8px; border-radius:7px; font-size:11px; font-weight:800; }
+      .ut-card button:disabled { cursor:not-allowed; opacity:.55; }
+      .ut-empty { padding:28px; border:1px dashed #37605c; text-align:center; color:#9cbab3; }
+      .ut-auth { width:min(430px,100%); margin:40px auto; padding:28px; background:#102021; border:1px solid #37605c; border-radius:12px; }
+      .ut-auth h2, .ut-auth p, .ut-auth label { color:#f4f7fb; }
+      .ut-auth h2 { margin:0 0 8px; color:#d9ff8d; }
+      .ut-auth p { color:#9cbab3; font-size:13px; }
+      .ut-auth form { display:grid; gap:9px; margin-top:18px; }
+      .ut-auth input { background:#0a1517; border-color:#315c59; border-radius:7px; }
+      .ut-auth input { color:#fff; }
+      .ut-auth input::placeholder { color:#8faeaa; }
+      .ut-auth-actions { display:flex; gap:8px; flex-wrap:wrap; }
+      .ut-auth-actions button { flex:1; min-width:140px; border-radius:7px; }
+      .ut-primary { background:#d9ff8d !important; border-color:#d9ff8d !important; color:#102021 !important; font-weight:900; }
+      .ut-error { min-height:18px; color:#ff9e91; font-size:12px; }
+      .ut-modal-backdrop { position:fixed; inset:0; z-index:200; display:grid; place-items:center; padding:16px; background:rgba(2,8,10,.82); }
+      .ut-modal { position:relative; display:grid; grid-template-columns:minmax(180px,250px) 1fr; gap:22px; width:min(720px,100%); max-height:90vh; overflow:auto; padding:20px; background:#102021; border:1px solid #d9ff8d; border-radius:12px; box-shadow:0 24px 80px rgba(0,0,0,.6); }
+      .ut-card-column { min-width:0; }
+      .ut-card-column > img { display:block; width:100%; border-radius:7px; }
+      .ut-modal h2 { margin:0; font-size:28px; color:#d9ff8d; }
+      .ut-modal p { color:#9cbab3; }
+      .ut-close { position:absolute; right:10px; top:10px; border:0; background:transparent; color:#fff; font-size:24px; padding:2px 8px; box-shadow:none; }
+      .ut-attributes { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+      .ut-attribute { display:flex; justify-content:space-between; gap:8px; padding:7px; background:#152b2c; border-radius:6px; color:#b5cfca; font-size:11px; }
+      .ut-attribute strong { color:#fff; }
+      .ut-profile-attributes { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:14px; }
+      .ut-profile-attributes .type-card { min-width:0; padding:9px; }
+      .ut-profile-attributes .attribute-row { padding:6px 0; }
+      .ut-stat-heading { margin-top:18px; padding-top:12px; border-top:1px solid #315c59; color:#d9ff8d; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+      .ut-game-stats { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin-top:8px; }
+      .ut-game-stat { display:flex; justify-content:space-between; gap:8px; padding:7px; border:1px solid #315c59; border-radius:6px; background:#132628; color:#a9c2bd; font-size:11px; }
+      .ut-game-stat strong { color:#fff; }
+      .ut-pack { display:flex; justify-content:center; gap:12px; min-height:260px; margin:24px 0; perspective:900px; }
+      .ut-pack-card { width:170px; transform:rotateY(180deg); opacity:.35; transition:transform .7s ease,opacity .35s ease; }
+      .ut-pack-card img { display:block; width:100%; border-radius:8px; box-shadow:0 12px 30px rgba(0,0,0,.35); }
+      .ut-pack.is-open .ut-pack-card { transform:rotateY(0); opacity:1; }
+      .ut-pack.is-open .ut-pack-card:nth-child(2) { transition-delay:.18s; }
+      .ut-welcome { max-width:620px; margin:20px auto; padding:30px 18px; text-align:center; }
+      .ut-welcome h2 { font-size:30px; margin:14px 0 6px; }
+      .ut-welcome p { color:#9cbab3; }
+      .ut-play-card { width:min(150px,22vw); cursor:pointer; transition:transform .15s ease,filter .15s ease; }
+      .ut-play-card:hover { transform:translateY(-5px) scale(1.03); filter:drop-shadow(0 10px 16px rgba(217,255,141,.22)); }
+      .ut-play-card.selected { transform:translateY(-5px); filter:drop-shadow(0 10px 16px rgba(217,255,141,.32)); }
+      .ut-play-card img { display:block; width:100%; border:1px solid #37605c; border-radius:8px; }
+      .ut-play-meta { padding-top:6px; color:#d9ff8d; font-size:11px; font-weight:800; text-align:center; }
+      .ut-side-label { margin-bottom:8px; text-align:center; color:#9cbab3; font-size:11px; font-weight:800; letter-spacing:.1em; }
+      .ut-dice { margin-left:5px; padding:1px 5px; border:1px solid #37605c; border-radius:5px; color:#d9ff8d; background:#132628; box-shadow:none; }
+      .ut-match-preview { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:12px; margin-bottom:16px; }
+      .ut-match-team { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; }
+      .ut-match-team { align-items:flex-start; display:grid; grid-template-columns:repeat(2,minmax(100px,150px)); }
+      .ut-match-team img { width:100%; max-width:150px; border:1px solid #37605c; border-radius:5px; }
+      .ut-swap-backdrop { position:fixed; inset:0; z-index:210; display:grid; place-items:center; padding:16px; background:rgba(2,8,10,.78); }
+      .ut-swap-window { width:min(680px,100%); max-height:82vh; overflow:auto; padding:20px; background:#102021; border:1px solid #d9ff8d; border-radius:12px; box-shadow:0 24px 80px rgba(0,0,0,.6); }
+      .ut-swap-window h3 { margin:0; color:#d9ff8d; }
+      .ut-swap-window p { color:#9cbab3; font-size:13px; }
+      .ut-swap-options { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; }
+      .ut-swap-option { padding:8px; text-align:left; background:#132628; border:1px solid #37605c; border-radius:8px; }
+      .ut-swap-option:hover { border-color:#d9ff8d; }
+      .ut-swap-option img { display:block; width:100%; border-radius:6px; }
+      .ut-swap-option span { display:block; padding-top:6px; color:#d9ff8d; font-size:11px; font-weight:800; }
+      .ut-vs { font-weight:900; color:#d9ff8d; }
+      @media (max-width:600px) { .ut-shell { padding:12px; } .ut-nav { grid-template-columns:1fr; } .ut-modal { grid-template-columns:1fr; } .ut-match-preview { grid-template-columns:1fr; } }
       @media (max-width: 900px) { .sim-live-grid, .sim-setup, .sim-finish-grid { grid-template-columns:1fr; } .sim-config { grid-template-columns:1fr; } .sim-profile-attributes { grid-template-columns:repeat(2, minmax(145px, 1fr)); } }
       @media (max-width: 520px) { .sim-profile-attributes { grid-template-columns:1fr; } }
     `;
@@ -1901,8 +1997,207 @@
       pendingFollowupTimeout: null,
       accessGranted: false,
       accessError: '',
-      settings: { format: '3vs3', winScore: SIMULATION_WIN_SCORE }
+      settings: { format: '3vs3', winScore: SIMULATION_WIN_SCORE },
+      clubView: 'club',
+      leaveRequested: false
+      ,rewardApplied: false,
+      previewTeamB: [],
+      selectedTeamA: [],
+      statsRecorded: false,
+      marketIndex: 0
     };
+
+    const clubState = {
+      session: null,
+      profile: null,
+      catalog: ULTIMATE_CARD_CATALOG,
+      ownedIds: new Set(),
+      playerStats: {},
+      loading: false,
+      initialized: false,
+      error: '',
+      welcomeCards: [],
+      welcomePending: false
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
+    }
+
+    function cardById(cardId) {
+      return clubState.catalog.find(card => card.id === cardId) || ULTIMATE_CARD_CATALOG.find(card => card.id === cardId);
+    }
+
+    function cardImage(card) {
+      return card?.image_path || `cards/${card?.name || 'Eric'}_Card.png`;
+    }
+
+    function getLocalUsers() {
+      return JSON.parse(localStorage.getItem('basket-club-users') || '{}');
+    }
+
+    function setLocalUsers(users) {
+      localStorage.setItem('basket-club-users', JSON.stringify(users));
+    }
+
+    function localClubProfile(email = '') {
+      const users = getLocalUsers();
+      return users[email.toLowerCase()]?.profile || null;
+    }
+
+    function saveLocalClub() {
+      if (!clubState.profile?.email) return;
+      const email = clubState.profile.email.toLowerCase();
+      const users = getLocalUsers();
+      users[email] = { password: users[email]?.password || '', profile: clubState.profile };
+      setLocalUsers(users);
+      localStorage.setItem(`basket-club-cards-${email}`, JSON.stringify([...clubState.ownedIds]));
+    }
+
+    function hydrateLocalClub(email) {
+      clubState.profile = localClubProfile(email);
+      clubState.ownedIds = new Set(JSON.parse(localStorage.getItem(`basket-club-cards-${email.toLowerCase()}`) || '[]'));
+      clubState.playerStats = JSON.parse(localStorage.getItem(`basket-club-player-stats-${email.toLowerCase()}`) || '{}');
+    }
+
+    async function loadClubData() {
+      clubState.loading = true;
+      clubState.error = '';
+      if (!supabaseClient) {
+        clubState.profile = null;
+        clubState.ownedIds = new Set();
+        clubState.loading = false;
+        clubState.initialized = true;
+        return;
+      }
+      const { data: sessionData } = await supabaseClient.auth.getSession();
+      clubState.session = sessionData.session;
+      if (!clubState.session) {
+        clubState.loading = false;
+        clubState.initialized = true;
+        return;
+      }
+      const user = clubState.session.user;
+      clubState.playerStats = JSON.parse(localStorage.getItem(`basket-club-player-stats-${user.id}`) || '{}');
+      const { data: profile, error: profileError } = await supabaseClient.from('profiles').select('*').eq('id', user.id).maybeSingle();
+      if (profileError) clubState.error = profileError.message;
+      clubState.profile = profile || { id: user.id, email: user.email, username: user.user_metadata?.username || '', coins: 500, wins: 0, losses: 0 };
+      const { data: catalog } = await supabaseClient.from('cards').select('*').order('name');
+      const { data: owned } = await supabaseClient.from('user_cards').select('card_id').eq('user_id', user.id);
+      clubState.catalog = catalog?.length ? catalog : ULTIMATE_CARD_CATALOG;
+      clubState.ownedIds = new Set((owned || []).map(item => item.card_id));
+      const starterSeenKey = `basket-starter-seen-${user.id}`;
+      if (clubState.ownedIds.size === 2 && !localStorage.getItem(starterSeenKey)) {
+        clubState.welcomeCards = [...clubState.ownedIds];
+        clubState.welcomePending = true;
+      }
+      clubState.loading = false;
+      clubState.initialized = true;
+    }
+
+    async function signInClub(email, password, register = false) {
+      if (!supabaseClient) {
+        const cleanEmail = email.trim().toLowerCase();
+        if (!cleanEmail || password.length < 6) {
+          clubState.error = 'Introduce un email y una contraseña de al menos 6 caracteres.';
+          renderSimulationScreen();
+          return;
+        }
+        const users = getLocalUsers();
+        if (register) {
+          if (users[cleanEmail]) { clubState.error = 'Ya existe una cuenta con ese email.'; renderSimulationScreen(); return; }
+          const starterCards = shuffleArray(SIMULATION_POOL).slice(0, 2).map(name => name.toLowerCase());
+          users[cleanEmail] = { password, profile: { username: '', email: cleanEmail, coins: 500, wins: 0, losses: 0 } };
+          setLocalUsers(users);
+          localStorage.setItem(`basket-club-cards-${cleanEmail}`, JSON.stringify(starterCards));
+          clubState.welcomeCards = starterCards;
+          clubState.welcomePending = true;
+        } else if (!users[cleanEmail]) {
+          clubState.error = 'No existe una cuenta con ese email. Crea una cuenta para entrar.';
+          renderSimulationScreen();
+          return;
+        } else if (users[cleanEmail].password !== password) {
+          clubState.error = 'La contraseña no es correcta.';
+          renderSimulationScreen();
+          return;
+        }
+        sessionStorage.setItem('basket-club-session', cleanEmail);
+        hydrateLocalClub(cleanEmail);
+        clubState.error = '';
+        renderSimulationScreen();
+        return;
+      }
+      const result = register
+        ? await supabaseClient.auth.signUp({ email, password })
+        : await supabaseClient.auth.signInWithPassword({ email, password });
+      if (result.error) { clubState.error = result.error.message; renderSimulationScreen(); return; }
+      await loadClubData();
+      renderSimulationScreen();
+    }
+
+    async function signOutClub() {
+      if (supabaseClient) await supabaseClient.auth.signOut();
+      sessionStorage.removeItem('basket-club-session');
+      clubState.session = null;
+      clubState.profile = null;
+      clubState.welcomePending = false;
+      renderSimulationScreen();
+    }
+
+    async function saveClubUsername(username) {
+      const clean = username.trim();
+      if (!clean || !clubState.profile) return;
+      const isAdmin = (clubState.profile.email || clubState.session?.user?.email || '').toLowerCase() === ULTIMATE_ADMIN_EMAIL;
+      const profile = { ...clubState.profile, username: isAdmin ? 'byEriK12' : clean, coins: isAdmin ? 999999 : clubState.profile.coins };
+      if (supabaseClient && clubState.session) {
+        const { error } = await supabaseClient.from('profiles').upsert(profile);
+        if (error) { clubState.error = error.message; renderSimulationScreen(); return; }
+      }
+      clubState.profile = profile;
+      saveLocalClub();
+      renderSimulationScreen();
+    }
+
+    async function purchaseClubCard(cardId) {
+      const card = cardById(cardId);
+      if (!card || clubState.ownedIds.has(cardId) || Number(clubState.profile?.coins || 0) < card.price) return;
+      if (!window.confirm(`¿Estás seguro de que quieres fichar a ${card.name} por ${card.price.toLocaleString('es-ES')} monedas?`)) return;
+      if (supabaseClient && clubState.session) {
+        const { error } = await supabaseClient.rpc('purchase_card', { requested_card_id: cardId });
+        if (error) { clubState.error = error.message; renderSimulationScreen(); return; }
+        await loadClubData();
+      } else {
+        clubState.profile.coins -= card.price;
+        clubState.ownedIds.add(cardId);
+        saveLocalClub();
+      }
+      renderSimulationScreen();
+    }
+
+    function showClubCard(cardId) {
+      const card = cardById(cardId);
+      const stats = getSimulationStats(card?.name);
+      const groups = [
+        ['finalizacion', 'Finalización', ['tiro_cercano', 'bandeja_en_carrera']],
+        ['tiro', 'Tiro', ['tiro_media_distancia', 'triple']],
+        ['pase', 'Creación de juego', ['precision_pase', 'manejo_balon']],
+        ['defensa', 'Defensa', ['defensa_interior', 'defensa_exterior', 'robo', 'tapon']],
+        ['rebote', 'Rebote', ['rebote_ofensivo', 'rebote_defensivo']],
+        ['fisico', 'Físico', ['velocidad', 'agilidad', 'fuerza']]
+      ];
+      const attributes = groups.map(([key, title, names]) => `<div class="type-card attribute-group attribute-group-${key}"><div class="title">${title}</div>${names.map(attribute => `<div class="attribute-row"><div class="attribute-label"><span>${getAttributeLabel(attribute)}</span><strong>${stats[attribute]}</strong></div><div class="attribute-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${stats[attribute]}"><span style="width:${stats[attribute]}%"></span></div></div>`).join('')}</div>`).join('');
+      const modal = document.createElement('div');
+      modal.className = 'ut-modal-backdrop';
+      const playerStats = clubState.playerStats[card?.id] || {};
+      const statRows = [
+        ['PTS', playerStats.pointsPerGame], ['AST', playerStats.assistsPerGame], ['REB', playerStats.reboundsPerGame],
+        ['TAP', playerStats.blocksPerGame], ['ROB', playerStats.stealsPerGame], ['PER', playerStats.turnoversPerGame],
+        ['TC%', playerStats.fieldGoalPercentage], ['3P%', playerStats.threePointPercentage], ['VAL', playerStats.ratingPerGame], ['MVP', playerStats.mvps]
+      ].map(([label, value]) => `<div class="ut-game-stat"><span>${label}</span><strong>${value ?? '-'}</strong></div>`).join('');
+      modal.innerHTML = `<div class="ut-modal"><button class="ut-close" type="button" aria-label="Cerrar">×</button><div class="ut-card-column"><img src="${cardImage(card)}" alt="${escapeHtml(card.name)}"><div class="ut-stat-heading">Estadísticas por partido</div><div class="ut-game-stats">${statRows}</div></div><div class="ut-profile-attributes">${attributes}</div></div>`;
+      modal.addEventListener('click', event => { if (event.target === modal || event.target.closest('.ut-close')) modal.remove(); });
+      document.body.appendChild(modal);
+    }
 
     function shuffleArray(list) {
       const clone = [...list];
@@ -1939,12 +2234,21 @@
       };
     }
 
+    function getBoxScoreKey(team, playerName) {
+      return `${team}:${playerName}`;
+    }
+
+    function getBoxScoreEntry(team, playerName) {
+      return simulationState.boxScore[getBoxScoreKey(team, playerName)];
+    }
+
     function buildSimulationRoster() {
-      const shuffled = shuffleArray(SIMULATION_POOL);
       const format = SIMULATION_FORMAT_OPTIONS.find(option => option.value === simulationState.settings.format);
       const playersPerTeam = format?.playersPerTeam || 3;
-      const teamA = shuffled.slice(0, playersPerTeam);
-      const teamB = shuffled.slice(playersPerTeam, playersPerTeam * 2);
+      const ownedNames = [...clubState.ownedIds].map(cardId => cardById(cardId)?.name).filter(Boolean);
+      const selectedNames = simulationState.selectedTeamA.map(cardId => cardById(cardId)?.name).filter(Boolean);
+      const teamA = (selectedNames.length === playersPerTeam ? selectedNames : shuffleArray(ownedNames).slice(0, playersPerTeam));
+      const teamB = shuffleArray(SIMULATION_POOL).slice(0, playersPerTeam);
       return { teamA, teamB };
     }
 
@@ -2103,6 +2407,7 @@
     }
 
     function startSimulationRoster() {
+      if (!window.confirm('¿Seguro que quieres empezar el partido?')) return;
       clearSimulationMessageTimer();
       if (simulationState.pendingCpuTimeout) {
         clearTimeout(simulationState.pendingCpuTimeout);
@@ -2123,21 +2428,24 @@
       simulationState.activePlayer = teamA[0];
       simulationState.userTurn = true;
       simulationState.winner = null;
+      simulationState.rewardApplied = false;
+      simulationState.statsRecorded = false;
       simulationState.matchOver = false;
       simulationState.mismatchActive = false;
       simulationState.lastPass = null;
       simulationState.boxScore = {};
-      for (const player of [...teamA, ...teamB]) {
-        simulationState.boxScore[player] = {
+      for (const [team, players] of [['A', teamA], ['B', teamB]]) {
+        for (const player of players) {
+          simulationState.boxScore[getBoxScoreKey(team, player)] = {
           pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, oreb: 0, dreb: 0,
           fgm: 0, fga: 0, tpm: 0, tpa: 0, fgp: 0, tpp: 0
-        };
+          };
+        }
       }
       simulationState.matchups = { A: {}, B: {} };
       teamA.forEach((player, index) => { simulationState.matchups.A[player] = teamB[index] || teamB[0]; });
       teamB.forEach((player, index) => { simulationState.matchups.B[player] = teamA[index] || teamA[0]; });
-      simulationState.phase = 'roster';
-      renderSimulationScreen();
+      beginMatch();
     }
 
     function pushSimulationMessage(text, type = 'info') {
@@ -2222,6 +2530,7 @@
       simulationState.activePlayer = null;
       simulationState.userTurn = true;
       simulationState.winner = null;
+      simulationState.rewardApplied = false;
       simulationState.matchOver = false;
       simulationState.mismatchActive = false;
       simulationState.lastPass = null;
@@ -2255,18 +2564,19 @@
       }, SIMULATION_FOLLOWUP_DELAY_MS);
     }
 
-    function updateBoxScore(playerName, statKey, value = 1) {
-      if (!simulationState.boxScore[playerName]) {
-        simulationState.boxScore[playerName] = {
+    function updateBoxScore(team, playerName, statKey, value = 1) {
+      const key = getBoxScoreKey(team, playerName);
+      if (!simulationState.boxScore[key]) {
+        simulationState.boxScore[key] = {
           pts: 0, reb: 0, ast: 0, stl: 0, blk: 0, tov: 0, oreb: 0, dreb: 0,
           fgm: 0, fga: 0, tpm: 0, tpa: 0, fgp: 0, tpp: 0
         };
       }
-      simulationState.boxScore[playerName][statKey] += value;
+      simulationState.boxScore[key][statKey] += value;
     }
 
-    function registerAttempt(playerName, shotType) {
-      const entry = simulationState.boxScore[playerName];
+    function registerAttempt(team, playerName, shotType) {
+      const entry = getBoxScoreEntry(team, playerName);
       if (!entry) return;
       entry.fga += 1;
       if (shotType === 'triple') {
@@ -2274,8 +2584,8 @@
       }
     }
 
-    function registerMadeShot(playerName, shotType, points) {
-      const entry = simulationState.boxScore[playerName];
+    function registerMadeShot(team, playerName, shotType, points) {
+      const entry = getBoxScoreEntry(team, playerName);
       if (!entry) return;
       entry.fgm += 1;
       entry.pts += points;
@@ -2284,9 +2594,9 @@
       }
     }
 
-    function assignAssist(passFrom, scorer) {
+    function assignAssist(team, passFrom, scorer) {
       if (!passFrom || !scorer || passFrom === scorer) return;
-      updateBoxScore(passFrom, 'ast', 1);
+      updateBoxScore(team, passFrom, 'ast', 1);
     }
 
     function completeTurnAfterAction(team, reasonText) {
@@ -2324,6 +2634,66 @@
       }
     }
 
+    async function applyMatchReward() {
+      if (simulationState.rewardApplied || !clubState.profile || !simulationState.winner) return;
+      simulationState.rewardApplied = true;
+      const won = simulationState.winner === 'A';
+      const reward = won ? 500 : 100;
+      if (supabaseClient && clubState.session) {
+        const { error } = await supabaseClient.rpc('record_match_result', { did_win: won, reward_coins: reward });
+        if (error) clubState.error = error.message;
+        await loadClubData();
+      } else {
+        clubState.profile.coins = Number(clubState.profile.coins || 0) + reward;
+        const recordKey = won ? 'wins' : 'losses';
+        clubState.profile[recordKey] = Number(clubState.profile[recordKey] || 0) + 1;
+        saveLocalClub();
+      }
+    }
+
+    function recordSimulationPlayerStats() {
+      if (simulationState.statsRecorded || !clubState.profile) return;
+      const players = [...simulationState.teams.A.map(player => ['A', player]), ...simulationState.teams.B.map(player => ['B', player])];
+      const mvp = players.reduce((best, [team, player]) => {
+        const stats = getBoxScoreEntry(team, player) || {};
+        const rating = (stats.pts || 0) + (stats.reb || 0) + (stats.ast || 0) + (stats.stl || 0) + (stats.blk || 0) - (stats.tov || 0);
+        return !best || rating > best.rating ? { team, player, rating } : best;
+      }, null);
+      for (const [team, player] of players) {
+        const card = cardById(norm(player));
+        if (!card) continue;
+        const game = getBoxScoreEntry(team, player) || {};
+        const entry = clubState.playerStats[card.id] || { games: 0, points: 0, assists: 0, rebounds: 0, blocks: 0, steals: 0, turnovers: 0, fgm: 0, fga: 0, tpm: 0, tpa: 0, rating: 0, mvps: 0 };
+        entry.games += 1;
+        entry.points += game.pts || 0;
+        entry.assists += game.ast || 0;
+        entry.rebounds += game.reb || 0;
+        entry.blocks += game.blk || 0;
+        entry.steals += game.stl || 0;
+        entry.turnovers += game.tov || 0;
+        entry.fgm += game.fgm || 0;
+        entry.fga += game.fga || 0;
+        entry.tpm += game.tpm || 0;
+        entry.tpa += game.tpa || 0;
+        entry.rating += (game.pts || 0) + (game.reb || 0) + (game.ast || 0) + (game.stl || 0) + (game.blk || 0) - (game.tov || 0);
+        entry.mvps += mvp?.player === player && mvp.team === team ? 1 : 0;
+        const games = entry.games;
+        entry.pointsPerGame = (entry.points / games).toFixed(1);
+        entry.assistsPerGame = (entry.assists / games).toFixed(1);
+        entry.reboundsPerGame = (entry.rebounds / games).toFixed(1);
+        entry.blocksPerGame = (entry.blocks / games).toFixed(1);
+        entry.stealsPerGame = (entry.steals / games).toFixed(1);
+        entry.turnoversPerGame = (entry.turnovers / games).toFixed(1);
+        entry.fieldGoalPercentage = entry.fga ? `${((entry.fgm / entry.fga) * 100).toFixed(1)}%` : '0.0%';
+        entry.threePointPercentage = entry.tpa ? `${((entry.tpm / entry.tpa) * 100).toFixed(1)}%` : '0.0%';
+        entry.ratingPerGame = (entry.rating / games).toFixed(1);
+        clubState.playerStats[card.id] = entry;
+      }
+      const identity = clubState.session?.user?.id || clubState.profile.email;
+      localStorage.setItem(`basket-club-player-stats-${identity}`, JSON.stringify(clubState.playerStats));
+      simulationState.statsRecorded = true;
+    }
+
     function getDefenderForAttacker(team, attacker) {
       const assigned = team === 'A' ? simulationState.matchups.A[attacker] : simulationState.matchups.B[attacker];
       return assigned || (team === 'A' ? simulationState.teams.B[0] : simulationState.teams.A[0]);
@@ -2349,9 +2719,9 @@
     }
 
     function resolveTurnover(team, attackerName, defenderName, lossChance) {
-      const scoreEntry = simulationState.boxScore[attackerName];
+      const scoreEntry = getBoxScoreEntry(team, attackerName);
       if (scoreEntry) scoreEntry.tov += 1;
-      const defEntry = simulationState.boxScore[defenderName];
+      const defEntry = getBoxScoreEntry(team === 'A' ? 'B' : 'A', defenderName);
       if (defEntry) defEntry.stl += 1;
       const nextTeam = team === 'A' ? 'B' : 'A';
       simulationState.possession = nextTeam;
@@ -2408,9 +2778,9 @@
         }), 'info');
         renderSimulationScreen();
       } else {
-        const defEntry = simulationState.boxScore[defenderName];
+        const defEntry = getBoxScoreEntry(team === 'A' ? 'B' : 'A', defenderName);
         if (defEntry) defEntry.stl += 1;
-        const passEntry = simulationState.boxScore[fromName];
+        const passEntry = getBoxScoreEntry(team, fromName);
         if (passEntry) passEntry.tov += 1;
         simulationState.possession = team === 'A' ? 'B' : 'A';
         simulationState.activePlayer = defenderName;
@@ -2501,9 +2871,9 @@
       const delta = shooter[shotAttr] - defender[defenseKey];
       const shotChance = clamp(base + (delta * 0.004), clampMap[shotType][0], clampMap[shotType][1]);
       const missChance = clamp(1 - shotChance, 0.15, 0.70);
-      registerAttempt(shooterName, shotType);
+      registerAttempt(team, shooterName, shotType);
       if (Math.random() < blockProb) {
-        const blockEntry = simulationState.boxScore[defenderName];
+        const blockEntry = getBoxScoreEntry(team === 'A' ? 'B' : 'A', defenderName);
         if (blockEntry) blockEntry.blk += 1;
         pushSimulationMessage(buildOutcomeText({
           successChance: shotChance * 100,
@@ -2524,13 +2894,13 @@
       const points = shotType === 'triple' ? 3 : 2;
       if (made) {
         simulationState.score[team] += points;
-        registerMadeShot(shooterName, shotType, points);
+        registerMadeShot(team, shooterName, shotType, points);
         if (simulationState.possession === 'A' && simulationState.activePlayer !== shooterName) {
           simulationState.activePlayer = shooterName;
         }
         const lastPass = simulationState.lastPass && simulationState.lastPass.team === team ? simulationState.lastPass.player : null;
         if (lastPass && lastPass !== shooterName) {
-          assignAssist(lastPass, shooterName);
+          assignAssist(team, lastPass, shooterName);
         }
         pushSimulationMessage(buildOutcomeText({
           successChance: shotChance * 100,
@@ -2571,7 +2941,7 @@
       if (defenseWins) {
         simulationState.possession = team === 'A' ? 'B' : 'A';
         simulationState.activePlayer = defenderName;
-        updateBoxScore(defenderName, 'stl', 1);
+        updateBoxScore(team === 'A' ? 'B' : 'A', defenderName, 'stl', 1);
         pushSimulationMessage(buildOutcomeText({
           successChance: recoveryChance * 100,
           failChance: (1 - recoveryChance) * 100,
@@ -2623,8 +2993,8 @@
       const defenseWins = Math.random() < defChance;
       if (defenseWins) {
         const reboundPlayer = getWeightedPlayer(team === 'A' ? simulationState.teams.B : simulationState.teams.A, 'def');
-        updateBoxScore(reboundPlayer, 'dreb', 1);
-        updateBoxScore(reboundPlayer, 'reb', 1);
+        updateBoxScore(defTeam, reboundPlayer, 'dreb', 1);
+        updateBoxScore(defTeam, reboundPlayer, 'reb', 1);
         simulationState.possession = defTeam;
         simulationState.activePlayer = reboundPlayer;
         simulationState.userTurn = defTeam === 'A';
@@ -2636,8 +3006,8 @@
         }), 'info');
       } else {
         const reboundPlayer = getWeightedPlayer(team === 'A' ? simulationState.teams.A : simulationState.teams.B, 'off');
-        updateBoxScore(reboundPlayer, 'oreb', 1);
-        updateBoxScore(reboundPlayer, 'reb', 1);
+        updateBoxScore(team, reboundPlayer, 'oreb', 1);
+        updateBoxScore(team, reboundPlayer, 'reb', 1);
         simulationState.possession = team;
         simulationState.activePlayer = reboundPlayer;
         simulationState.userTurn = team === 'A';
@@ -2707,6 +3077,132 @@
       document.getElementById('sim-access-password')?.focus();
     }
 
+    function renderUltimateAuth(root) {
+      const hasSupabase = Boolean(supabaseClient);
+      root.innerHTML = `<div class="ut-shell"><div class="ut-auth">
+        <div class="ut-brand">Ultimate Club</div><h2>Acceso al club</h2>
+        <p>${hasSupabase ? 'Inicia sesión para guardar tu plantilla, monedas y récord.' : 'Supabase aún no está configurado. Este acceso usa un perfil local de desarrollo.'}</p>
+        <form id="ut-auth-form"><input id="ut-email" type="email" placeholder="Email" autocomplete="email" required><input id="ut-password" type="password" placeholder="Contraseña" autocomplete="current-password" minlength="6" required><div class="ut-auth-actions"><button class="ut-primary" type="submit">Iniciar sesión</button><button type="button" id="ut-register">Crear cuenta</button></div></form>
+        ${hasSupabase ? '<button type="button" id="ut-google" style="width:100%;margin-top:8px">Continuar con Google</button>' : ''}
+        <div class="ut-error" role="alert">${escapeHtml(clubState.error)}</div>
+      </div></div>`;
+      root.querySelector('#ut-auth-form')?.addEventListener('submit', event => { event.preventDefault(); signInClub(root.querySelector('#ut-email').value, root.querySelector('#ut-password').value); });
+      root.querySelector('#ut-register')?.addEventListener('click', () => signInClub(root.querySelector('#ut-email').value, root.querySelector('#ut-password').value, true));
+      root.querySelector('#ut-google')?.addEventListener('click', () => supabaseClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } }));
+    }
+
+    function renderUltimateWelcome(root) {
+      const cards = clubState.welcomeCards.map(cardId => {
+        const card = cardById(cardId);
+        return `<div class="ut-pack-card"><img src="${cardImage(card)}" alt="Carta de ${escapeHtml(card?.name || 'jugador')}"></div>`;
+      }).join('');
+      root.innerHTML = `<div class="ut-shell"><div class="ut-welcome"><div class="ut-brand">Ultimate Club</div><h2>Tu sobre inicial</h2><p>Has recibido dos cartas. Pulsa para descubrir tu plantilla.</p><div class="ut-pack" id="ut-pack">${cards}</div><button type="button" class="ut-primary" id="ut-open-pack">Abrir sobre</button></div></div>`;
+      root.querySelector('#ut-open-pack')?.addEventListener('click', () => {
+        root.querySelector('#ut-pack')?.classList.add('is-open');
+        root.querySelector('#ut-open-pack').disabled = true;
+        setTimeout(() => {
+          clubState.welcomePending = false;
+          const identity = clubState.session?.user?.id || clubState.profile?.email;
+          if (identity) localStorage.setItem(`basket-starter-seen-${identity}`, '1');
+          renderSimulationScreen();
+        }, 850);
+      });
+    }
+
+    function renderUltimateHeader() {
+      const profile = clubState.profile || {};
+      const coins = Number(profile.coins || 0).toLocaleString('es-ES');
+      return `<div class="ut-header"><div class="ut-brand">Ultimate Club</div><div class="ut-status"><span>${escapeHtml(profile.username || profile.email || 'Usuario')}</span><span>${profile.wins || 0} - ${profile.losses || 0}</span><span>🪙 ${coins}</span></div></div>`;
+    }
+
+    function renderUltimateNav() {
+      return `<nav class="ut-nav"><button type="button" class="${simulationState.clubView === 'market' ? 'active' : ''}" data-ut-view="market">Mercado</button><button type="button" class="${simulationState.clubView === 'club' ? 'active' : ''}" data-ut-view="club">Mi club</button><button type="button" class="${simulationState.clubView === 'play' ? 'active' : ''}" data-ut-view="play">Jugar</button></nav>`;
+    }
+
+    function renderUltimateCard(card, owned) {
+      const canBuy = !owned && Number(clubState.profile?.coins || 0) >= card.price;
+      const price = `${card.price.toLocaleString('es-ES')} 🪙`;
+      return `<article class="ut-card" data-ut-card="${card.id}"><img src="${cardImage(card)}" alt="${escapeHtml(card.name)}">${owned ? '<button type="button" disabled>En tu club</button>' : `<button type="button" data-ut-buy="${card.id}" title="${canBuy ? `Fichar por ${price}` : `Monedas insuficientes. Precio: ${price}`}" ${canBuy ? '' : 'disabled'}>${canBuy ? `Fichar por ${price}` : `Insuficiente · ${price}`}</button>`}</article>`;
+    }
+
+    function bindUltimateCommon(root) {
+      root.querySelectorAll('[data-ut-view]').forEach(button => button.addEventListener('click', () => { simulationState.clubView = button.dataset.utView; renderSimulationScreen(); }));
+      root.querySelector('#ut-signout')?.addEventListener('click', signOutClub);
+      root.querySelectorAll('[data-ut-card]').forEach(card => card.addEventListener('click', event => { if (!event.target.closest('[data-ut-buy]')) showClubCard(card.dataset.utCard); }));
+      root.querySelectorAll('[data-ut-buy]').forEach(button => button.addEventListener('click', () => purchaseClubCard(button.dataset.utBuy)));
+    }
+
+    function openLineupSwap(slotIndex) {
+      const owned = clubState.catalog.filter(card => clubState.ownedIds.has(card.id));
+      const currentId = simulationState.selectedTeamA[slotIndex];
+      const options = owned.filter(card => card.id === currentId || !simulationState.selectedTeamA.includes(card.id));
+      const modal = document.createElement('div');
+      modal.className = 'ut-swap-backdrop';
+      modal.innerHTML = `<div class="ut-swap-window"><button class="ut-close" type="button" aria-label="Cerrar">×</button><h3>Cambiar jugador</h3><p>Elige una carta de tu club para ocupar este puesto.</p><div class="ut-swap-options">${options.map(card => `<button type="button" class="ut-swap-option" data-ut-swap-card="${card.id}"><img src="${cardImage(card)}" alt="${escapeHtml(card.name)}"><span>${escapeHtml(card.name)} · ${escapeHtml(obtenerPerfil(card.name).posicion)}</span></button>`).join('')}</div></div>`;
+      modal.addEventListener('click', event => {
+        if (event.target === modal || event.target.closest('.ut-close')) { modal.remove(); return; }
+        const option = event.target.closest('[data-ut-swap-card]');
+        if (!option) return;
+        simulationState.selectedTeamA[slotIndex] = option.dataset.utSwapCard;
+        modal.remove();
+        renderSimulationScreen();
+      });
+      document.body.appendChild(modal);
+    }
+
+    function renderUltimateClub(root) {
+      const owned = clubState.catalog.filter(card => clubState.ownedIds.has(card.id));
+      const cards = owned.length ? owned.map(card => renderUltimateCard(card, true)).join('') : '<div class="ut-empty">Tu álbum está vacío.</div>';
+      const marketCards = clubState.catalog.length > 3
+        ? Array.from({ length: 3 }, (_, offset) => clubState.catalog[(simulationState.marketIndex + offset) % clubState.catalog.length])
+        : clubState.catalog;
+      const market = marketCards.map(card => renderUltimateCard(card, clubState.ownedIds.has(card.id))).join('');
+      const content = simulationState.clubView === 'market'
+        ? `<div class="ut-title-row"><div><h2>Mercado</h2><p>Explora tres cartas con las flechas.</p></div></div><div class="ut-market-carousel"><button type="button" class="ut-market-arrow" id="ut-market-prev" aria-label="Cartas anteriores">‹</button><div class="ut-market-window"><div class="ut-market-track">${market}</div></div><button type="button" class="ut-market-arrow" id="ut-market-next" aria-label="Cartas siguientes">›</button></div>`
+        : `<div class="ut-title-row"><div><h2>Mi club</h2><p>Cartas desbloqueadas: ${owned.length} / ${clubState.catalog.length}</p></div></div><div class="ut-card-grid">${cards}</div>`;
+      root.innerHTML = `<div class="ut-shell">${renderUltimateHeader()}${renderUltimateNav()}${content}<div class="ut-error">${escapeHtml(clubState.error)}</div></div>`;
+      bindUltimateCommon(root);
+      root.querySelector('#ut-market-prev')?.addEventListener('click', () => {
+        simulationState.marketIndex = (simulationState.marketIndex - 1 + clubState.catalog.length) % clubState.catalog.length;
+        renderSimulationScreen();
+      });
+      root.querySelector('#ut-market-next')?.addEventListener('click', () => {
+        simulationState.marketIndex = (simulationState.marketIndex + 1) % clubState.catalog.length;
+        renderSimulationScreen();
+      });
+    }
+
+    function refreshOpponentPreview() {
+      const format = SIMULATION_FORMAT_OPTIONS.find(option => option.value === simulationState.settings.format);
+      simulationState.previewTeamB = shuffleArray(SIMULATION_POOL).slice(0, format?.playersPerTeam || 3);
+    }
+
+    function renderUltimatePlayLobby(root) {
+      const format = SIMULATION_FORMAT_OPTIONS.find(option => option.value === simulationState.settings.format);
+      const playersPerTeam = format?.playersPerTeam || 3;
+      const owned = clubState.catalog.filter(card => clubState.ownedIds.has(card.id));
+      const validSelected = simulationState.selectedTeamA.filter(cardId => owned.some(card => card.id === cardId));
+      const selectedIds = [...validSelected];
+      if (simulationState.selectedTeamA.length === 0) {
+        for (const card of owned) {
+          if (selectedIds.length >= playersPerTeam) break;
+          if (!selectedIds.includes(card.id)) selectedIds.push(card.id);
+        }
+      }
+      simulationState.selectedTeamA = selectedIds.slice(0, playersPerTeam);
+      const enoughCards = owned.length >= playersPerTeam && selectedIds.length === playersPerTeam;
+      if (!simulationState.previewTeamB.length) refreshOpponentPreview();
+      const previewTeamB = simulationState.previewTeamB.map(name => cardById(norm(name)) || { name }).map(card => `<article class="ut-play-card"><img src="${cardImage(card)}" alt="CPU ${escapeHtml(card.name)}"><div class="ut-play-meta">${escapeHtml(obtenerPerfil(card.name).posicion)}</div></article>`).join('');
+      const previewTeamA = simulationState.selectedTeamA.map((cardId, slotIndex) => { const card = cardById(cardId); return card ? `<article class="ut-play-card selected" data-ut-swap-slot="${slotIndex}"><img src="${cardImage(card)}" alt="${escapeHtml(card.name)}"><div class="ut-play-meta">Cambiar por · ${escapeHtml(card.name)} · ${escapeHtml(obtenerPerfil(card.name).posicion)}</div></article>` : ''; }).join('');
+      root.innerHTML = `<div class="ut-shell">${renderUltimateHeader()}${renderUltimateNav()}<div class="ut-title-row"><div><h2>Jugar</h2><p>Selecciona ${playersPerTeam} titulares. Pulsa una carta para cambiarla por otra de tu club.</p></div></div><div class="sim-config"><label for="sim-format-select">Formato<select id="sim-format-select">${SIMULATION_FORMAT_OPTIONS.map(option => `<option value="${option.value}" ${simulationState.settings.format === option.value ? 'selected' : ''}>${option.label}</option>`).join('')}</select></label><label for="sim-win-select">Victoria<select id="sim-win-select">${SIMULATION_WIN_OPTIONS.map(option => `<option value="${option.value}" ${simulationState.settings.winScore === option.score ? 'selected' : ''}>${option.label}</option>`).join('')}</select></label></div><div class="ut-match-preview"><div><div class="ut-side-label">TU EQUIPO · ${simulationState.selectedTeamA.length}/${playersPerTeam}</div><div class="ut-match-team">${previewTeamA || '<div class="ut-empty">Sin cartas</div>'}</div></div><span class="ut-vs">VS</span><div><div class="ut-side-label">RIVAL <button type="button" class="ut-dice" id="ut-reroll" aria-label="Cambiar rival" title="Cambiar rival">⚄</button></div><div class="ut-match-team">${previewTeamB}</div></div></div><div class="ut-actions sim-actions"><button type="button" class="ut-primary sim-action-button" id="sim-start-btn" ${enoughCards ? '' : 'disabled'}>Iniciar partido</button><button type="button" class="sim-action-button" data-ut-view="market">Ir al mercado</button></div>${enoughCards ? '' : `<div class="ut-error">Selecciona suficientes cartas para el formato ${format?.label || ''}, o consigue más en el Mercado.</div>`}</div>`;
+      bindUltimateCommon(root);
+      root.querySelectorAll('[data-ut-swap-slot]').forEach(card => card.addEventListener('click', () => openLineupSwap(Number(card.dataset.utSwapSlot))));
+      root.querySelector('#sim-start-btn')?.addEventListener('click', startSimulationRoster);
+      root.querySelector('#ut-reroll')?.addEventListener('click', () => { refreshOpponentPreview(); renderSimulationScreen(); });
+      root.querySelector('#sim-format-select')?.addEventListener('change', event => { simulationState.settings.format = event.target.value; simulationState.previewTeamB = []; renderSimulationScreen(); });
+      root.querySelector('#sim-win-select')?.addEventListener('change', event => { simulationState.settings.winScore = Number(event.target.value); renderSimulationScreen(); });
+    }
+
     function renderSimulationScreen() {
       const root = document.getElementById('sim-content');
       if (!root) return;
@@ -2714,6 +3210,21 @@
         renderSimulationAccessGate(root);
         return;
       }
+
+      if (!clubState.profile && !clubState.loading && !clubState.initialized) {
+        loadClubData().then(() => renderSimulationScreen());
+        renderUltimateAuth(root);
+        return;
+      }
+      if (clubState.loading) { root.innerHTML = '<div class="ut-shell"><div class="ut-empty">Cargando tu club...</div></div>'; return; }
+      if (clubState.welcomePending) { renderUltimateWelcome(root); return; }
+      if (!clubState.profile.username) {
+        root.innerHTML = `<div class="ut-shell"><div class="ut-auth"><div class="ut-brand">Ultimate Club</div><h2>Elige tu nombre de usuario</h2><p>Necesitas un nombre para entrar al club.</p><form id="ut-username-form"><input id="ut-username" required minlength="3" maxlength="24" placeholder="Nombre de usuario"><button class="ut-primary" type="submit">Entrar al club</button></form><div class="ut-error">${escapeHtml(clubState.error)}</div></div></div>`;
+        root.querySelector('#ut-username-form')?.addEventListener('submit', event => { event.preventDefault(); saveClubUsername(root.querySelector('#ut-username').value); });
+        return;
+      }
+      if (simulationState.phase === 'lobby' && simulationState.clubView !== 'play') { renderUltimateClub(root); return; }
+      if (simulationState.phase === 'lobby' && simulationState.clubView === 'play') { renderUltimatePlayLobby(root); return; }
 
       if (simulationState.phase === 'lobby') {
         root.innerHTML = `
@@ -2777,7 +3288,7 @@
                   <div class="sim-players">
                     ${teamA.map(player => `
                       <div class="sim-player-card" tabindex="0">
-                        <img src="${getPlayerPhoto(player)}" alt="${player}" />
+                        <img src="${cardImage(cardById(norm(player)) || { name: player })}" alt="${player}" />
                         <div>
                           <div class="name">${player}</div>
                           <div class="role">Jugador</div>
@@ -2792,7 +3303,7 @@
                   <div class="sim-players">
                     ${teamB.map(player => `
                       <div class="sim-player-card" tabindex="0">
-                        <img src="${getPlayerPhoto(player)}" alt="${player}" />
+                        <img src="${cardImage(cardById(norm(player)) || { name: player })}" alt="${player}" />
                         <div>
                           <div class="name">${player}</div>
                           <div class="role">CPU</div>
@@ -2908,11 +3419,12 @@
         `;
 
         document.getElementById('sim-exit-live')?.addEventListener('click', () => {
-          const shouldExit = window.confirm('¿Seguro que quieres salir del partido? Se reiniciará el marcador y la simulación.');
+          const shouldExit = window.confirm('¿Seguro que quieres abandonar? No recibirás monedas ni se registrará la partida.');
           if (!shouldExit) return;
           resetSimulationStateForNewMatch();
-          simulationState.phase = 'roster';
-          startSimulationRoster();
+          simulationState.phase = 'lobby';
+          simulationState.clubView = 'play';
+          renderSimulationScreen();
         });
         document.querySelectorAll('[data-sim-pass]').forEach(button => {
           button.addEventListener('click', () => {
@@ -2936,29 +3448,34 @@
       }
 
       if (simulationState.phase === 'finished') {
+        recordSimulationPlayerStats();
+        if (!simulationState.rewardApplied) {
+          applyMatchReward().then(() => renderSimulationScreen());
+        }
         const winner = simulationState.winner === 'A' ? 'Equipo A' : 'Equipo B';
+        const reward = simulationState.winner === 'A' ? 500 : 100;
         const winnerPlayers = simulationState.teams[simulationState.winner] || [];
         const loserPlayers = simulationState.winner === 'A' ? simulationState.teams.B : simulationState.teams.A;
-        const mvp = [...simulationState.teams.A, ...simulationState.teams.B].reduce((best, player) => {
-          const stats = simulationState.boxScore[player] || { pts:0, reb:0, ast:0, stl:0, blk:0, tov:0 };
+        const mvp = [...simulationState.teams.A.map(player => ['A', player]), ...simulationState.teams.B.map(player => ['B', player])].reduce((best, [team, player]) => {
+          const stats = getBoxScoreEntry(team, player) || { pts:0, reb:0, ast:0, stl:0, blk:0, tov:0 };
           const rating = (stats.pts || 0) + (stats.reb || 0) + (stats.ast || 0) + (stats.stl || 0) + (stats.blk || 0) - (stats.tov || 0);
           const points = stats.pts || 0;
           if (!best || rating > best.rating || (rating === best.rating && points > best.points)) {
-            return { player, rating, points };
+            return { team, player, rating, points };
           }
           return best;
         }, null);
         const buildRows = (team) => {
           const players = simulationState.teams[team] || [];
           return players.map(player => {
-            const stats = simulationState.boxScore[player] || { pts:0, reb:0, ast:0, stl:0, blk:0, tov:0, fgm:0, fga:0, tpm:0, tpa:0 };
+            const stats = getBoxScoreEntry(team, player) || { pts:0, reb:0, ast:0, stl:0, blk:0, tov:0, fgm:0, fga:0, tpm:0, tpa:0 };
             const reb = stats.reb || (stats.oreb || 0) + (stats.dreb || 0);
             const fgp = stats.fga ? ((stats.fgm / stats.fga) * 100) : 0;
             const tpp = stats.tpa ? ((stats.tpm / stats.tpa) * 100) : 0;
             const rating = stats.pts + (stats.reb || 0) + stats.ast + stats.stl + stats.blk - stats.tov;
             return `
-              <tr class="${mvp && mvp.player === player ? 'mvp-row' : ''}">
-                <td>${player}${mvp && mvp.player === player ? '<span class="sim-mvp-badge">MVP</span>' : ''}</td>
+              <tr class="${mvp && mvp.team === team && mvp.player === player ? 'mvp-row' : ''}">
+                <td>${player}${mvp && mvp.team === team && mvp.player === player ? '<span class="sim-mvp-badge">MVP</span>' : ''}</td>
                 <td>${stats.pts}</td>
                 <td>${reb}</td>
                 <td>${stats.ast}</td>
@@ -2978,6 +3495,7 @@
               <div class="sim-result-card">
                 <h2>¡${winner} ha ganado el partido!</h2>
                 <div class="sim-score" style="font-size:22px; margin-top:10px;">Equipo A ${simulationState.score.A} - ${simulationState.score.B} Equipo B</div>
+                <div class="sim-mvp">${simulationState.winner === 'A' ? '¡Victoria! +500 monedas añadidas a tu club.' : 'Derrota: +100 monedas.'}</div>
                 <div class="sim-mvp">MVP: ${mvp ? `${mvp.player} (${mvp.rating} VAL)` : 'Sin datos'}</div>
               </div>
               <div class="sim-finish-grid">
