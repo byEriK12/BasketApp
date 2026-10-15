@@ -1741,8 +1741,8 @@
     });
 
     const SIMULATION_POOL = ["Aleix", "Arnau", "Cavi", "Diaz", "Eric", "Ert", "Grinyo", "Jamo"];
-    const SUPABASE_URL = window.BASKET_SUPABASE_URL || '';
-    const SUPABASE_ANON_KEY = window.BASKET_SUPABASE_ANON_KEY || '';
+    const SUPABASE_URL = "https://fawwabuyxulydwdnzqmx.supabase.co" || '';
+    const SUPABASE_ANON_KEY = "sb_publishable_pn-ioI0Sgw00hWINTUvWFg_Zk2HTZXz" || '';
     const supabaseClient = SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase
       ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
       : null;
@@ -1959,10 +1959,10 @@
       .ut-swap-window { width:min(680px,100%); max-height:82vh; overflow:auto; padding:20px; background:#102021; border:1px solid #d9ff8d; border-radius:12px; box-shadow:0 24px 80px rgba(0,0,0,.6); }
       .ut-swap-window h3 { margin:0; color:#d9ff8d; }
       .ut-swap-window p { color:#9cbab3; font-size:13px; }
-      .ut-swap-options { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; }
+      .ut-swap-options { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,150px)); justify-content:start; gap:12px; }
       .ut-swap-option { padding:8px; text-align:left; background:#132628; border:1px solid #37605c; border-radius:8px; }
       .ut-swap-option:hover { border-color:#d9ff8d; }
-      .ut-swap-option img { display:block; width:100%; border-radius:6px; }
+      .ut-swap-option img { display:block; width:100%; aspect-ratio:2 / 3; object-fit:cover; border-radius:6px; }
       .ut-swap-option span { display:block; padding-top:6px; color:#d9ff8d; font-size:11px; font-weight:800; }
       .ut-vs { font-weight:900; color:#d9ff8d; }
       @media (max-width:600px) { .ut-shell { padding:12px; } .ut-nav { grid-template-columns:1fr; } .ut-modal { grid-template-columns:1fr; } .ut-match-preview { grid-template-columns:1fr; } }
@@ -2004,6 +2004,7 @@
       previewTeamB: [],
       selectedTeamA: [],
       statsRecorded: false,
+      selectionFormat: null,
       marketIndex: 0
     };
 
@@ -2130,7 +2131,13 @@
       const result = register
         ? await supabaseClient.auth.signUp({ email, password })
         : await supabaseClient.auth.signInWithPassword({ email, password });
-      if (result.error) { clubState.error = result.error.message; renderSimulationScreen(); return; }
+      if (result.error) {
+        clubState.error = register
+          ? result.error.message
+          : 'Email o contraseña incorrectos. Si no tienes cuenta, crea una cuenta.';
+        renderSimulationScreen();
+        return;
+      }
       await loadClubData();
       renderSimulationScreen();
     }
@@ -2171,6 +2178,7 @@
         clubState.ownedIds.add(cardId);
         saveLocalClub();
       }
+      simulationState.selectionFormat = null;
       renderSimulationScreen();
     }
 
@@ -3183,13 +3191,15 @@
       const owned = clubState.catalog.filter(card => clubState.ownedIds.has(card.id));
       const validSelected = simulationState.selectedTeamA.filter(cardId => owned.some(card => card.id === cardId));
       const selectedIds = [...validSelected];
-      if (simulationState.selectedTeamA.length === 0) {
+      const formatChanged = simulationState.selectionFormat !== simulationState.settings.format;
+      if (simulationState.selectedTeamA.length === 0 || formatChanged) {
         for (const card of owned) {
           if (selectedIds.length >= playersPerTeam) break;
           if (!selectedIds.includes(card.id)) selectedIds.push(card.id);
         }
       }
       simulationState.selectedTeamA = selectedIds.slice(0, playersPerTeam);
+      simulationState.selectionFormat = simulationState.settings.format;
       const enoughCards = owned.length >= playersPerTeam && selectedIds.length === playersPerTeam;
       if (!simulationState.previewTeamB.length) refreshOpponentPreview();
       const previewTeamB = simulationState.previewTeamB.map(name => cardById(norm(name)) || { name }).map(card => `<article class="ut-play-card"><img src="${cardImage(card)}" alt="CPU ${escapeHtml(card.name)}"><div class="ut-play-meta">${escapeHtml(obtenerPerfil(card.name).posicion)}</div></article>`).join('');
