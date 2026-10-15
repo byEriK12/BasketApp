@@ -30,15 +30,18 @@ create table if not exists public.user_cards (
 );
 
 insert into public.cards (id, name, overall, price, image_path) values
-  ('aleix', 'Aleix', 75, 5000, 'cards/Aleix_Card.png'),
-  ('arnau', 'Arnau', 74, 5000, 'cards/Arnau_Card.png'),
-  ('cavi', 'Cavi', 77, 5000, 'cards/Cavi_Card.png'),
-  ('diaz', 'Diaz', 76, 5000, 'cards/Diaz_Card.png'),
-  ('eric', 'Eric', 78, 5000, 'cards/Eric_Card.png'),
-  ('ert', 'Ert', 75, 5000, 'cards/Ert_Card.png'),
-  ('grinyo', 'Grinyo', 74, 5000, 'cards/Grinyo_Card.png'),
-  ('jamo', 'Jamo', 76, 5000, 'cards/Jamo_Card.png')
+  ('aleix', 'Aleix', 74, 7400, 'cards/Aleix_Card.png'),
+  ('arnau', 'Arnau', 78, 7800, 'cards/Arnau_Card.png'),
+  ('cavi', 'Cavi', 70, 7000, 'cards/Cavi_Card.png'),
+  ('diaz', 'Diaz', 76, 7600, 'cards/Diaz_Card.png'),
+  ('eric', 'Eric', 79, 7900, 'cards/Eric_Card.png'),
+  ('ert', 'Ert', 74, 7400, 'cards/Ert_Card.png'),
+  ('grinyo', 'Grinyo', 64, 6400, 'cards/Grinyo_Card.png'),
+  ('jamo', 'Jamo', 70, 7000, 'cards/Jamo_Card.png')
 on conflict (id) do update set name = excluded.name, overall = excluded.overall, price = excluded.price, image_path = excluded.image_path;
+
+-- Keeps an existing project in sync with the editable overall-based pricing rule.
+update public.cards set price = overall * 100;
 
 alter table public.profiles enable row level security;
 alter table public.cards enable row level security;

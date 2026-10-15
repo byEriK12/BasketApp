@@ -1747,10 +1747,11 @@
       ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
       : null;
     const ULTIMATE_ADMIN_EMAIL = 'eric.matasp12@gmail.com';
+    const ULTIMATE_PRICE_PER_OVERALL = 100;
     const ULTIMATE_CARD_CATALOG = SIMULATION_POOL.map(name => ({
-      id: name.toLowerCase(), name, overall: { Aleix: 75, Arnau: 74, Cavi: 77, Diaz: 76, Eric: 78, Ert: 75, Grinyo: 74, Jamo: 76 }[name],
-      price: 5000, image_path: `cards/${name}_Card.png`
-    }));
+      id: name.toLowerCase(), name, overall: { Aleix: 74, Arnau: 78, Cavi: 70, Diaz: 76, Eric: 79, Ert: 74, Grinyo: 64, Jamo: 70 }[name],
+      image_path: `cards/${name}_Card.png`
+    })).map(card => ({ ...card, price: card.overall * ULTIMATE_PRICE_PER_OVERALL }));
     const SIMULATION_WIN_SCORE = 11;
     const SIMULATION_ACCESS_PASSWORD = 'basketcadafinde';
     const SIMULATION_FORMAT_OPTIONS = [
@@ -1780,7 +1781,8 @@
       Eric: { tiro_cercano: 87, bandeja_en_carrera: 75, tiro_media_distancia: 77, triple: 76, precision_pase: 89, manejo_balon: 83, defensa_interior: 80, defensa_exterior: 68, robo: 72, tapon: 85, rebote_ofensivo: 81, rebote_defensivo: 79, velocidad: 73, agilidad: 70, fuerza: 82 },
       Ert: { tiro_cercano: 83, bandeja_en_carrera: 70, tiro_media_distancia: 71, triple: 73, precision_pase: 77, manejo_balon: 78, defensa_interior: 77, defensa_exterior: 64, robo: 65, tapon: 74, rebote_ofensivo: 73, rebote_defensivo: 70, velocidad: 72, agilidad: 70, fuerza: 79 },
       Grinyo: { tiro_cercano: 62, bandeja_en_carrera: 60, tiro_media_distancia: 70, triple: 63, precision_pase: 70, manejo_balon: 49, defensa_interior: 71, defensa_exterior: 76, robo: 57, tapon: 55, rebote_ofensivo: 61, rebote_defensivo: 70, velocidad: 68, agilidad: 80, fuerza: 62 },
-      Jamo: { tiro_cercano: 68, bandeja_en_carrera: 69, tiro_media_distancia: 64, triple: 78, precision_pase: 76, manejo_balon: 59, defensa_interior: 81, defensa_exterior: 71, robo: 72, tapon: 82, rebote_ofensivo: 67, rebote_defensivo: 75, velocidad: 67, agilidad: 67, fuerza: 63 }
+      Jamo: { tiro_cercano: 68, bandeja_en_carrera: 69, tiro_media_distancia: 64, triple: 78, precision_pase: 76, manejo_balon: 59, defensa_interior: 81, defensa_exterior: 71, robo: 72, tapon: 82, rebote_ofensivo: 67, rebote_defensivo: 75, velocidad: 67, agilidad: 67, fuerza: 63 },
+      Llongueras: { tiro_cercano: 76, bandeja_en_carrera: 74, tiro_media_distancia: 68, triple: 77, precision_pase: 80, manejo_balon: 67, defensa_interior: 65, defensa_exterior: 69, robo: 68, tapon: 53, rebote_ofensivo: 78, rebote_defensivo: 75, velocidad: 84, agilidad: 75, fuerza: 75 }
     };
 
     const SIMULATION_CSS = `
@@ -2256,7 +2258,12 @@
       const ownedNames = [...clubState.ownedIds].map(cardId => cardById(cardId)?.name).filter(Boolean);
       const selectedNames = simulationState.selectedTeamA.map(cardId => cardById(cardId)?.name).filter(Boolean);
       const teamA = (selectedNames.length === playersPerTeam ? selectedNames : shuffleArray(ownedNames).slice(0, playersPerTeam));
-      const teamB = shuffleArray(SIMULATION_POOL).slice(0, playersPerTeam);
+      const previewTeamB = simulationState.previewTeamB
+        .map(name => cardById(norm(name))?.name || name)
+        .filter(Boolean);
+      const teamB = previewTeamB.length === playersPerTeam
+        ? previewTeamB
+        : shuffleArray(SIMULATION_POOL).slice(0, playersPerTeam);
       return { teamA, teamB };
     }
 
@@ -3062,7 +3069,7 @@
               <input id="sim-access-password" type="password" autocomplete="off" placeholder="Contraseña" aria-label="Contraseña" required />
               <button type="submit" class="sim-action-button primary">Entrar</button>
             </form>
-            <div class="sim-lock-error" role="alert">${simulationState.accessError}</div>
+            <div class="sim-lock-error" role="alert" aria-live="assertive">${escapeHtml(simulationState.accessError)}</div>
           </div>
         </div>
       `;
@@ -3075,7 +3082,7 @@
           renderSimulationScreen();
           return;
         }
-        simulationState.accessError = 'Contraseña incorrecta.';
+        simulationState.accessError = 'Contraseña incorrecta. Inténtalo de nuevo.';
         if (input) {
           input.value = '';
           input.focus();
@@ -3228,6 +3235,7 @@
       }
       if (clubState.loading) { root.innerHTML = '<div class="ut-shell"><div class="ut-empty">Cargando tu club...</div></div>'; return; }
       if (clubState.welcomePending) { renderUltimateWelcome(root); return; }
+      if (!clubState.profile) { renderUltimateAuth(root); return; }
       if (!clubState.profile.username) {
         root.innerHTML = `<div class="ut-shell"><div class="ut-auth"><div class="ut-brand">Ultimate Club</div><h2>Elige tu nombre de usuario</h2><p>Necesitas un nombre para entrar al club.</p><form id="ut-username-form"><input id="ut-username" required minlength="3" maxlength="24" placeholder="Nombre de usuario"><button class="ut-primary" type="submit">Entrar al club</button></form><div class="ut-error">${escapeHtml(clubState.error)}</div></div></div>`;
         root.querySelector('#ut-username-form')?.addEventListener('submit', event => { event.preventDefault(); saveClubUsername(root.querySelector('#ut-username').value); });
