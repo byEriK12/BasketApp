@@ -756,6 +756,41 @@
     formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:6, minutos:15,
     puntos:8, asistencias:0, rebotes:5, tapones:3, triples_intentados:0, triples_anotados:0,
     jugadores_equipo:["Eric","Nicole","Cavi"], jugadores_rivales:["Jamo","Diaz","Ert"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:8, minutos:15,
+    puntos:2, asistencias:1, rebotes:4, tapones:1, triples_intentados:2, triples_anotados:0,
+    jugadores_equipo:["Eric","Cavi","Diaz"], jugadores_rivales:["Jamo","Aleix","Ert"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:6, minutos:15,
+    puntos:2, asistencias:2, rebotes:5, tapones:0, triples_intentados:2, triples_anotados:0,
+    jugadores_equipo:["Eric","Aleix","Ert"], jugadores_rivales:["Jamo","Diaz","Cavi"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:5, minutos:15,
+    puntos:2, asistencias:4, rebotes:4, tapones:0, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Aleix","Ert"], jugadores_rivales:["Jamo","Cavi","Diaz"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:21, puntos_rivales:14, minutos:25,
+    puntos:9, asistencias:2, rebotes:8, tapones:1, triples_intentados:2, triples_anotados:1,
+    jugadores_equipo:["Eric","Aleix","Cavi"], jugadores_rivales:["Jamo","Diaz","Ert"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:2, minutos:10,
+    puntos:6, asistencias:2, rebotes:4, tapones:1, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Ert","Cavi"], jugadores_rivales:["Jamo","Diaz","Aleix"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:12, puntos_rivales:6, minutos:15,
+    puntos:4, asistencias:3, rebotes:5, tapones:0, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Ert","Jamo"], jugadores_rivales:["Cavi","Aleix","Diaz"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:22, puntos_rivales:18, minutos:25,
+    puntos:8, asistencias:2, rebotes:10, tapones:1, triples_intentados:1, triples_anotados:0,
+    jugadores_equipo:["Eric","Ert","Jamo"], jugadores_rivales:["Diaz","Cavi","Aleix"]
   }
 ];
 
@@ -767,5 +802,13 @@ const estadisticasDiazRaw = [
   { partido: 148, puntos: 5, asistencias: 2, rebotes: 5, tapones: 0, triples_intentados: 4, triples_anotados: 1, minutos: 15 },
   { partido: 149, puntos: 4, asistencias: 1, rebotes: 4, tapones: 0, triples_intentados: 4, triples_anotados: 0, minutos: 20 },
   { partido: 150, puntos: 5, asistencias: 3, rebotes: 5, tapones: 0, triples_intentados: 3, triples_anotados: 1, minutos: 15 },
-  { partido: 151, puntos: 2, asistencias: 2, rebotes: 4, tapones: 0, triples_intentados: 3, triples_anotados: 0, minutos: 15 }
+  { partido: 151, puntos: 2, asistencias: 2, rebotes: 4, tapones: 0, triples_intentados: 3, triples_anotados: 0, minutos: 15 },
+  { partido: 152, puntos: 5, asistencias: 1, rebotes: 4, tapones: 1, triples_intentados: 3, triples_anotados: 1, minutos: 15 },
+  { partido: 153, puntos: 0, asistencias: 0, rebotes: 5, tapones: 0, triples_intentados: 3, triples_anotados: 0, minutos: 15 },
+  { partido: 154, puntos: 3, asistencias: 0, rebotes: 4, tapones: 0, triples_intentados: 2, triples_anotados: 1, minutos: 15 },
+  { partido: 155, puntos: 2, asistencias: 4, rebotes: 13, tapones: 0, triples_intentados: 1, triples_anotados: 0, minutos: 25 },
+  { partido: 156, puntos: 0, asistencias: 1, rebotes: 0, tapones: 0, triples_intentados: 0, triples_anotados: 0, minutos: 10 },
+  { partido: 157, puntos: 4, asistencias: 1, rebotes: 2, tapones: 0, triples_intentados: 0, triples_anotados: 0, minutos: 15 },
+  { partido: 158, puntos: 10, asistencias: 3, rebotes: 6, tapones: 0, triples_intentados: 4, triples_anotados: 2, minutos: 25 },
+
 ];
