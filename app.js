@@ -967,6 +967,46 @@
         defensa: [['Defensa Interior', 62], ['Defensa Exterior', 80], ['Robo', 81], ['Tapón', 59]],
         rebote: [['Rebote Ofensivo', 57], ['Rebote Defensivo', 63]],
         fisico: [['Velocidad', 75], ['Agilidad', 66], ['Fuerza', 72]]
+      },
+      Pep: {
+        finalizacion: [['Tiro Cercano', 59], ['Bandeja en Carrera', 61]],
+        tiro: [['Tiro de Media Distancia', 58], ['Triple', 65]],
+        pase: [['Precisión de Pase', 67], ['Manejo de Balón', 62]],
+        defensa: [['Defensa Interior', 60], ['Defensa Exterior', 72], ['Robo', 73], ['Tapón', 60]],
+        rebote: [['Rebote Ofensivo', 66], ['Rebote Defensivo', 64]],
+        fisico: [['Velocidad', 75], ['Agilidad', 672], ['Fuerza', 65]]
+      },
+      Ot: {
+        finalizacion: [['Tiro Cercano', 70], ['Bandeja en Carrera', 74]],
+        tiro: [['Tiro de Media Distancia', 63], ['Triple', 59]],
+        pase: [['Precisión de Pase', 68], ['Manejo de Balón', 63]],
+        defensa: [['Defensa Interior', 72], ['Defensa Exterior', 74], ['Robo', 63], ['Tapón', 73]],
+        rebote: [['Rebote Ofensivo', 71], ['Rebote Defensivo', 75]],
+        fisico: [['Velocidad', 74], ['Agilidad', 70], ['Fuerza', 66]]
+      },
+      Gomez: {
+        finalizacion: [['Tiro Cercano', 71], ['Bandeja en Carrera', 75]],
+        tiro: [['Tiro de Media Distancia', 66], ['Triple', 74]],
+        pase: [['Precisión de Pase', 69], ['Manejo de Balón', 72]],
+        defensa: [['Defensa Interior', 73], ['Defensa Exterior', 74], ['Robo', 61], ['Tapón', 80]],
+        rebote: [['Rebote Ofensivo', 62], ['Rebote Defensivo', 77]],
+        fisico: [['Velocidad', 70], ['Agilidad', 76], ['Fuerza', 75]]
+      },
+      Moya: {
+        finalizacion: [['Tiro Cercano', 58], ['Bandeja en Carrera', 60]],
+        tiro: [['Tiro de Media Distancia', 59], ['Triple', 54]],
+        pase: [['Precisión de Pase', 67], ['Manejo de Balón', 61]],
+        defensa: [['Defensa Interior', 60], ['Defensa Exterior', 79], ['Robo', 79], ['Tapón', 61]],
+        rebote: [['Rebote Ofensivo', 59], ['Rebote Defensivo', 55]],
+        fisico: [['Velocidad', 76], ['Agilidad', 67], ['Fuerza', 79]]
+      },
+      Andreu: {
+        finalizacion: [['Tiro Cercano', 66], ['Bandeja en Carrera', 63]],
+        tiro: [['Tiro de Media Distancia', 70], ['Triple', 66]],
+        pase: [['Precisión de Pase', 72], ['Manejo de Balón', 67]],
+        defensa: [['Defensa Interior', 62], ['Defensa Exterior', 64], ['Robo', 64], ['Tapón', 57]],
+        rebote: [['Rebote Ofensivo', 61], ['Rebote Defensivo', 63]],
+        fisico: [['Velocidad', 68], ['Agilidad', 63], ['Fuerza', 71]]
       }
     };
 
@@ -1772,7 +1812,7 @@
       }
     });
 
-    const SIMULATION_POOL = ["Aleix", "Arnau", "Cavi", "Diaz", "Eric", "Ert", "Grinyo", "Jamo", "Llongueras", "Blasi", "Batalla", "Raset"];
+    const SIMULATION_POOL = ["Aleix", "Arnau", "Cavi", "Diaz", "Eric", "Ert", "Grinyo", "Jamo", "Llongueras", "Blasi", "Batalla", "Raset", "Pep", "Ot", "Gomez", "Moya", "Andreu"];
     const SUPABASE_URL = "https://fawwabuyxulydwdnzqmx.supabase.co" || '';
     const SUPABASE_ANON_KEY = "sb_publishable_pn-ioI0Sgw00hWINTUvWFg_Zk2HTZXz" || '';
     const supabaseClient = SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase
@@ -1781,7 +1821,7 @@
     const ULTIMATE_ADMIN_EMAIL = 'eric.matasp12@gmail.com';
     const ULTIMATE_PRICE_PER_OVERALL = 100;
     const ULTIMATE_CARD_CATALOG = SIMULATION_POOL.map(name => ({
-      id: name.toLowerCase(), name, overall: { Aleix: 74, Arnau: 78, Cavi: 70, Diaz: 76, Eric: 79, Ert: 74, Grinyo: 64, Jamo: 70, Llongueras: 71, Blasi: 67, Batalla: 63, Raset: 68 }[name],
+      id: name.toLowerCase(), name, overall: { Aleix: 74, Arnau: 78, Cavi: 70, Diaz: 76, Eric: 79, Ert: 74, Grinyo: 64, Jamo: 70, Llongueras: 71, Blasi: 67, Batalla: 63, Raset: 68, Pep: 64, Ot: 68, Gomez: 72, Moya: 63, Andreu: 65 }[name],
       image_path: `cards/${name}_Card.png`
     })).map(card => ({ ...card, price: card.overall * ULTIMATE_PRICE_PER_OVERALL }));
     const SIMULATION_WIN_SCORE = 11;
@@ -1817,7 +1857,12 @@
       Llongueras: { tiro_cercano: 76, bandeja_en_carrera: 72, tiro_media_distancia: 65, triple: 76, precision_pase: 80, manejo_balon: 64, defensa_interior: 65, defensa_exterior: 69, robo: 68, tapon: 53, rebote_ofensivo: 78, rebote_defensivo: 67, velocidad: 81, agilidad: 73, fuerza: 75 },
       Blasi: { tiro_cercano: 77, bandeja_en_carrera: 68, tiro_media_distancia: 64, triple: 60, precision_pase: 73, manejo_balon: 60, defensa_interior: 67, defensa_exterior: 67, robo: 73, tapon: 58, rebote_ofensivo: 63, rebote_defensivo: 71, velocidad: 75, agilidad: 61, fuerza: 78 },
       Batalla: { tiro_cercano: 61, bandeja_en_carrera: 68, tiro_media_distancia: 60, triple: 58, precision_pase: 66, manejo_balon: 51, defensa_interior: 63, defensa_exterior: 78, robo: 75, tapon: 67, rebote_ofensivo: 69, rebote_defensivo: 62, velocidad: 67, agilidad: 73, fuerza: 49 },
-      Raset: { tiro_cercano: 68, bandeja_en_carrera: 62, tiro_media_distancia: 73, triple: 81, precision_pase: 72, manejo_balon: 61, defensa_interior: 62, defensa_exterior: 80, robo: 81, tapon: 59, rebote_ofensivo: 57, rebote_defensivo: 63, velocidad: 75, agilidad: 66, fuerza: 72 }
+      Raset: { tiro_cercano: 68, bandeja_en_carrera: 62, tiro_media_distancia: 73, triple: 81, precision_pase: 72, manejo_balon: 61, defensa_interior: 62, defensa_exterior: 80, robo: 81, tapon: 59, rebote_ofensivo: 57, rebote_defensivo: 63, velocidad: 75, agilidad: 66, fuerza: 72 },
+      Pep: { tiro_cercano: 59, bandeja_en_carrera: 61, tiro_media_distancia: 58, triple: 65, precision_pase: 67, manejo_balon: 62, defensa_interior: 60, defensa_exterior: 72, robo: 73, tapon: 60, rebote_ofensivo: 66, rebote_defensivo: 64, velocidad: 75, agilidad: 72, fuerza: 65 },
+      Ot: { tiro_cercano: 70, bandeja_en_carrera: 74, tiro_media_distancia: 63, triple: 59, precision_pase: 68, manejo_balon: 63, defensa_interior: 72, defensa_exterior: 74, robo: 63, tapon: 73, rebote_ofensivo: 71, rebote_defensivo: 75, velocidad: 74, agilidad: 70, fuerza: 66 },
+      Gomez: { tiro_cercano: 71, bandeja_en_carrera: 75, tiro_media_distancia: 66, triple: 74, precision_pase: 69, manejo_balon: 72, defensa_interior: 73, defensa_exterior: 74, robo: 61, tapon: 80, rebote_ofensivo: 62, rebote_defensivo: 77, velocidad: 70, agilidad: 76, fuerza: 75 },
+      Moya: { tiro_cercano: 58, bandeja_en_carrera: 60, tiro_media_distancia: 59, triple: 54, precision_pase: 67, manejo_balon: 61, defensa_interior: 60, defensa_exterior: 79, robo: 79, tapon: 61, rebote_ofensivo: 59, rebote_defensivo: 55, velocidad: 76, agilidad: 67, fuerza: 79 },
+      Andreu: { tiro_cercano: 66, bandeja_en_carrera: 63, tiro_media_distancia: 70, triple: 66, precision_pase: 72, manejo_balon: 67, defensa_interior: 62, defensa_exterior: 64, robo: 64, tapon: 57, rebote_ofensivo: 61, rebote_defensivo: 63, velocidad: 68, agilidad: 63, fuerza: 71 }
     };
 
     const SIMULATION_CSS = `
