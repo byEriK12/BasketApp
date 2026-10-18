@@ -2182,17 +2182,30 @@
       const user = clubState.session.user;
       const cachedStats = JSON.parse(localStorage.getItem(`basket-club-player-stats-${user.id}`) || '{}');
       clubState.playerStats = cachedStats;
-      const { data: profile, error: profileError } = await supabaseClient.from('profiles').select('*').eq('id', user.id).maybeSingle();
+      let { data: profile, error: profileError } = await supabaseClient.from('profiles').select('*').eq('id', user.id).maybeSingle();
       if (profileError) clubState.error = profileError.message;
-      clubState.profile = profile || { id: user.id, email: user.email, username: user.user_metadata?.username || '', coins: 500, wins: 0, losses: 0 };
+      if (!profile) {
+        const isAdmin = (user.email || '').toLowerCase() === ULTIMATE_ADMIN_EMAIL;
+        const fallbackProfile = { id: user.id, email: user.email, username: isAdmin ? 'byEriK12' : '', coins: isAdmin ? 999999 : 500, wins: 0, losses: 0 };
+        const { data: createdProfile, error: createProfileError } = await supabaseClient.from('profiles').upsert(fallbackProfile).select().single();
+        if (createProfileError) { clubState.error = createProfileError.message; }
+        profile = createdProfile || fallbackProfile;
+      }
+      clubState.profile = profile;
       const { data: catalog } = await supabaseClient.from('cards').select('*').order('name');
-      const { data: owned } = await supabaseClient.from('user_cards').select('card_id').eq('user_id', user.id);
+      clubState.catalog = catalog?.length ? catalog : ULTIMATE_CARD_CATALOG;
+      let { data: owned } = await supabaseClient.from('user_cards').select('card_id').eq('user_id', user.id);
+      if (!owned?.length) {
+        const starterCards = drawStarterCardIds();
+        const { error: starterError } = await supabaseClient.from('user_cards').insert(starterCards.map(cardId => ({ user_id: user.id, card_id: cardId })));
+        if (starterError && starterError.code !== '23505') clubState.error = starterError.message;
+        owned = starterCards.map(card_id => ({ card_id }));
+      }
       const { data: savedStats, error: statsError } = await supabaseClient.from('player_stats').select('card_id, stats').eq('user_id', user.id);
       if (statsError && statsError.code !== '42P01') clubState.error = statsError.message;
       if (savedStats?.length) {
         clubState.playerStats = Object.fromEntries(savedStats.map(row => [row.card_id, row.stats]));
       }
-      clubState.catalog = catalog?.length ? catalog : ULTIMATE_CARD_CATALOG;
       clubState.ownedIds = new Set((owned || []).map(item => item.card_id));
       const starterSeenKey = `basket-starter-seen-${user.id}`;
       if (clubState.ownedIds.size === 2 && !localStorage.getItem(starterSeenKey)) {
