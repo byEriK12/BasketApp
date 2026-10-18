@@ -29,15 +29,32 @@ create table if not exists public.user_cards (
   unique (user_id, card_id)
 );
 
+create table if not exists public.player_stats (
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  card_id text not null references public.cards(id) on delete cascade,
+  stats jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, card_id)
+);
+
 insert into public.cards (id, name, overall, price, image_path) values
-  ('aleix', 'Aleix', 74, 7400, 'cards/Aleix_Card.png'),
-  ('arnau', 'Arnau', 78, 7800, 'cards/Arnau_Card.png'),
-  ('cavi', 'Cavi', 70, 7000, 'cards/Cavi_Card.png'),
-  ('diaz', 'Diaz', 76, 7600, 'cards/Diaz_Card.png'),
-  ('eric', 'Eric', 79, 7900, 'cards/Eric_Card.png'),
-  ('ert', 'Ert', 74, 7400, 'cards/Ert_Card.png'),
-  ('grinyo', 'Grinyo', 64, 6400, 'cards/Grinyo_Card.png'),
-  ('jamo', 'Jamo', 70, 7000, 'cards/Jamo_Card.png')
+  ('aleix', 'Aleix', 74, 3500, 'cards/Aleix_Card.png'),
+  ('arnau', 'Arnau', 78, 5500, 'cards/Arnau_Card.png'),
+  ('cavi', 'Cavi', 70, 3000, 'cards/Cavi_Card.png'),
+  ('diaz', 'Diaz', 76, 5000, 'cards/Diaz_Card.png'),
+  ('eric', 'Eric', 79, 5500, 'cards/Eric_Card.png'),
+  ('ert', 'Ert', 74, 3500, 'cards/Ert_Card.png'),
+  ('grinyo', 'Grinyo', 64, 1500, 'cards/Grinyo_Card.png'),
+  ('jamo', 'Jamo', 70, 3500, 'cards/Jamo_Card.png'),
+  ('andreu', 'Andreu', 65, 3000, 'cards/Andreu_Card.png'),
+  ('batalla', 'Batalla', 63, 1500, 'cards/Batalla_Card.png'),
+  ('blasi', 'Blasi', 67, 3000, 'cards/Blasi_Card.png'),
+  ('gomez', 'Gomez', 72, 3000, 'cards/Gomez_Card.png'),
+  ('llongueras', 'Llongueras', 71, 3000, 'cards/Llongueras_Card.png'),
+  ('moya', 'Moya', 63, 1000, 'cards/Moya_Card.png'),
+  ('ot', 'Ot', 68, 3000, 'cards/Ot_Card.png'),
+  ('pep', 'Pep', 64, 1000, 'cards/Pep_Card.png'),
+  ('raset', 'Raset', 68, 3500, 'cards/Raset_Card.png')
 on conflict (id) do update set name = excluded.name, overall = excluded.overall, price = excluded.price, image_path = excluded.image_path;
 
 -- Keeps an existing project in sync with the editable overall-based pricing rule.
@@ -46,6 +63,7 @@ update public.cards set price = overall * 100;
 alter table public.profiles enable row level security;
 alter table public.cards enable row level security;
 alter table public.user_cards enable row level security;
+alter table public.player_stats enable row level security;
 
 drop policy if exists "Profiles accessible by owner" on public.profiles;
 create policy "Profiles accessible by owner" on public.profiles for all using (auth.uid() = id) with check (auth.uid() = id);
@@ -53,6 +71,8 @@ drop policy if exists "Cards visible by everyone" on public.cards;
 create policy "Cards visible by everyone" on public.cards for select using (true);
 drop policy if exists "User cards accessible by owner" on public.user_cards;
 create policy "User cards accessible by owner" on public.user_cards for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "Player stats accessible by owner" on public.player_stats;
+create policy "Player stats accessible by owner" on public.player_stats for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create or replace function public.handle_new_user()
 returns trigger

@@ -1968,6 +1968,7 @@
       .ut-brand { font-size:22px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:#d9ff8d; }
       .ut-status { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; color:#c0d4d0; }
       .ut-status span { padding:7px 9px; border:1px solid #315c59; border-radius:8px; background:#102021; }
+      .ut-signout { padding:7px 10px; border:1px solid #7b504b; border-radius:8px; background:#2a1e20; color:#ffd2ca; font-size:12px; font-weight:800; }
       .ut-nav { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:18px 0 22px; }
       .ut-nav button { border-radius:8px; padding:12px; background:#122526; border-color:#315c59; text-transform:uppercase; font-size:11px; font-weight:800; letter-spacing:.08em; }
       .ut-nav button.active { background:#d9ff8d; border-color:#d9ff8d; color:#102021; }
@@ -2115,6 +2116,24 @@
       return card?.image_path || `cards/${card?.name || 'Eric'}_Card.png`;
     }
 
+    function drawStarterCardIds() {
+      const tiers = {
+        bronze: ULTIMATE_CARD_CATALOG.filter(card => card.overall <= 64),
+        silver: ULTIMATE_CARD_CATALOG.filter(card => card.overall > 64 && card.overall <= 74),
+        gold: ULTIMATE_CARD_CATALOG.filter(card => card.overall > 74)
+      };
+      const selected = [];
+      for (let draw = 0; draw < 2; draw++) {
+        const roll = Math.random();
+        const tier = roll < 0.60 ? 'bronze' : roll < 0.90 ? 'silver' : 'gold';
+        const candidates = tiers[tier].filter(card => !selected.includes(card.id));
+        const fallback = ULTIMATE_CARD_CATALOG.filter(card => !selected.includes(card.id));
+        const pool = candidates.length ? candidates : fallback;
+        if (pool.length) selected.push(pool[Math.floor(Math.random() * pool.length)].id);
+      }
+      return selected;
+    }
+
     function getLocalUsers() {
       return JSON.parse(localStorage.getItem('basket-club-users') || '{}');
     }
@@ -2161,12 +2180,18 @@
         return;
       }
       const user = clubState.session.user;
-      clubState.playerStats = JSON.parse(localStorage.getItem(`basket-club-player-stats-${user.id}`) || '{}');
+      const cachedStats = JSON.parse(localStorage.getItem(`basket-club-player-stats-${user.id}`) || '{}');
+      clubState.playerStats = cachedStats;
       const { data: profile, error: profileError } = await supabaseClient.from('profiles').select('*').eq('id', user.id).maybeSingle();
       if (profileError) clubState.error = profileError.message;
       clubState.profile = profile || { id: user.id, email: user.email, username: user.user_metadata?.username || '', coins: 500, wins: 0, losses: 0 };
       const { data: catalog } = await supabaseClient.from('cards').select('*').order('name');
       const { data: owned } = await supabaseClient.from('user_cards').select('card_id').eq('user_id', user.id);
+      const { data: savedStats, error: statsError } = await supabaseClient.from('player_stats').select('card_id, stats').eq('user_id', user.id);
+      if (statsError && statsError.code !== '42P01') clubState.error = statsError.message;
+      if (savedStats?.length) {
+        clubState.playerStats = Object.fromEntries(savedStats.map(row => [row.card_id, row.stats]));
+      }
       clubState.catalog = catalog?.length ? catalog : ULTIMATE_CARD_CATALOG;
       clubState.ownedIds = new Set((owned || []).map(item => item.card_id));
       const starterSeenKey = `basket-starter-seen-${user.id}`;
@@ -2189,7 +2214,7 @@
         const users = getLocalUsers();
         if (register) {
           if (users[cleanEmail]) { clubState.error = 'Ya existe una cuenta con ese email.'; renderSimulationScreen(); return; }
-          const starterCards = shuffleArray(SIMULATION_POOL).slice(0, 2).map(name => name.toLowerCase());
+          const starterCards = drawStarterCardIds();
           users[cleanEmail] = { password, profile: { username: '', email: cleanEmail, coins: 500, wins: 0, losses: 0 } };
           setLocalUsers(users);
           localStorage.setItem(`basket-club-cards-${cleanEmail}`, JSON.stringify(starterCards));
@@ -2229,6 +2254,7 @@
       sessionStorage.removeItem('basket-club-session');
       clubState.session = null;
       clubState.profile = null;
+      clubState.initialized = false;
       clubState.welcomePending = false;
       renderSimulationScreen();
     }
@@ -2748,7 +2774,7 @@
 
     function recordSimulationPlayerStats() {
       if (simulationState.statsRecorded || !clubState.profile) return;
-      const players = [...simulationState.teams.A.map(player => ['A', player]), ...simulationState.teams.B.map(player => ['B', player])];
+      const players = simulationState.teams.A.map(player => ['A', player]);
       const mvp = players.reduce((best, [team, player]) => {
         const stats = getBoxScoreEntry(team, player) || {};
         const rating = (stats.pts || 0) + (stats.reb || 0) + (stats.ast || 0) + (stats.stl || 0) + (stats.blk || 0) - (stats.tov || 0);
@@ -2786,6 +2812,10 @@
       }
       const identity = clubState.session?.user?.id || clubState.profile.email;
       localStorage.setItem(`basket-club-player-stats-${identity}`, JSON.stringify(clubState.playerStats));
+      if (supabaseClient && clubState.session) {
+        Promise.all(Object.entries(clubState.playerStats).map(([cardId, stats]) => supabaseClient.from('player_stats').upsert({ user_id: clubState.session.user.id, card_id: cardId, stats }, { onConflict: 'user_id,card_id' })))
+          .catch(error => { clubState.error = error.message; });
+      }
       simulationState.statsRecorded = true;
     }
 
@@ -3207,7 +3237,7 @@
     function renderUltimateHeader() {
       const profile = clubState.profile || {};
       const coins = Number(profile.coins || 0).toLocaleString('es-ES');
-      return `<div class="ut-header"><div class="ut-brand">Ultimate Club</div><div class="ut-status"><span>${escapeHtml(profile.username || profile.email || 'Usuario')}</span><span>${profile.wins || 0} - ${profile.losses || 0}</span><span>🪙 ${coins}</span></div></div>`;
+      return `<div class="ut-header"><div class="ut-brand">Ultimate Club</div><div class="ut-status"><span>${escapeHtml(profile.username || profile.email || 'Usuario')}</span><span>${profile.wins || 0} - ${profile.losses || 0}</span><span>🪙 ${coins}</span><button type="button" class="ut-signout" id="ut-signout">Cerrar sesión</button></div></div>`;
     }
 
     function renderUltimateNav() {
