@@ -2103,7 +2103,7 @@
       welcomeCards: [],
       welcomePending: false
     };
-
+    
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
     }
@@ -2263,14 +2263,21 @@
     }
 
     async function signOutClub() {
-      if (supabaseClient) await supabaseClient.auth.signOut();
-      sessionStorage.removeItem('basket-club-session');
-      clubState.session = null;
-      clubState.profile = null;
-      clubState.initialized = false;
-      clubState.welcomePending = false;
-      renderSimulationScreen();
-    }
+  if (supabaseClient) await supabaseClient.auth.signOut();
+  sessionStorage.removeItem('basket-club-session');
+  localStorage.removeItem('basket-club-session'); // por si acaso guardas algo en local
+  clubState.session = null;
+  clubState.profile = null;
+  clubState.initialized = false;
+  clubState.welcomePending = false;
+  
+  // Limpia el hash (#access_token=...) y deja la URL en https://basket-app-gray.vercel.app/
+  if (window.location.hash) {
+    window.history.replaceState(null, '', window.location.pathname);
+  }
+  
+  renderSimulationScreen();
+}
 
     async function saveClubUsername(username) {
       const clean = username.trim();
@@ -3724,4 +3731,23 @@
       simulationState.phase = 'lobby';
       renderSimulationScreen();
     }, 100);
+
+    // Escuchar el retorno de OAuth (Google) y limpiar el hash de la URL
+    if (supabaseClient) {
+      supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+          // Limpia el hash con los tokens (#access_token=...) para dejar la URL limpia
+          if (window.location.hash && window.location.hash.includes('access_token')) {
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+          clubState.session = session;
+          await loadClubData();
+          renderSimulationScreen();
+        } else if (event === 'SIGNED_OUT') {
+          if (window.location.hash) {
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        }
+      });
+    }
 
