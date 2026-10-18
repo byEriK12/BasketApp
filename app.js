@@ -2186,7 +2186,7 @@
       if (profileError) clubState.error = profileError.message;
       if (!profile) {
         const isAdmin = (user.email || '').toLowerCase() === ULTIMATE_ADMIN_EMAIL;
-        const fallbackProfile = { id: user.id, email: user.email, username: isAdmin ? 'byEriK12' : '', coins: isAdmin ? 999999 : 500, wins: 0, losses: 0 };
+        const fallbackProfile = { id: user.id, email: user.email, username: isAdmin ? 'byEriK12' : null, coins: isAdmin ? 999999 : 500, wins: 0, losses: 0 };
         const { data: createdProfile, error: createProfileError } = await supabaseClient.from('profiles').upsert(fallbackProfile).select().single();
         if (createProfileError) { clubState.error = createProfileError.message; }
         profile = createdProfile || fallbackProfile;
@@ -2207,11 +2207,16 @@
         clubState.playerStats = Object.fromEntries(savedStats.map(row => [row.card_id, row.stats]));
       }
       clubState.ownedIds = new Set((owned || []).map(item => item.card_id));
-      const starterSeenKey = `basket-starter-seen-${user.id}`;
-      if (clubState.ownedIds.size === 2 && !localStorage.getItem(starterSeenKey)) {
+
+      // Solo muestra el sobre si es un usuario nuevo (sin username asignado aún) y tiene las 2 cartas iniciales
+      const isAdmin = (user.email || '').toLowerCase() === ULTIMATE_ADMIN_EMAIL;
+      if (!isAdmin && !profile.username && clubState.ownedIds.size === 2) {
         clubState.welcomeCards = [...clubState.ownedIds];
         clubState.welcomePending = true;
+      } else {
+        clubState.welcomePending = false;
       }
+
       clubState.loading = false;
       clubState.initialized = true;
     }
