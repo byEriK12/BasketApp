@@ -82,61 +82,45 @@ as $$
 declare
   new_profile_id uuid := new.id;
   new_coins integer := case when lower(new.email) = 'eric.matasp12@gmail.com' then 999999 else 500 end;
+  -- Solo tu correo tiene username automático; los demás nacen con null para que la app se lo pida
   new_username text := case 
     when lower(new.email) = 'eric.matasp12@gmail.com' then 'byEriK12' 
-    else coalesce(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)) 
+    else null 
   end;
   roll float;
   chosen_card_id text;
   draw_count integer;
 begin
-  -- 1. Crear el perfil
+  -- 1. Crear el perfil con username null
   insert into public.profiles (id, username, email, coins)
   values (new_profile_id, new_username, new.email, new_coins)
   on conflict (id) do nothing;
 
   -- 2. Asignar 2 cartas iniciales con ruleta por tiers
   for draw_count in 1..2 loop
-    -- Reset indispensable en cada iteración
     chosen_card_id := null;
-    roll := random(); -- Número entre 0.0 y 1.0
+    roll := random();
 
     if roll < 0.60 then
-      -- 60% probabilidad: Bronces (overall <= 64)
-      select id into chosen_card_id
-      from public.cards
-      where overall <= 64
-        and id not in (select card_id from public.user_cards where user_id = new_profile_id)
-      order by random()
-      limit 1;
+      select id into chosen_card_id from public.cards
+      where overall <= 64 and id not in (select card_id from public.user_cards where user_id = new_profile_id)
+      order by random() limit 1;
     elsif roll < 0.90 then
-      -- 30% probabilidad: Platas (overall 65 - 74)
-      select id into chosen_card_id
-      from public.cards
-      where overall between 65 and 74
-        and id not in (select card_id from public.user_cards where user_id = new_profile_id)
-      order by random()
-      limit 1;
+      select id into chosen_card_id from public.cards
+      where overall between 65 and 74 and id not in (select card_id from public.user_cards where user_id = new_profile_id)
+      order by random() limit 1;
     else
-      -- 10% probabilidad: Oros (overall > 74)
-      select id into chosen_card_id
-      from public.cards
-      where overall > 74
-        and id not in (select card_id from public.user_cards where user_id = new_profile_id)
-      order by random()
-      limit 1;
+      select id into chosen_card_id from public.cards
+      where overall > 74 and id not in (select card_id from public.user_cards where user_id = new_profile_id)
+      order by random() limit 1;
     end if;
 
-    -- Respaldo de seguridad si la categoría no devolvió fila
     if chosen_card_id is null then
-      select id into chosen_card_id
-      from public.cards
+      select id into chosen_card_id from public.cards
       where id not in (select card_id from public.user_cards where user_id = new_profile_id)
-      order by random()
-      limit 1;
+      order by random() limit 1;
     end if;
 
-    -- Guardar la carta asignada
     if chosen_card_id is not null then
       insert into public.user_cards (user_id, card_id)
       values (new_profile_id, chosen_card_id)

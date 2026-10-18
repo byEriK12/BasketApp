@@ -3732,22 +3732,54 @@
       renderSimulationScreen();
     }, 100);
 
-    // Escuchar el retorno de OAuth (Google) y limpiar el hash de la URL
-    if (supabaseClient) {
+    // Procesar autenticación y retorno de Google OAuth de forma robusta
+    async function handleAuthReturn() {
+      if (!supabaseClient) return;
+
+      const fullUrl = window.location.href;
+
+      // 1. Detectar si la URL trae tokens de Google/Supabase
+      if (fullUrl.includes('access_token=')) {
+        // Extraer los parámetros del hash aunque venga con ## o #
+        const hashContent = fullUrl.substring(fullUrl.indexOf('#')).replace(/^#+/, '');
+        const params = new URLSearchParams(hashContent);
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+
+        // Limpiar la barra de direcciones de inmediato (deja http://localhost:8080/BasketApp/)
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState(null, '', cleanUrl);
+
+        // Si tenemos los tokens, forzar a Supabase a fijar la sesión
+        if (accessToken && refreshToken) {
+          const { data, error } = await supabaseClient.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+          if (!error && data?.session) {
+            clubState.session = data.session;
+            await loadClubData();
+            renderSimulationScreen();
+            return;
+          }
+        }
+      }
+
+      // 2. Listener general para inicios y cierres de sesión posteriores
       supabaseClient.auth.onAuthStateChange(async (event, session) => {
         if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
-          // Limpia el hash con los tokens (#access_token=...) para dejar la URL limpia
-          if (window.location.hash && window.location.hash.includes('access_token')) {
-            window.history.replaceState(null, '', window.location.pathname);
-          }
           clubState.session = session;
           await loadClubData();
           renderSimulationScreen();
         } else if (event === 'SIGNED_OUT') {
-          if (window.location.hash) {
-            window.history.replaceState(null, '', window.location.pathname);
-          }
+          const cleanUrl = window.location.origin + window.location.pathname;
+          window.history.replaceState(null, '', cleanUrl);
+          clubState.session = null;
+          clubState.profile = null;
+          renderSimulationScreen();
         }
       });
     }
+
+    handleAuthReturn();
 
