@@ -2216,6 +2216,17 @@
       } else {
         clubState.welcomePending = false;
       }
+      
+      try {
+        const { data: bonusResult } = await supabaseClient.rpc('claim_daily_bonus');
+        if (bonusResult && bonusResult.success) {
+          profile.coins = bonusResult.new_coins;
+          clubState.profile.coins = bonusResult.new_coins;
+          alert('🎁 ¡Recompensa diaria! Has recibido 100 monedas por tu primera entrada del día.');
+        }
+      } catch (e) {
+        console.warn('Error al verificar bonus diario:', e);
+      }
 
       clubState.loading = false;
       clubState.initialized = true;

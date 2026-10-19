@@ -171,5 +171,39 @@ begin
 end;
 $$;
 
+-- Recompensa diaria por inicio de sesión (100 monedas)
+alter table public.profiles 
+add column if not exists last_daily_claim date default null;
+
+create or replace function public.claim_daily_bonus()
+returns json
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_coins integer;
+  v_last_claim date;
+  v_today date := current_date;
+begin
+  select coins, last_daily_claim 
+  into v_coins, v_last_claim
+  from public.profiles 
+  where id = auth.uid();
+
+  if v_last_claim is not null and v_last_claim >= v_today then
+    return json_build_object('success', false, 'message', 'Ya has reclamado tu recompensa de hoy');
+  end if;
+
+  update public.profiles
+  set coins = coins + 100,
+      last_daily_claim = v_today
+  where id = auth.uid();
+
+  return json_build_object('success', true, 'reward', 100, 'new_coins', v_coins + 100);
+end;
+$$;
+
 grant execute on function public.purchase_card(text) to authenticated;
 grant execute on function public.record_match_result(boolean, integer) to authenticated;
+grant execute on function public.claim_daily_bonus() to authenticated;
