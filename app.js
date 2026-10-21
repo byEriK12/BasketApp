@@ -2795,7 +2795,9 @@
       if (simulationState.rewardApplied || !clubState.profile || !simulationState.winner) return;
       simulationState.rewardApplied = true;
       const won = simulationState.winner === 'A';
-      const reward = won ? 500 : 100;
+      const is21 = Number(simulationState.settings?.winScore) === 21;
+      const reward = won ? (is21 ? 500 : 300) : (is21 ? 100 : 50);
+
       if (supabaseClient && clubState.session) {
         const { error } = await supabaseClient.rpc('record_match_result', { did_win: won, reward_coins: reward });
         if (error) clubState.error = error.message;
@@ -3616,8 +3618,11 @@
         if (!simulationState.rewardApplied) {
           applyMatchReward().then(() => renderSimulationScreen());
         }
+        const is21 = Number(simulationState.settings?.winScore) === 21;
+        const winCoins = is21 ? 500 : 300;
+        const lossCoins = is21 ? 100 : 50;
         const winner = simulationState.winner === 'A' ? 'Equipo A' : 'Equipo B';
-        const reward = simulationState.winner === 'A' ? 500 : 100;
+        const reward = simulationState.winner === 'A' ? winCoins : lossCoins;
         const winnerPlayers = simulationState.teams[simulationState.winner] || [];
         const loserPlayers = simulationState.winner === 'A' ? simulationState.teams.B : simulationState.teams.A;
         const mvp = [...simulationState.teams.A.map(player => ['A', player]), ...simulationState.teams.B.map(player => ['B', player])].reduce((best, [team, player]) => {
@@ -3659,7 +3664,7 @@
               <div class="sim-result-card">
                 <h2>¡${winner} ha ganado el partido!</h2>
                 <div class="sim-score" style="font-size:22px; margin-top:10px;">Equipo A ${simulationState.score.A} - ${simulationState.score.B} Equipo B</div>
-                <div class="sim-mvp">${simulationState.winner === 'A' ? '¡Victoria! +500 monedas añadidas a tu club.' : 'Derrota: +100 monedas.'}</div>
+                <div class="sim-mvp">${simulationState.winner === 'A' ? `¡Victoria! +${winCoins} monedas añadidas a tu club.` : `Derrota: +${lossCoins} monedas.`}</div>
                 <div class="sim-mvp">MVP: ${mvp ? `${mvp.player} (${mvp.rating} VAL)` : 'Sin datos'}</div>
               </div>
               <div class="sim-finish-grid">

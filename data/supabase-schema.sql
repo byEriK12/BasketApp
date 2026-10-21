@@ -162,7 +162,11 @@ security invoker
 set search_path = public
 as $$
 begin
-  if reward_coins not in (100, 500) then raise exception 'Recompensa no valida'; end if;
+  -- Permitir las recompensas de 21 pts (100 derrota, 500 victoria) y 11 pts (50 derrota, 300 victoria)
+  if reward_coins not in (50, 100, 300, 500) then 
+    raise exception 'Recompensa no valida: %', reward_coins; 
+  end if;
+
   update public.profiles
     set coins = coins + reward_coins,
         wins = wins + case when did_win then 1 else 0 end,
