@@ -1007,6 +1007,14 @@
         defensa: [['Defensa Interior', 62], ['Defensa Exterior', 64], ['Robo', 64], ['Tapón', 57]],
         rebote: [['Rebote Ofensivo', 61], ['Rebote Defensivo', 63]],
         fisico: [['Velocidad', 68], ['Agilidad', 63], ['Fuerza', 71]]
+      },
+      Jamo_MOTM: {
+        finalizacion: [['Tiro Cercano', 78], ['Bandeja en Carrera', 83]],
+        tiro: [['Tiro de Media Distancia', 77], ['Triple', 95]],
+        pase: [['Precisión de Pase', 88], ['Manejo de Balón', 83]],
+        defensa: [['Defensa Interior', 90], ['Defensa Exterior', 79], ['Robo', 84], ['Tapón', 90]],
+        rebote: [['Rebote Ofensivo', 78], ['Rebote Defensivo', 82]],
+        fisico: [['Velocidad', 83], ['Agilidad', 91], ['Fuerza', 72]]
       }
     };
 
@@ -1862,7 +1870,8 @@
       Ot: { tiro_cercano: 70, bandeja_en_carrera: 74, tiro_media_distancia: 63, triple: 59, precision_pase: 68, manejo_balon: 63, defensa_interior: 72, defensa_exterior: 74, robo: 63, tapon: 73, rebote_ofensivo: 71, rebote_defensivo: 75, velocidad: 74, agilidad: 70, fuerza: 66 },
       Gomez: { tiro_cercano: 71, bandeja_en_carrera: 75, tiro_media_distancia: 66, triple: 74, precision_pase: 69, manejo_balon: 72, defensa_interior: 73, defensa_exterior: 74, robo: 61, tapon: 80, rebote_ofensivo: 62, rebote_defensivo: 77, velocidad: 70, agilidad: 76, fuerza: 75 },
       Moya: { tiro_cercano: 58, bandeja_en_carrera: 60, tiro_media_distancia: 59, triple: 54, precision_pase: 67, manejo_balon: 61, defensa_interior: 60, defensa_exterior: 79, robo: 79, tapon: 61, rebote_ofensivo: 59, rebote_defensivo: 55, velocidad: 76, agilidad: 67, fuerza: 79 },
-      Andreu: { tiro_cercano: 66, bandeja_en_carrera: 63, tiro_media_distancia: 70, triple: 66, precision_pase: 72, manejo_balon: 67, defensa_interior: 62, defensa_exterior: 64, robo: 64, tapon: 57, rebote_ofensivo: 61, rebote_defensivo: 63, velocidad: 68, agilidad: 63, fuerza: 71 }
+      Andreu: { tiro_cercano: 66, bandeja_en_carrera: 63, tiro_media_distancia: 70, triple: 66, precision_pase: 72, manejo_balon: 67, defensa_interior: 62, defensa_exterior: 64, robo: 64, tapon: 57, rebote_ofensivo: 61, rebote_defensivo: 63, velocidad: 68, agilidad: 63, fuerza: 71 },
+      Jamo_MOTM: { tiro_cercano: 78, bandeja_en_carrera: 83, tiro_media_distancia: 77, triple: 95, precision_pase: 88, manejo_balon: 83, defensa_interior: 90, defensa_exterior: 79, robo: 84, tapon: 90, rebote_ofensivo: 78, rebote_defensivo: 82, velocidad: 83, agilidad: 91, fuerza: 72 }
     };
 
     const SIMULATION_CSS = `
@@ -2078,7 +2087,7 @@
       pendingCpuTimeout: null,
       pendingFinishTimeout: null,
       pendingFollowupTimeout: null,
-      accessGranted: false,
+      accessGranted: true,
       accessError: '',
       settings: { format: '3vs3', winScore: SIMULATION_WIN_SCORE },
       clubView: 'club',
