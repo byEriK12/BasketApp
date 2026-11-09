@@ -162,8 +162,8 @@ security invoker
 set search_path = public
 as $$
 begin
-  -- Permitir las recompensas de 21 pts (100 derrota, 500 victoria) y 11 pts (50 derrota, 300 victoria)
-  if reward_coins not in (50, 100, 300, 500) then 
+  -- 0 monedas para abandono; 50, 100, 300, 500 para partidos finalizados
+  if reward_coins not in (0, 50, 100, 300, 500) then 
     raise exception 'Recompensa no valida: %', reward_coins; 
   end if;
 

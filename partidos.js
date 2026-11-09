@@ -791,6 +791,61 @@
     formato:"3vs3", resultado:true, puntos_totales:22, puntos_rivales:18, minutos:25,
     puntos:8, asistencias:2, rebotes:10, tapones:1, triples_intentados:1, triples_anotados:0,
     jugadores_equipo:["Eric","Ert","Jamo"], jugadores_rivales:["Diaz","Cavi","Aleix"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:5, minutos:15,
+    puntos:6, asistencias:1, rebotes:6, tapones:0, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Arnau","Aleix"], jugadores_rivales:["Jamo","Cavi","Ert"]
+  },
+  {
+    formato:"3vs3", resultado:false, puntos_totales:9, puntos_rivales:12, minutos:20,
+    puntos:null, asistencias:null, rebotes:null, tapones:null, triples_intentados:null, triples_anotados:null,
+    jugadores_equipo:["Diaz","Arnau","Jamo"], jugadores_rivales:["Ert","Cavi","Aleix"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:12, puntos_rivales:10, minutos:15,
+    puntos:7, asistencias:1, rebotes:3, tapones:0, triples_intentados:3, triples_anotados:1,
+    jugadores_equipo:["Eric","Jamo","Ert"], jugadores_rivales:["Diaz","Cavi","Aleix"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:3, minutos:15,
+    puntos:0, asistencias:3, rebotes:2, tapones:0, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Aleix","Diaz"], jugadores_rivales:["Ert","Jamo","Arnau"]
+  },
+  {
+    formato:"3vs3", resultado:false, puntos_totales:3, puntos_rivales:12, minutos:10,
+    puntos:3, asistencias:0, rebotes:1, tapones:0, triples_intentados:1, triples_anotados:1,
+    jugadores_equipo:["Eric","Arnau","Cavi"], jugadores_rivales:["Ert","Jamo","Diaz"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:0, minutos:10,
+    puntos:6, asistencias:1, rebotes:3, tapones:0, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Arnau","Cavi"], jugadores_rivales:["Diaz","Jamo","Aleix"]
+  },
+  {
+    formato:"3vs3", resultado:false, puntos_totales:9, puntos_rivales:11, minutos:15,
+    puntos:4, asistencias:2, rebotes:4, tapones:0, triples_intentados:1, triples_anotados:0,
+    jugadores_equipo:["Eric","Arnau","Diaz"], jugadores_rivales:["Ert","Cavi","Aleix"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:12, puntos_rivales:2, minutos:15,
+    puntos:8, asistencias:1, rebotes:2, tapones:1, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Aleix","Diaz"], jugadores_rivales:["Arnau","Cavi","Jamo"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:11, puntos_rivales:0, minutos:10,
+    puntos:4, asistencias:2, rebotes:3, tapones:1, triples_intentados:1, triples_anotados:0,
+    jugadores_equipo:["Eric","Arnau","Jamo"], jugadores_rivales:["Ert","Diaz","Cavi"]
+  },
+  {
+    formato:"3vs3", resultado:true, puntos_totales:13, puntos_rivales:10, minutos:20,
+    puntos:null, asistencias:null, rebotes:null, tapones:null, triples_intentados:null, triples_anotados:null,
+    jugadores_equipo:["Diaz","Aleix","Cavi"], jugadores_rivales:["Ert","Arnau","Jamo"]
+  },
+  {
+    formato:"3vs3", resultado:false, puntos_totales:10, puntos_rivales:13, minutos:15,
+    puntos:2, asistencias:4, rebotes:3, tapones:0, triples_intentados:0, triples_anotados:0,
+    jugadores_equipo:["Eric","Aleix","Diaz"], jugadores_rivales:["Ert","Cavi","Arnau"]
   }
 ];
 
@@ -810,5 +865,16 @@ const estadisticasDiazRaw = [
   { partido: 156, puntos: 0, asistencias: 1, rebotes: 0, tapones: 0, triples_intentados: 0, triples_anotados: 0, minutos: 10 },
   { partido: 157, puntos: 4, asistencias: 1, rebotes: 2, tapones: 0, triples_intentados: 0, triples_anotados: 0, minutos: 15 },
   { partido: 158, puntos: 10, asistencias: 3, rebotes: 6, tapones: 0, triples_intentados: 4, triples_anotados: 2, minutos: 25 },
+  { partido: 160, puntos: 2, asistencias: 1, rebotes: 5, tapones: 0, triples_intentados: 3, triples_anotados: 0, minutos: 20 },
+  { partido: 161, puntos: 2, asistencias: 1, rebotes: 2, tapones: 0, triples_intentados: 1, triples_anotados: 0, minutos: 15 },
+  { partido: 162, puntos: 2, asistencias: 2, rebotes: 3, tapones: 0, triples_intentados: 1, triples_anotados: 0, minutos: 15 },
+  { partido: 163, puntos: 0, asistencias: 3, rebotes: 1, tapones: 0, triples_intentados: 0, triples_anotados: 0, minutos: 10 },
+  { partido: 164, puntos: 0, asistencias: 0, rebotes: 0, tapones: 0, triples_intentados: 0, triples_anotados: 0, minutos: 10 },
+  { partido: 165, puntos: 0, asistencias: 0, rebotes: 2, tapones: 0, triples_intentados: 1, triples_anotados: 0, minutos: 15 },
+  { partido: 166, puntos: 2, asistencias: 1, rebotes: 2, tapones: 0, triples_intentados: 1, triples_anotados: 0, minutos: 15 },
+  { partido: 167, puntos: 0, asistencias: 0, rebotes: 3, tapones: 0, triples_intentados: 0, triples_anotados: 0, minutos: 10 },
+  { partido: 168, puntos: 2, asistencias: 2, rebotes: 7, tapones: 0, triples_intentados: 3, triples_anotados: 0, minutos: 20 },
+  { partido: 169, puntos: 6, asistencias: 1, rebotes: 2, tapones: 0, triples_intentados: 2, triples_anotados: 0, minutos: 15 },
+
 
 ];
