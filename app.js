@@ -1049,6 +1049,14 @@
         defensa: [['Defensa Interior', 90], ['Defensa Exterior', 79], ['Robo', 84], ['Tapón', 90]],
         rebote: [['Rebote Ofensivo', 78], ['Rebote Defensivo', 82]],
         fisico: [['Velocidad', 83], ['Agilidad', 91], ['Fuerza', 72]]
+      },
+      Eric_Record_Breaker: {
+        finalizacion: [['Tiro Cercano', 91], ['Bandeja en Carrera', 87]],
+        tiro: [['Tiro de Media Distancia', 85], ['Triple', 82]],
+        pase: [['Precisión de Pase', 99], ['Manejo de Balón', 94]],
+        defensa: [['Defensa Interior', 85], ['Defensa Exterior', 82], ['Robo', 79], ['Tapón', 89]],
+        rebote: [['Rebote Ofensivo', 90], ['Rebote Defensivo', 85]],
+        fisico: [['Velocidad', 81], ['Agilidad', 84], ['Fuerza', 84]]
       }
     };
 
@@ -1905,7 +1913,8 @@
       Gomez: { tiro_cercano: 71, bandeja_en_carrera: 75, tiro_media_distancia: 66, triple: 74, precision_pase: 69, manejo_balon: 72, defensa_interior: 73, defensa_exterior: 74, robo: 61, tapon: 80, rebote_ofensivo: 62, rebote_defensivo: 77, velocidad: 70, agilidad: 76, fuerza: 75 },
       Moya: { tiro_cercano: 58, bandeja_en_carrera: 60, tiro_media_distancia: 59, triple: 54, precision_pase: 67, manejo_balon: 61, defensa_interior: 60, defensa_exterior: 79, robo: 79, tapon: 61, rebote_ofensivo: 59, rebote_defensivo: 55, velocidad: 76, agilidad: 67, fuerza: 79 },
       Andreu: { tiro_cercano: 66, bandeja_en_carrera: 63, tiro_media_distancia: 70, triple: 66, precision_pase: 72, manejo_balon: 67, defensa_interior: 62, defensa_exterior: 64, robo: 64, tapon: 57, rebote_ofensivo: 61, rebote_defensivo: 63, velocidad: 68, agilidad: 63, fuerza: 71 },
-      Jamo_MOTM: { tiro_cercano: 78, bandeja_en_carrera: 83, tiro_media_distancia: 77, triple: 95, precision_pase: 88, manejo_balon: 83, defensa_interior: 90, defensa_exterior: 79, robo: 84, tapon: 90, rebote_ofensivo: 78, rebote_defensivo: 82, velocidad: 83, agilidad: 91, fuerza: 72 }
+      Jamo_MOTM: { tiro_cercano: 78, bandeja_en_carrera: 83, tiro_media_distancia: 77, triple: 95, precision_pase: 88, manejo_balon: 83, defensa_interior: 90, defensa_exterior: 79, robo: 84, tapon: 90, rebote_ofensivo: 78, rebote_defensivo: 82, velocidad: 83, agilidad: 91, fuerza: 72 },
+      Eric_Record_Breaker: { tiro_cercano: 91, bandeja_en_carrera: 87, tiro_media_distancia: 85, triple: 82, precision_pase: 99, manejo_balon: 94, defensa_interior: 85, defensa_exterior: 82, robo: 79, tapon: 89, rebote_ofensivo: 90, rebote_defensivo: 85, velocidad: 81, agilidad: 84, fuerza: 84 }
     };
 
     const SIMULATION_CSS = `
@@ -2696,8 +2705,9 @@
       const stats = getSimulationStats(player.name);
       const attr = stats[type] || stats.tiro_media_distancia;
       const base = { tiro_cercano: .60, bandeja_en_carrera: .55, tiro_media_distancia: .45, triple: .38 }[type];
-      const min = { tiro_cercano: .35, bandeja_en_carrera: .30, tiro_media_distancia: .22, triple: .18 }[type];
-      const max = { tiro_cercano: .85, bandeja_en_carrera: .80, tiro_media_distancia: .70, triple: .60 }[type];
+      // Mínimos y máximos intermedios equilibrados
+      const min = { tiro_cercano: .30, bandeja_en_carrera: .25, tiro_media_distancia: .18, triple: .15 }[type];
+      const max = { tiro_cercano: .86, bandeja_en_carrera: .82, tiro_media_distancia: .72, triple: .62 }[type];
       const defender = getSimulationStats(getDefenderForAttacker('A', player.name));
       const defense = type === 'triple' || type === 'tiro_media_distancia' ? defender.defensa_exterior : defender.defensa_interior;
       const distance = Math.hypot(player.x - 1200, player.y - 349);
@@ -2705,7 +2715,7 @@
       const defenderPlayer = simulationState.canvas?.players.find(candidate => candidate.name === getDefenderForAttacker('A', player.name));
       const contestDistance = defenderPlayer ? Math.hypot(defenderPlayer.x - player.x, defenderPlayer.y - player.y) : Infinity;
       const contestPenalty = contestDistance < 220 ? (220 - Math.max(55, contestDistance)) * .0012 : 0;
-      const attributeAdjustment = (attr - defense) * .006;
+      const attributeAdjustment = (attr - defense) * .009;
       return { type, chance: clamp(clamp(base + attributeAdjustment, min, max) - distancePenalty - contestPenalty, min, max) };
     }
 
@@ -3487,7 +3497,7 @@
           const chance = canvasProbability(shooter).chance;
           const defender = getDefenderForAttacker('A', shooter.name);
           const defenderPlayer = state.players.find(player => player.name === defender);
-          const blocked = defenderPlayer && Math.hypot(defenderPlayer.x - shooter.x, defenderPlayer.y - shooter.y) < 90 && Math.random() < clamp(.04 + (getSimulationStats(defender).tapon - getSimulationStats(shooter)[state.ball.shotType]) * .0015, .005, .12);
+          const blocked = defenderPlayer && Math.hypot(defenderPlayer.x - shooter.x, defenderPlayer.y - shooter.y) < 90 && Math.random() < clamp(.045 + (getSimulationStats(defender).tapon - getSimulationStats(shooter)[state.ball.shotType]) * .0025, .008, .15);
           const shotInfo = canvasProbability(shooter);
           const shotChance = shotInfo.chance;
           const missChance = 1 - shotChance;
@@ -4275,9 +4285,8 @@
       const P_atq = (0.55 * atk.manejo_balon) + (0.25 * atk.agilidad) + (0.20 * atk.velocidad);
       const P_def = (0.50 * def.robo) + (0.30 * def.agilidad) + (0.20 * def.velocidad);
       const delta = P_def - P_atq;
-      // Probabilidad base reducida: entre 0.8% y 3.5% como máximo
-      const prob = 0.018 + (delta * 0.0004);
-      return clamp(prob, 0.008, 0.035);
+      const prob = 0.019 + (delta * 0.0009);
+      return clamp(prob, 0.006, 0.045);
     }
 
     function computePassTurnoverProbability(attackerName, defenderName) {
@@ -4286,8 +4295,7 @@
       const ballControl = (0.55 * atk.manejo_balon) + (0.25 * atk.agilidad) + (0.20 * atk.precision_pase);
       const defensivePressure = (0.45 * def.robo) + (0.35 * def.agilidad) + (0.20 * def.velocidad);
       const delta = defensivePressure - ballControl;
-      // Suelo y techo más realistas para no cortar pases constantemente
-      return clamp(0.015 + (delta * 0.0004), 0.005, 0.035);
+      return clamp(0.016 + (delta * 0.0008), 0.006, 0.045);
     }
 
     function resolveTurnover(team, attackerName, defenderName, lossChance) {
@@ -4359,7 +4367,7 @@
       const defenderName = getDefenderForAttacker(team, toName);
       const defender = getSimulationStats(defenderName);
       const delta = passer.precision_pase - ((0.60 * defender.robo) + (0.40 * defender.agilidad));
-      const successChance = clamp(0.94 + (delta * 0.0018), 0.88, 0.99);
+      const successChance = clamp(0.93 + (delta * 0.0030), 0.82, 0.99);
       const overallSuccessChance = (1 - lossChance) * successChance;
       const overallFailChance = 1 - overallSuccessChance;
       if (Math.random() < successChance) {
@@ -4416,7 +4424,7 @@
       const atq = (0.75 * manejo) + (0.25 * blocker.fuerza);
       const def = (0.35 * defensor.defensa_exterior) + (0.25 * defensor.agilidad) + (0.20 * defensor.velocidad) + (0.20 * defensor.fuerza);
       const delta = atq - def;
-      const switchChance = clamp(0.60 + (delta * 0.003), 0.30, 0.85);
+      const switchChance = clamp(0.60 + (delta * 0.0055), 0.25, 0.88);
       const failChance = clamp(1 - switchChance, 0.15, 0.70);
       const handlerDefender = getDefenderForAttacker(team, handlerName);
       const blockerDefender = getDefenderForAttacker(team, blockerName);
@@ -4470,7 +4478,7 @@
       };
       const shotAttr = shotAttrMap[shotType] || 'tiro_cercano';
       const defenseKey = (shotType === 'tiro_cercano' || shotType === 'bandeja_en_carrera') ? 'defensa_interior' : 'defensa_exterior';
-      const blockProb = clamp(0.04 + ((defender.tapon - shooter[shotAttr]) * 0.0015), 0.005, 0.12);
+      const blockProb = clamp(0.045 + ((defender.tapon - shooter[shotAttr]) * 0.0025), 0.008, 0.15);
       const baseMap = {
         tiro_cercano: 0.60,
         bandeja_en_carrera: 0.55,
@@ -4478,14 +4486,14 @@
         triple: 0.38
       };
       const clampMap = {
-        tiro_cercano: [0.35, 0.85],
-        bandeja_en_carrera: [0.30, 0.80],
-        tiro_media_distancia: [0.22, 0.70],
-        triple: [0.18, 0.60]
+        tiro_cercano: [0.30, 0.86],
+        bandeja_en_carrera: [0.25, 0.82],
+        tiro_media_distancia: [0.18, 0.72],
+        triple: [0.15, 0.62]
       };
       const base = baseMap[shotType] || 0.60;
       const delta = shooter[shotAttr] - defender[defenseKey];
-      const shotChance = clamp(base + (delta * 0.004), clampMap[shotType][0], clampMap[shotType][1]);
+      const shotChance = clamp(base + (delta * 0.008), clampMap[shotType][0], clampMap[shotType][1]);
       const missChance = clamp(1 - shotChance, 0.15, 0.70);
       registerAttempt(team, shooterName, shotType);
       if (Math.random() < blockProb) {
@@ -4554,7 +4562,7 @@
       const defScore = (0.40 * defender.velocidad) + (0.35 * defender.agilidad) + (0.25 * defender.rebote_defensivo);
       const atkScore = (0.40 * attacker.velocidad) + (0.35 * attacker.agilidad) + (0.25 * attacker.rebote_ofensivo);
       const delta = defScore - atkScore;
-      const recoveryChance = clamp(0.65 + (delta * 0.003), 0.45, 0.85);
+      const recoveryChance = clamp(0.65 + (delta * 0.0055), 0.40, 0.88);
       const defenseWins = Math.random() < recoveryChance;
 
       let winningTeam = '';
@@ -4608,7 +4616,7 @@
       const reboundDef = (0.50 * defender.rebote_defensivo) + (0.30 * defender.fuerza) + (0.20 * defender.agilidad);
       const reboundAtq = (0.50 * attacker.rebote_ofensivo) + (0.30 * attacker.fuerza) + (0.20 * attacker.agilidad);
       const delta = reboundDef - reboundAtq;
-      const defChance = clamp(0.75 + (delta * 0.003), 0.55, 0.90);
+      const defChance = clamp(0.72 + (delta * 0.005), 0.48, 0.90);
       const offChance = clamp(1 - defChance, 0.10, 0.45);
 
       // 1. Balón fuera
