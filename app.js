@@ -1057,6 +1057,22 @@
         defensa: [['Defensa Interior', 85], ['Defensa Exterior', 82], ['Robo', 79], ['Tapón', 89]],
         rebote: [['Rebote Ofensivo', 90], ['Rebote Defensivo', 85]],
         fisico: [['Velocidad', 81], ['Agilidad', 84], ['Fuerza', 84]]
+      },
+      Diaz_IF: {
+        finalizacion: [['Tiro Cercano', 80], ['Bandeja en Carrera', 72]],
+        tiro: [['Tiro de Media Distancia', 67], ['Triple', 72]],
+        pase: [['Precisión de Pase', 84], ['Manejo de Balón', 76]],
+        defensa: [['Defensa Interior', 78], ['Defensa Exterior', 85], ['Robo', 86], ['Tapón', 74]],
+        rebote: [['Rebote Ofensivo', 88], ['Rebote Defensivo', 86]],
+        fisico: [['Velocidad', 80], ['Agilidad', 80], ['Fuerza', 78]]
+      },
+      Aleix_IF: {
+        finalizacion: [['Tiro Cercano', 86], ['Bandeja en Carrera', 88]],
+        tiro: [['Tiro de Media Distancia', 81], ['Triple', 68]],
+        pase: [['Precisión de Pase', 84], ['Manejo de Balón', 85]],
+        defensa: [['Defensa Interior', 65], ['Defensa Exterior', 80], ['Robo', 65], ['Tapón', 65]],
+        rebote: [['Rebote Ofensivo', 64], ['Rebote Defensivo', 75]],
+        fisico: [['Velocidad', 86], ['Agilidad', 89], ['Fuerza', 64]]
       }
     };
 
@@ -1879,7 +1895,8 @@
     const SIMULATION_FORMAT_OPTIONS = [
       { value: '2vs2', label: '2 vs 2', playersPerTeam: 2 },
       { value: '3vs3', label: '3 vs 3', playersPerTeam: 3 },
-      { value: '4vs4', label: '4 vs 4', playersPerTeam: 4 }
+      { value: '4vs4', label: '4 vs 4', playersPerTeam: 4 },
+      { value: '5vs5', label: '5 vs 5', playersPerTeam: 5 }
     ];
     const SIMULATION_WIN_OPTIONS = [
       { value: '11', label: 'A 11 puntos', score: 11 },
@@ -1914,7 +1931,9 @@
       Moya: { tiro_cercano: 58, bandeja_en_carrera: 60, tiro_media_distancia: 59, triple: 54, precision_pase: 67, manejo_balon: 61, defensa_interior: 60, defensa_exterior: 79, robo: 79, tapon: 61, rebote_ofensivo: 59, rebote_defensivo: 55, velocidad: 76, agilidad: 67, fuerza: 79 },
       Andreu: { tiro_cercano: 66, bandeja_en_carrera: 63, tiro_media_distancia: 70, triple: 66, precision_pase: 72, manejo_balon: 67, defensa_interior: 62, defensa_exterior: 64, robo: 64, tapon: 57, rebote_ofensivo: 61, rebote_defensivo: 63, velocidad: 68, agilidad: 63, fuerza: 71 },
       Jamo_MOTM: { tiro_cercano: 78, bandeja_en_carrera: 83, tiro_media_distancia: 77, triple: 95, precision_pase: 88, manejo_balon: 83, defensa_interior: 90, defensa_exterior: 79, robo: 84, tapon: 90, rebote_ofensivo: 78, rebote_defensivo: 82, velocidad: 83, agilidad: 91, fuerza: 72 },
-      Eric_Record_Breaker: { tiro_cercano: 91, bandeja_en_carrera: 87, tiro_media_distancia: 85, triple: 82, precision_pase: 99, manejo_balon: 94, defensa_interior: 85, defensa_exterior: 82, robo: 79, tapon: 89, rebote_ofensivo: 90, rebote_defensivo: 85, velocidad: 81, agilidad: 84, fuerza: 84 }
+      Eric_Record_Breaker: { tiro_cercano: 91, bandeja_en_carrera: 87, tiro_media_distancia: 85, triple: 82, precision_pase: 99, manejo_balon: 94, defensa_interior: 85, defensa_exterior: 82, robo: 79, tapon: 89, rebote_ofensivo: 90, rebote_defensivo: 85, velocidad: 81, agilidad: 84, fuerza: 84 },
+      Diaz_IF: { tiro_cercano: 80, bandeja_en_carrera: 72, tiro_media_distancia: 67, triple: 72, precision_pase: 84, manejo_balon: 76, defensa_interior: 78, defensa_exterior: 85, robo: 86, tapon: 74, rebote_ofensivo: 88, rebote_defensivo: 86, velocidad: 80, agilidad: 80, fuerza: 78 },
+      Aleix_IF: { tiro_cercano: 86, bandeja_en_carrera: 88, tiro_media_distancia: 81, triple: 68, precision_pase: 84, manejo_balon: 85, defensa_interior: 65, defensa_exterior: 80, robo: 65, tapon: 65, rebote_ofensivo: 64, rebote_defensivo: 75, velocidad: 86, agilidad: 89, fuerza: 64 }
     };
 
     const SIMULATION_CSS = `
@@ -2701,22 +2720,83 @@
     }
 
     function canvasProbability(player) {
+      if (!player) return { type: 'tiro_media_distancia', chance: 0.45 };
+
       const type = canvasShotZone(player);
       const stats = getSimulationStats(player.name);
-      const attr = stats[type] || stats.tiro_media_distancia;
-      const base = { tiro_cercano: .60, bandeja_en_carrera: .55, tiro_media_distancia: .45, triple: .38 }[type];
-      // Mínimos y máximos intermedios equilibrados
-      const min = { tiro_cercano: .30, bandeja_en_carrera: .25, tiro_media_distancia: .18, triple: .15 }[type];
-      const max = { tiro_cercano: .86, bandeja_en_carrera: .82, tiro_media_distancia: .72, triple: .62 }[type];
-      const defender = getSimulationStats(getDefenderForAttacker('A', player.name));
-      const defense = type === 'triple' || type === 'tiro_media_distancia' ? defender.defensa_exterior : defender.defensa_interior;
-      const distance = Math.hypot(player.x - 1200, player.y - 349);
-      const distancePenalty = Math.max(0, (distance - 300) * .00015);
-      const defenderPlayer = simulationState.canvas?.players.find(candidate => candidate.name === getDefenderForAttacker('A', player.name));
-      const contestDistance = defenderPlayer ? Math.hypot(defenderPlayer.x - player.x, defenderPlayer.y - player.y) : Infinity;
-      const contestPenalty = contestDistance < 220 ? (220 - Math.max(55, contestDistance)) * .0012 : 0;
-      const attributeAdjustment = (attr - defense) * .009;
-      return { type, chance: clamp(clamp(base + attributeAdjustment, min, max) - distancePenalty - contestPenalty, min, max) };
+      const attr = stats[type] || stats.tiro_media_distancia || 60;
+      const base = { tiro_cercano: .60, bandeja_en_carrera: .55, tiro_media_distancia: .45, triple: .38 }[type] || 0.45;
+      const min = { tiro_cercano: .30, bandeja_en_carrera: .25, tiro_media_distancia: .18, triple: .15 }[type] || 0.15;
+      const max = { tiro_cercano: .86, bandeja_en_carrera: .82, tiro_media_distancia: .72, triple: .62 }[type] || 0.65;
+
+      const defName = getDefenderForAttacker('A', player.name);
+      const defender = getSimulationStats(defName);
+      const defense = (type === 'triple' || type === 'tiro_media_distancia') 
+        ? (defender.defensa_exterior || 60) 
+        : (defender.defensa_interior || 60);
+
+      // Penalización suave de distancia pura al aro
+      const hoopX = (CANVAS_COURT && CANVAS_COURT.hoop) ? CANVAS_COURT.hoop.x : 1200;
+      const hoopY = (CANVAS_COURT && CANVAS_COURT.hoop) ? CANVAS_COURT.hoop.y : 349;
+      const distance = Math.hypot(player.x - hoopX, player.y - hoopY);
+      const distancePenalty = Math.max(0, (distance - 300) * 0.00015);
+
+      // ==========================================================
+      // CÁLCULO DE PUNTEO DIRECCIONAL (FRENTE / LADO / ESPALDA)
+      // ==========================================================
+      let contestPenalty = 0;
+      const canvasPlayers = simulationState.canvas?.players || [];
+      const defenderObj = canvasPlayers.find(candidate => candidate.name === defName);
+
+      if (defenderObj) {
+        const contestDistance = Math.hypot(defenderObj.x - player.x, defenderObj.y - player.y);
+        
+        // Solo evaluamos punteo si está a distancia física de molestar (< 190 px)
+        if (contestDistance < 190 && contestDistance > 1) {
+          // Vector hacia el aro
+          const toHoopX = hoopX - player.x;
+          const toHoopY = hoopY - player.y;
+          const distHoop = Math.hypot(toHoopX, toHoopY) || 1;
+
+          // Vector hacia el defensor
+          const toDefX = defenderObj.x - player.x;
+          const toDefY = defenderObj.y - player.y;
+
+          // Coseno del ángulo entre la trayectoria al aro y la posición del defensor
+          const cosAngle = (toHoopX * toDefX + toHoopY * toDefY) / (distHoop * contestDistance);
+
+          let positionFactor = 0;
+
+          if (cosAngle > 0.65) {
+            // 1. TOTALMENTE DELANTE (cono frontal directo a canasta)
+            positionFactor = 1.0;
+          } else if (cosAngle > 0.15) {
+            // 2. EN EL COSTADO / LATERAL (punteo parcial de ayuda o persecución)
+            positionFactor = 0.35 + (cosAngle - 0.15) * 0.5;
+          } else {
+            // 3. DETRÁS / ESPALDA GANADA (cosAngle <= 0.15) -> 0 punteo
+            positionFactor = 0;
+          }
+
+          if (positionFactor > 0) {
+            const now = performance.now();
+            const isLackingAwareness = Boolean(
+              (defenderObj.reactionDelayUntil && defenderObj.reactionDelayUntil > now) ||
+              (defenderObj.screenStunUntil && defenderObj.screenStunUntil > now)
+            );
+            
+            const awarenessMod = isLackingAwareness ? 0.35 : 1.0;
+            const qualityMod = (defense / 75); 
+
+            contestPenalty = (190 - Math.max(50, contestDistance)) * 0.0011 * qualityMod * awarenessMod * positionFactor;
+          }
+        }
+      }
+
+      const attributeAdjustment = (attr - defense) * 0.009;
+      const finalChance = clamp(clamp(base + attributeAdjustment, min, max) - distancePenalty - contestPenalty, min, max);
+
+      return { type, chance: finalChance };
     }
 
     function canvasPlayer(name, team, index) {
@@ -2745,6 +2825,11 @@
         screenAnchorY: 0,        // <-- NUEVO
         screenStunUntil: 0,
         paintStayUntil: 0,     // <-- NUEVO: Temporizador de 3 segundos dentro de la zona
+        // --- NUEVAS VARIABLES DE IA DEFENSIVA DINÁMICA ---
+        reactionDelayUntil: 0,     // Lapso de retraso al cambio de ritmo del atacante
+        lastAttackerVx: 0,         // Para detectar cambios bruscos de dirección
+        lastAttackerVy: 0,
+        defensiveStanceDist: 140,  // Distancia personalizada de flotación
         phase: index * 1.7 
       };
     }
@@ -2761,7 +2846,9 @@
         ? [{ x: 1200, y: 1080 }, { x: 820, y: 1110 }]
         : user.length === 3
           ? [{ x: 1200, y: 1080 }, { x: 800, y: 1110 }, { x: 1600, y: 1110 }]
-          : [{ x: 1200, y: 1080 }, { x: 760, y: 1110 }, { x: 1640, y: 1110 }, { x: 1200, y: 650 }];
+          : user.length === 4
+            ? [{ x: 1200, y: 1080 }, { x: 760, y: 1110 }, { x: 1640, y: 1110 }, { x: 1200, y: 650 }]
+            : [{ x: 1200, y: 1080 }, { x: 650, y: 1110 }, { x: 1750, y: 1110 }, { x: 1060, y: 700 }, { x: 1340, y: 620 }];
 
       state.players.forEach(player => {
         player.vx = 0;
@@ -3254,30 +3341,77 @@
         if (player.team === 'B') {
           const marked = state.players.find(candidate => candidate.name === getDefenderForAttacker('B', player.name));
           if (marked) {
+            const defStats = getSimulationStats(player.name);
+            const atkStats = getSimulationStats(marked.name);
+            const isCarrier = marked.name === simulationState.activePlayer;
+
+            // 1. FLOTACIÓN DINÁMICA: ¿El atacante es tirador o penetrador?
+            // Si el atacante tiene poco triple (<70), el defensor flota más lejos para proteger la entrada.
+            // Si tiene 80+, el defensor busca pegarse más.
+            let baseDistance = 145;
+            if (isCarrier) {
+              const shooterThreat = (atkStats.triple + atkStats.tiro_media_distancia) / 2;
+              const defAggression = defStats.defensa_exterior;
+              baseDistance = clamp(170 - (shooterThreat * 0.45) + ((80 - defAggression) * 0.4), 100, 185);
+              if (state.mode === CANVAS_STATES.BALL_IN_SHOT) baseDistance = 80;
+            } else {
+              baseDistance = 210; // Lejos del balón deja más espacio para ver el juego
+            }
+
+            // 2. DETECCIÓN DE CAMBIO DE RITMO / ARRANQUE DEL ATACANTE
+            const atkSpeedNow = Math.hypot(marked.vx, marked.vy);
+            const atkSpeedPrev = Math.hypot(player.lastAttackerVx || 0, player.lastAttackerVy || 0);
+            const dotDirection = (marked.vx * (player.lastAttackerVx || 0)) + (marked.vy * (player.lastAttackerVy || 0));
+
+            // Si el atacante arranca desde parado o hace un cambio brusco de dirección:
+            const startedMoving = atkSpeedPrev < 0.15 && atkSpeedNow > 0.5;
+            const changedDirection = dotDirection < 0 && atkSpeedNow > 0.5;
+
+            if (isCarrier && (startedMoving || changedDirection)) {
+              // Ventaja del atacante por agilidad / velocidad frente a la defensa
+              const agilityAdvantage = (atkStats.agilidad * 0.6 + atkStats.velocidad * 0.4) - (defStats.defensa_exterior * 0.5 + defStats.agilidad * 0.5);
+              // Posibilidad de que el defensor "pique" o tarde en reaccionar (entre 120ms y 380ms)
+              if (Math.random() < clamp(0.40 + (agilityAdvantage * 0.008), 0.20, 0.75)) {
+                const reactionLag = clamp(180 + (agilityAdvantage * 4), 100, 420);
+                player.reactionDelayUntil = time + reactionLag;
+              }
+            }
+            player.lastAttackerVx = marked.vx;
+            player.lastAttackerVy = marked.vy;
+
+            // 3. CÁLCULO DEL VECTOR DE MOVIMIENTO
             const toHoopX = CANVAS_COURT.hoop.x - marked.x;
             const toHoopY = CANVAS_COURT.hoop.y - marked.y;
             const toHoopDistance = Math.hypot(toHoopX, toHoopY) || 1;
-            const targetDistance = marked.name === simulationState.activePlayer
-              ? (state.mode === CANVAS_STATES.BALL_IN_SHOT ? 85 : 125)
-              : 190;
-            const targetX = marked.x + (toHoopX / toHoopDistance) * targetDistance;
-            const targetY = marked.y + (toHoopY / toHoopDistance) * targetDistance;
+
+            const targetX = marked.x + (toHoopX / toHoopDistance) * baseDistance;
+            const targetY = marked.y + (toHoopY / toHoopDistance) * baseDistance;
             const dx = targetX - player.x;
             const dy = targetY - player.y;
             const targetDistanceNow = Math.hypot(dx, dy) || 1;
-            const defensiveStats = getSimulationStats(player.name);
 
-            // Factor de aturdimiento: si está encallado en el bloqueo, velocidad mínima de tropiezo
-            let stunFactor = 1.0;
+            // 4. FACTORES DE VELOCIDAD E INERCIA
+            let speedFactor = 1.0;
+            // Bloqueado en pantalla
             if (player.screenStunUntil && player.screenStunUntil > time) {
-              stunFactor = 0.15;
+              speedFactor = 0.15;
+            }
+            // Retraso de percepción / arranque
+            else if (player.reactionDelayUntil && player.reactionDelayUntil > time) {
+              speedFactor = 0.35; // Tarda en arrancar los pies
             }
 
-            const baseDefSpeed = 4.0 + defensiveStats.velocidad * 0.05 + defensiveStats.agilidad * 0.03;
-            const defensiveSpeed = baseDefSpeed * stunFactor;
+            const baseDefSpeed = 3.8 + defStats.velocidad * 0.045 + defStats.agilidad * 0.025;
+            const defensiveSpeed = baseDefSpeed * speedFactor;
             const travel = Math.min(targetDistanceNow, defensiveSpeed * dt);
-            player.vx = (dx / targetDistanceNow) * (travel / Math.max(dt, 0.001));
-            player.vy = (dy / targetDistanceNow) * (travel / Math.max(dt, 0.001));
+
+            // Suavizado de aceleración (evita giros robóticos instantáneos)
+            const targetVx = (dx / targetDistanceNow) * (travel / Math.max(dt, 0.001));
+            const targetVy = (dy / targetDistanceNow) * (travel / Math.max(dt, 0.001));
+            const lerpSpeed = 0.22; // Inercia física
+            player.vx = player.vx + (targetVx - player.vx) * lerpSpeed;
+            player.vy = player.vy + (targetVy - player.vy) * lerpSpeed;
+
             player.x += player.vx * dt;
             player.y += player.vy * dt;
           }
@@ -4091,9 +4225,15 @@
     }
 
     function checkForMatchWin(lastScorer = null) {
-      if (simulationState.score.A >= simulationState.settings.winScore || simulationState.score.B >= simulationState.settings.winScore) {
+      const scoreDifference = simulationState.score.A - simulationState.score.B;
+      const winningTeam = simulationState.score.A >= simulationState.settings.winScore && scoreDifference >= 2
+        ? 'A'
+        : simulationState.score.B >= simulationState.settings.winScore && scoreDifference <= -2
+          ? 'B'
+          : null;
+      if (winningTeam) {
         simulationState.matchOver = true;
-        simulationState.winner = simulationState.score.A >= simulationState.settings.winScore ? 'A' : 'B';
+        simulationState.winner = winningTeam;
         
         const winTitle = simulationState.winner === 'A'
           ? `¡Victoria! Canasta ganadora de ${lastScorer || simulationState.activePlayer || 'Equipo A'}.`
