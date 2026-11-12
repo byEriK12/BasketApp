@@ -636,8 +636,9 @@
     };
 
     function obtenerPerfil(nombre) {
-      const key = norm(nombre);
-      const base = perfilesJugadores[key] || {};
+      const rawKey = norm(nombre);
+      const baseKey = rawKey.split('_')[0];
+      const base = perfilesJugadores[rawKey] || perfilesJugadores[baseKey] || {};
       const nombreMostrado = base.nombreMostrado || nombre || 'Jugador';
       const fotoGenerica = `https://ui-avatars.com/api/?name=${encodeURIComponent((nombreMostrado || 'Jugador').split(/\s+/).slice(0, 2).join(' '))}&background=111&color=fff&size=400`;
       const fotoLocal = `images/${encodeURIComponent(nombreMostrado)}.jpg`;
@@ -1886,10 +1887,22 @@
       : null;
     const ULTIMATE_ADMIN_EMAIL = 'eric.matasp12@gmail.com';
     const ULTIMATE_PRICE_PER_OVERALL = 100;
-    const ULTIMATE_CARD_CATALOG = SIMULATION_POOL.map(name => ({
-      id: name.toLowerCase(), name, overall: { Aleix: 74, Arnau: 78, Cavi: 70, Diaz: 76, Eric: 79, Ert: 74, Grinyo: 64, Jamo: 70, Llongueras: 71, Blasi: 67, Batalla: 63, Raset: 68, Pep: 64, Ot: 68, Gomez: 72, Moya: 63, Andreu: 65 }[name],
-      image_path: `cards/${name}_Card.png`
+    const ULTIMATE_SPECIAL_CARDS = [
+      { id: 'aleix_if', name: 'Aleix_IF', displayName: 'Aleix', overall: 78, price: 10000, image_path: 'cards/Aleix_IF_Card.png', isSpecial: true, event: 'totw' },
+      { id: 'jamo_motm', name: 'Jamo_MOTM', displayName: 'Jamo', overall: 84, price: 20000, image_path: 'cards/Jamo_MOTM_Card.png', isSpecial: true, event: 'totw' },
+      { id: 'diaz_if', name: 'Diaz_IF', displayName: 'Diaz', overall: 79, price: 10000, image_path: 'cards/Diaz_IF_Card.png', isSpecial: true, event: 'totw' },
+      { id: 'eric_record_breaker', name: 'Eric_Record_Breaker', displayName: 'Eric', overall: 87, price: 50000, image_path: 'cards/Eric_Record_Breaker_Card.png', isSpecial: true, event: 'record_breaker' }
+    ];
+
+    const ULTIMATE_BASE_CATALOG = SIMULATION_POOL.map(name => ({
+      id: name.toLowerCase(),
+      name,
+      overall: { Aleix: 74, Arnau: 78, Cavi: 70, Diaz: 76, Eric: 79, Ert: 74, Grinyo: 64, Jamo: 70, Llongueras: 71, Blasi: 67, Batalla: 63, Raset: 68, Pep: 64, Ot: 68, Gomez: 72, Moya: 63, Andreu: 65 }[name],
+      image_path: `cards/${name}_Card.png`,
+      isSpecial: false
     })).map(card => ({ ...card, price: card.overall * ULTIMATE_PRICE_PER_OVERALL }));
+
+    const ULTIMATE_CARD_CATALOG = [...ULTIMATE_BASE_CATALOG, ...ULTIMATE_SPECIAL_CARDS];
     const SIMULATION_WIN_SCORE = 11;
     const SIMULATION_ACCESS_PASSWORD = 'basketcadafinde';
     const SIMULATION_FORMAT_OPTIONS = [
@@ -2114,8 +2127,8 @@
       .ut-welcome h2 { font-size:30px; margin:14px 0 6px; }
       .ut-welcome p { color:#9cbab3; }
       .ut-play-card { width:min(150px,22vw); cursor:pointer; transition:transform .15s ease,filter .15s ease; }
-      .ut-play-card:hover { transform:translateY(-5px) scale(1.03); filter:drop-shadow(0 10px 16px rgba(217,255,141,.22)); }
-      .ut-play-card.selected { transform:translateY(-5px); filter:drop-shadow(0 10px 16px rgba(217,255,141,.32)); }
+      .ut-play-card:hover, .ut-play-card.selected:hover { transform:translateY(-6px) scale(1.05); filter:drop-shadow(0 12px 20px rgba(217,255,141,.38)); z-index:3; }
+      .ut-play-card.selected { filter:drop-shadow(0 6px 12px rgba(217,255,141,.18)); }
       .ut-play-card img { display:block; width:100%; border:1px solid #37605c; border-radius:8px; }
       .ut-play-meta { padding-top:6px; color:#d9ff8d; font-size:11px; font-weight:800; text-align:center; }
       .ut-side-label { margin-bottom:8px; text-align:center; color:#9cbab3; font-size:11px; font-weight:800; letter-spacing:.1em; }
@@ -2152,6 +2165,30 @@
       .ut-lineup-controls select { width:auto; min-width:130px; background:#0a1517; border:1px solid #37605c; color:#fff; font-weight:700; padding:8px 12px; border-radius:8px; }
       .ut-swap-section-title { margin:14px 0 8px; padding-bottom:4px; border-bottom:1px solid #285050; color:#d9ff8d; font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.06em; }
       .ut-swap-option.recommended { border-color:#d9ff8d; background:linear-gradient(180deg, rgba(217,255,141,.14), #132628); box-shadow:0 0 12px rgba(217,255,141,.18); }
+      section.panel, #tab-simulacion, #sim-content, .ut-shell { min-width:0; max-width:100%; overflow-x:hidden; }
+      .ut-market-wrap { position:relative; padding-bottom:68px; }
+      .ut-events-fab { position:fixed; right:32px; bottom:32px; z-index:90; padding:12px 22px; border-radius:999px; background:linear-gradient(135deg, #f4c542, #ff7b00); color:#101418; border:2px solid #fff3c4; font-size:14px; font-weight:900; text-transform:uppercase; letter-spacing:.06em; box-shadow:0 12px 30px rgba(0,0,0,.65); cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:transform .15s ease, box-shadow .15s ease; }
+      .ut-events-fab:hover { transform:translateY(-2px) scale(1.02); box-shadow:0 16px 38px rgba(244,197,66,.45); }
+      .ut-events-stage { position:relative; width:100%; max-width:100%; min-width:0; margin:0 auto; overflow:hidden; border-radius:16px; border:2px solid #37605c; box-shadow:0 22px 55px rgba(0,0,0,.65); box-sizing:border-box; }
+      .ut-events-slider { display:flex; width:100%; transition:transform .5s cubic-bezier(.22, 1, .36, 1); will-change:transform; }
+      .ut-event-slide { flex:0 0 100%; width:100%; min-width:0; min-height:420px; padding:26px 56px; background-size:cover; background-position:center; background-repeat:no-repeat; display:flex; flex-direction:column; justify-content:center; align-items:center; position:relative; box-sizing:border-box; }
+      .ut-event-cards-row { display:grid; grid-template-columns:repeat(3, minmax(0, 175px)); justify-content:center; align-items:center; gap:20px; width:100%; z-index:2; }
+      .ut-event-slide:nth-child(2) .ut-event-cards-row { grid-template-columns:minmax(0, 235px); }
+      .ut-special-card { width:100%; min-width:0; background:transparent !important; border:0 !important; padding:0; cursor:pointer; transition:transform .2s ease, filter .2s ease; display:flex; flex-direction:column; align-items:center; }
+      .ut-special-card:hover { transform:translateY(-6px) scale(1.03); filter:drop-shadow(0 16px 24px rgba(0,0,0,.75)); }
+      .ut-special-card img { display:block; width:100%; height:auto; object-fit:contain; background:transparent !important; border:0 !important; filter:drop-shadow(0 12px 20px rgba(0,0,0,.65)); }
+      .ut-special-buy { margin-top:10px; width:100%; padding:8px 8px; border-radius:999px; background:rgba(10, 18, 21, 0.88); border:1.5px solid #d9ff8d; color:#d9ff8d; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.03em; backdrop-filter:blur(6px); box-shadow:0 8px 20px rgba(0,0,0,.5); transition:all .15s ease; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .ut-special-buy:hover:not(:disabled) { background:#d9ff8d; color:#102021; transform:scale(1.03); }
+      .ut-special-buy:disabled { opacity:.65; border-color:#6c8a86; color:#b0c4c0; cursor:not-allowed; }
+      .ut-event-nav-arrow { position:absolute; top:50%; transform:translateY(-50%) !important; z-index:30; width:44px; height:44px; padding:0 !important; margin:0; border-radius:50%; background:rgba(10,18,21,.88); border:2px solid #d9ff8d; color:#d9ff8d; font-size:26px; line-height:1; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; backdrop-filter:blur(4px); box-shadow:0 6px 18px rgba(0,0,0,.55); }
+      .ut-event-nav-arrow:hover { background:#d9ff8d; color:#102021; box-shadow:0 8px 24px rgba(217,255,141,.4); }
+      .ut-event-nav-arrow:active { transform:translateY(-50%) scale(0.95) !important; }
+      .ut-event-nav-arrow * { pointer-events:none; }
+      .ut-event-nav-arrow.prev { left:12px; }
+      .ut-event-nav-arrow.next { right:12px; }
+      .ut-event-dots { display:flex; justify-content:center; gap:10px; margin-top:12px; }
+      .ut-event-dot { padding:7px 14px; border-radius:999px; font-size:12px; font-weight:800; background:#122526; border:1px solid #315c59; color:#9cbab3; cursor:pointer; }
+      .ut-event-dot.active { background:#d9ff8d; color:#102021; border-color:#d9ff8d; }
     `;
 
     if (!document.getElementById('sim-style-root')) {
@@ -2190,6 +2227,7 @@
       statsRecorded: false,
       selectionFormat: null,
       marketIndex: 0,
+      specialEventIndex: 0, // <-- 0 = TOTW (Jugadores de la semana), 1 = Record Breaker
       lineupFormat: '5vs5', // <-- Formato activo en la pizarra de Mi Quinteto
       lineupDraft: null,      // <-- Borrador temporal de la pizarra
       lineupDirty: false,     // <-- Indica si hay cambios sin guardar
@@ -2220,6 +2258,11 @@
       return String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
     }
 
+    // Convierte 'Eric_Record_Breaker' -> 'Eric', 'Jamo_MOTM' -> 'Jamo', etc.
+    function cleanPlayerName(name) {
+      return String(name || '').trim().split('_')[0];
+    }
+
     function cardById(cardId) {
       return clubState.catalog.find(card => card.id === cardId) || ULTIMATE_CARD_CATALOG.find(card => card.id === cardId);
     }
@@ -2229,17 +2272,18 @@
     }
 
     function drawStarterCardIds() {
+      const basePool = ULTIMATE_CARD_CATALOG.filter(card => !card.isSpecial);
       const tiers = {
-        bronze: ULTIMATE_CARD_CATALOG.filter(card => card.overall <= 64),
-        silver: ULTIMATE_CARD_CATALOG.filter(card => card.overall > 64 && card.overall <= 74),
-        gold: ULTIMATE_CARD_CATALOG.filter(card => card.overall > 74)
+        bronze: basePool.filter(card => card.overall <= 64),
+        silver: basePool.filter(card => card.overall > 64 && card.overall <= 74),
+        gold: basePool.filter(card => card.overall > 74)
       };
       const selected = [];
       for (let draw = 0; draw < 2; draw++) {
         const roll = Math.random();
         const tier = roll < 0.60 ? 'bronze' : roll < 0.90 ? 'silver' : 'gold';
         const candidates = tiers[tier].filter(card => !selected.includes(card.id));
-        const fallback = ULTIMATE_CARD_CATALOG.filter(card => !selected.includes(card.id));
+        const fallback = basePool.filter(card => !selected.includes(card.id));
         const pool = candidates.length ? candidates : fallback;
         if (pool.length) selected.push(pool[Math.floor(Math.random() * pool.length)].id);
       }
@@ -2305,7 +2349,13 @@
       }
       clubState.profile = profile;
       const { data: catalog } = await supabaseClient.from('cards').select('*').order('name');
-      clubState.catalog = catalog?.length ? catalog : ULTIMATE_CARD_CATALOG;
+      const mergedCatalog = catalog?.length ? [...catalog] : [...ULTIMATE_BASE_CATALOG];
+      ULTIMATE_SPECIAL_CARDS.forEach(sp => {
+        const existingIdx = mergedCatalog.findIndex(c => c.id === sp.id);
+        if (existingIdx >= 0) mergedCatalog[existingIdx] = { ...mergedCatalog[existingIdx], ...sp };
+        else mergedCatalog.push(sp);
+      });
+      clubState.catalog = mergedCatalog;
       let { data: owned } = await supabaseClient.from('user_cards').select('card_id').eq('user_id', user.id);
       if (!owned?.length) {
         const starterCards = drawStarterCardIds();
@@ -2319,7 +2369,10 @@
         clubState.playerStats = Object.fromEntries(savedStats.map(row => [row.card_id, row.stats]));
       }
       clubState.ownedIds = new Set((owned || []).map(item => item.card_id));
-
+      if (profile.lineups && typeof profile.lineups === 'object') {
+        localStorage.setItem(getLineupStorageKey(), JSON.stringify(profile.lineups));
+      }
+      loadSavedLineups(true);
       // Solo muestra el sobre si es un usuario nuevo (sin username asignado aún) y tiene las 2 cartas iniciales
       const isAdmin = (user.email || '').toLowerCase() === ULTIMATE_ADMIN_EMAIL;
       if (!isAdmin && !profile.username && clubState.ownedIds.size === 2) {
@@ -2428,7 +2481,7 @@
     async function purchaseClubCard(cardId) {
       const card = cardById(cardId);
       if (!card || clubState.ownedIds.has(cardId) || Number(clubState.profile?.coins || 0) < card.price) return;
-      if (!window.confirm(`¿Estás seguro de que quieres fichar a ${card.name} por ${card.price.toLocaleString('es-ES')} monedas?`)) return;
+      if (!window.confirm(`¿Estás seguro de que quieres fichar a ${cleanPlayerName(card.name)} por ${card.price.toLocaleString('es-ES')} monedas?`)) return;
       if (supabaseClient && clubState.session) {
         const { error } = await supabaseClient.rpc('purchase_card', { requested_card_id: cardId });
         if (error) { clubState.error = error.message; renderSimulationScreen(); return; }
@@ -2923,15 +2976,15 @@
       simulationState.shotClock = simulationState.shotClockLimit || 24;
 
       if (delayed) {
-        const activeName = simulationState.activePlayer || user[0];
+        const activeName = cleanPlayerName(simulationState.activePlayer || user[0]);
 
         // 1. Si venimos de meter canasta, mostrar el banner de la canasta (anotador, puntos y asistencia)
         if (reason === 'basket') {
-          state.celebrationText = simulationState.currentEvent || `¡CANASTA! Anota ${activeName}.`;
+          state.celebrationText = formatDisplayNames(simulationState.currentEvent || `¡CANASTA! Anota ${activeName}.`);
         } 
         // 2. Si venimos de rebote, robo o acción defensiva, mostrar el motivo limpio
         else if (typeof reason === 'string' && reason !== 'rebound') {
-          state.celebrationText = reason;
+          state.celebrationText = formatDisplayNames(reason);
         } 
         // 3. Fallback para rebotes defensivos
         else if (reason === 'rebound') {
@@ -2939,7 +2992,7 @@
         } 
         // 4. Fallback general
         else {
-          state.celebrationText = simulationState.currentEvent || 'Preparados...';
+          state.celebrationText = formatDisplayNames(simulationState.currentEvent || 'Preparados...');
         }
           
         state.countdownUntil = performance.now() + 4000;
@@ -2957,13 +3010,18 @@
       }
     }
 
+    function formatDisplayNames(text) {
+      return String(text ?? '').replace(/\b(Eric|Aleix|Diaz|Jamo)_(Record_Breaker|MOTM|IF)\b/g, '$1');
+    }
+
     function canvasMessage(text, type = 'info', rawEventText = null) {
-      // rawEventText guarda la versión limpia sin etiquetas HTML para la caja flotante del Canvas
-      simulationState.currentEvent = rawEventText || text.replace(/<[^>]*>?/gm, '');
+      const cleanText = formatDisplayNames(text);
+      const cleanRaw = rawEventText ? formatDisplayNames(rawEventText) : null;
+      simulationState.currentEvent = cleanRaw || cleanText.replace(/<[^>]*>?/gm, '');
       if (simulationState.messageQueue.length >= SIMULATION_FEED_LIMIT) {
         simulationState.messageQueue.shift();
       }
-      simulationState.messageQueue.push({ text, type });
+      simulationState.messageQueue.push({ text: cleanText, type });
     }
 
     function switchToDefensePbp() {
@@ -2979,6 +3037,7 @@
 
       const teamA = simulationState.teams.A || [];
       const validPlayer = teamA.includes(reboundPlayer) ? reboundPlayer : teamA[0];
+      const displayValid = cleanPlayerName(validPlayer);
 
       simulationState.possession = 'A';
       simulationState.activePlayer = validPlayer;
@@ -2987,7 +3046,9 @@
 
       ensureValidMatchups();
 
-      const bannerClean = cleanBannerText || (resetReason === 'out_of_bounds' ? `${validPlayer} saca de banda.` : `${validPlayer} captura el rebote defensivo.`);
+      const rawBanner = cleanBannerText || (resetReason === 'out_of_bounds' ? `${displayValid} saca de banda.` : `${displayValid} captura el rebote defensivo.`);
+      const bannerClean = formatDisplayNames(rawBanner);
+
       simulationState.canvasResetReason = bannerClean;
       simulationState.currentEvent = bannerClean;
 
@@ -2996,7 +3057,7 @@
       simulationState.pbpActionsCount = 0;
       simulationState.pbpActionsLimit = 8;
 
-      const feedText = feedMsg || bannerClean;
+      const feedText = formatDisplayNames(feedMsg || bannerClean);
       if (simulationState.messageQueue.length >= SIMULATION_FEED_LIMIT) {
         simulationState.messageQueue.shift();
       }
@@ -3117,7 +3178,7 @@
         const fgp = stats.fga ? ((stats.fgm / stats.fga) * 100).toFixed(1) : '0.0';
         const tpp = stats.tpa ? ((stats.tpm / stats.tpa) * 100).toFixed(1) : '0.0';
         const rating = (stats.pts || 0) + reb + (stats.ast || 0) + (stats.stl || 0) + (stats.blk || 0) - (stats.tov || 0);
-        return `<tr><td>${escapeHtml(player)}</td><td>${stats.pts || 0}</td><td>${reb}</td><td>${stats.ast || 0}</td><td>${stats.stl || 0}</td><td>${stats.blk || 0}</td><td>${stats.tov || 0}</td><td>${stats.fgm || 0}/${stats.fga || 0} (${fgp}%)</td><td>${stats.tpm || 0}/${stats.tpa || 0} (${tpp}%)</td><td>${rating}</td></tr>`;
+        return `<tr><td>${escapeHtml(cleanPlayerName(player))}</td><td>${stats.pts || 0}</td><td>${reb}</td><td>${stats.ast || 0}</td><td>${stats.stl || 0}</td><td>${stats.blk || 0}</td><td>${stats.tov || 0}</td><td>${stats.fgm || 0}/${stats.fga || 0} (${fgp}%)</td><td>${stats.tpm || 0}/${stats.tpa || 0} (${tpp}%)</td><td>${rating}</td></tr>`;
       }).join('');
       const table = team => `<h4>Equipo ${team} · ${simulationState.score[team]} puntos</h4><table class="sim-canvas-box"><thead><tr><th>Jugador</th><th>PTS</th><th>REB</th><th>AST</th><th>ROB</th><th>TAP</th><th>TOV</th><th>TC</th><th>3P</th><th>VAL</th></tr></thead><tbody>${buildRows(team)}</tbody></table>`;
       return `<div class="sim-canvas-pause" id="sim-canvas-pause"><div class="sim-canvas-pause-card"><h3>Partido pausado · ${simulationState.score.A} - ${simulationState.score.B}</h3><p class="sim-canvas-help">WASD/Flechas: mover · Espacio: pase · F: tiro · R: bloqueo · Q: reanudar</p><div class="sim-canvas-pause-actions"><button type="button" class="sim-action-button primary" id="sim-canvas-resume">Reanudar partido</button><button type="button" class="sim-action-button" id="sim-canvas-exit">Salir al menú</button></div>${table('A')}${table('B')}</div></div>`;
@@ -3200,7 +3261,7 @@
       // Filas con estadísticas de los rivales
       const rows = teamB.map(player => {
         const stats = getBoxScoreEntry('B', player) || {};
-        return `<div class="sim-feed-item"><strong>${escapeHtml(player)}</strong> · ${stats.pts || 0} pts · ${stats.reb || 0} reb · ${stats.ast || 0} ast · ${stats.stl || 0} rob · ${stats.blk || 0} tap</div>`;
+        return `<div class="sim-feed-item"><strong>${escapeHtml(cleanPlayerName(player))}</strong> · ${stats.pts || 0} pts · ${stats.reb || 0} reb · ${stats.ast || 0} ast · ${stats.stl || 0} rob · ${stats.blk || 0} tap</div>`;
       }).join('');
 
       // Filas con las marcas / emparejamientos
@@ -3209,7 +3270,7 @@
         const isCarrier = attackerCpu === simulationState.activePlayer;
         return `
           <div class="sim-feed-item" style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; font-size:12px; ${isCarrier ? 'border-left-color:#ffb454; background:#1b2f31;' : ''}">
-            <span><strong>${escapeHtml(defenderUser)}</strong> defiende a <strong>${escapeHtml(attackerCpu)}</strong></span>
+            <span><strong>${escapeHtml(cleanPlayerName(defenderUser))}</strong> defiende a <strong>${escapeHtml(cleanPlayerName(attackerCpu))}</strong></span>
             ${isCarrier ? '<span class="sim-pill" style="font-size:10px; padding:2px 6px; background:#ffb454; color:#102021; font-weight:800;">Con Balón</span>' : ''}
           </div>
         `;
@@ -3873,7 +3934,7 @@
         ctx.strokeStyle = player.team === 'A' ? '#60a5fa' : '#f87171';
         ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         ctx.shadowBlur = 0; ctx.fillStyle = '#fff'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(player.number, player.x, player.y + 9);
-        ctx.fillStyle = '#0a1215dd'; ctx.fillRect(player.x - 92, player.y + 55, 184, 31); ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 23px sans-serif'; ctx.fillText(player.name, player.x, player.y + 79);
+        ctx.fillStyle = '#0a1215dd'; ctx.fillRect(player.x - 92, player.y + 55, 184, 31); ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 23px sans-serif'; ctx.fillText(cleanPlayerName(player.name), player.x, player.y + 79);
         ctx.restore();
       });
       if (active && simulationState.possession === 'A' && (state.mode === CANVAS_STATES.OFFENSE_LIVE || state.mode === CANVAS_STATES.BALL_IN_SHOT || state.mode === CANVAS_STATES.BALL_REBOUND)) {
@@ -3949,7 +4010,7 @@
           // 4. Nombre del anotador (tamaño equivalente a la canasta normal)
           ctx.fillStyle = '#ffffff';
           ctx.font = '900 130px sans-serif';
-          ctx.fillText(d.scorer, cx, cardY + 310);
+          ctx.fillText(cleanPlayerName(d.scorer), cx, cardY + 310);
 
           // 5. Subtítulo de la acción
           ctx.fillStyle = '#9cbab3';
@@ -3960,7 +4021,7 @@
           const statY = cardY + 530;
           const statsList = [
             `Acierto: ${d.pct}%`,
-            d.passer ? `Asistencia: ${d.passer}` : 'Tiro individual',
+            d.passer ? `Asistencia: ${cleanPlayerName(d.passer)}` : 'Tiro individual'
             `Marcador: ${d.scoreA} - ${d.scoreB}`
           ];
 
@@ -4097,10 +4158,11 @@
     }
 
     function pushSimulationMessage(text, type = 'info') {
+      const cleanText = formatDisplayNames(text);
       if (simulationState.messageQueue.length >= SIMULATION_FEED_LIMIT) {
         simulationState.messageQueue = [];
       }
-      simulationState.messageQueue.push({ text, type });
+      simulationState.messageQueue.push({ text: cleanText, type });
       renderSimulationScreen();
     }
 
@@ -4306,7 +4368,7 @@
         simulationState.winner = winningTeam;
         
         const winTitle = simulationState.winner === 'A'
-          ? `¡Victoria! Canasta ganadora de ${lastScorer || simulationState.activePlayer || 'Equipo A'}.`
+          ? `¡Victoria! Canasta ganadora de ${cleanPlayerName(lastScorer || simulationState.activePlayer || 'Equipo A')}.`
           : `¡Final! Equipo B se lleva la victoria.`;
 
         // Fijamos el evento para que la pantalla final y el banner lean la canasta ganadora
@@ -5071,13 +5133,16 @@
         .sort((a, b) => (posOrder[getPos(a.name)] || 9) - (posOrder[getPos(b.name)] || 9) || b.overall - a.overall);
 
       const renderCardBtn = (card, isRec) => {
-        const inOtherSlot = simulationState.selectedTeamA.indexOf(card.id);
+        const cardBase = cleanPlayerName(card.id);
+        const samePlayerIdx = simulationState.selectedTeamA.findIndex(id => cleanPlayerName(id) === cardBase);
         const pos = getPos(card.name);
-        const badge = card.id === currentId ? ' · Actual' : (inOtherSlot !== -1 ? ' · En equipo' : '');
+        const badge = card.id === currentId
+          ? ' · Actual'
+          : (samePlayerIdx !== -1 ? ' · En equipo' : '');
         return `
           <button type="button" class="ut-swap-option ${isRec ? 'recommended' : ''}" data-ut-swap-card="${card.id}">
-            <img src="${cardImage(card)}" alt="${escapeHtml(card.name)}">
-            <span>[${escapeHtml(pos)}] ${escapeHtml(card.name)}${badge}</span>
+            <img src="${cardImage(card)}" alt="${escapeHtml(cleanPlayerName(card.name))}">
+            <span>[${escapeHtml(pos)}] ${escapeHtml(cleanPlayerName(card.name))}${badge}</span>
           </button>
         `;
       };
@@ -5104,11 +5169,24 @@
         const option = event.target.closest('[data-ut-swap-card]');
         if (!option) return;
         const pickedId = option.dataset.utSwapCard;
-        const existingIdx = simulationState.selectedTeamA.indexOf(pickedId);
+
+        if (pickedId === currentId) {
+          modal.remove();
+          return;
+        }
+
+        const pickedBase = cleanPlayerName(pickedId);
+        const existingIdx = simulationState.selectedTeamA.findIndex(id => cleanPlayerName(id) === pickedBase);
+
+        // Si el mismo jugador (o su otra versión oro/especial) está en OTRO hueco, intercambiamos puestos
+        // PERO solo si el jugador que estamos quitando (currentId) no es otra versión del mismo jugador
         if (existingIdx !== -1 && existingIdx !== slotIndex) {
-          simulationState.selectedTeamA[existingIdx] = currentId;
+          if (cleanPlayerName(currentId) !== pickedBase) {
+            simulationState.selectedTeamA[existingIdx] = currentId;
+          }
         }
         simulationState.selectedTeamA[slotIndex] = pickedId;
+
         saveCurrentLineup(simulationState.settings.format, simulationState.selectedTeamA, false);
         modal.remove();
         renderSimulationScreen();
@@ -5148,36 +5226,76 @@
     }
 
     function loadSavedLineups(forceReload = false) {
+      // No sobreescribir si aún no se han cargado las cartas del club
+      if (!clubState.ownedIds || clubState.ownedIds.size === 0) return;
+
       try {
-        const raw = localStorage.getItem(getLineupStorageKey());
-        const parsed = raw ? JSON.parse(raw) : {};
+        // Prioridad 1: Base de datos (profile.lineups) | Prioridad 2: localStorage
+        const dbLineups = (clubState.profile?.lineups && typeof clubState.profile.lineups === 'object')
+          ? clubState.profile.lineups
+          : null;
+        const rawLocal = localStorage.getItem(getLineupStorageKey());
+        const localLineups = rawLocal ? JSON.parse(rawLocal) : {};
+        const source = (dbLineups && Object.keys(dbLineups).length > 0) ? dbLineups : localLineups;
+
         const owned = [...clubState.ownedIds];
         ['2vs2', '3vs3', '4vs4', '5vs5'].forEach(fmt => {
           const count = parseInt(fmt, 10) || 3;
-          // Si ya hay una alineación editándose en memoria y no forzamos recarga, la respetamos
           const currentMem = clubState.savedLineups[fmt];
           if (!forceReload && Array.isArray(currentMem) && currentMem.length === count && currentMem.every(id => clubState.ownedIds.has(id))) {
             return;
           }
-          const savedList = Array.isArray(parsed[fmt]) ? parsed[fmt].filter(id => clubState.ownedIds.has(id)) : [];
+
+          const savedList = Array.isArray(source[fmt])
+            ? source[fmt].filter(id => clubState.ownedIds.has(id))
+            : [];
+
+          // Rellenar solo si faltan huecos para completar el formato
           for (const cardId of owned) {
             if (savedList.length >= count) break;
             if (!savedList.includes(cardId)) savedList.push(cardId);
           }
           clubState.savedLineups[fmt] = savedList.slice(0, count);
         });
+
+        // Mantener caché local sincronizada
+        localStorage.setItem(getLineupStorageKey(), JSON.stringify(clubState.savedLineups));
       } catch (e) {
         console.warn('Error cargando quintetos:', e);
       }
     }
 
-    function saveCurrentLineup(format, lineupArray, showFeedback = false) {
+    async function saveCurrentLineup(format, lineupArray, showFeedback = false) {
       clubState.savedLineups[format] = [...lineupArray];
+
+      // 1. Guardar inmediatamente en localStorage y en el perfil en memoria
       localStorage.setItem(getLineupStorageKey(), JSON.stringify(clubState.savedLineups));
+      if (clubState.profile) {
+        clubState.profile.lineups = { ...clubState.savedLineups };
+      }
+
+      // 2. Si el formato coincide con el seleccionado en Jugar, actualizarlo al instante
       if (simulationState.settings.format === format) {
         simulationState.selectedTeamA = [...lineupArray];
         simulationState.selectionFormat = format;
       }
+
+      // 3. Guardar de forma persistente en Supabase (tabla profiles)
+      if (supabaseClient && clubState.session?.user?.id) {
+        const { error } = await supabaseClient
+          .from('profiles')
+          .update({ lineups: clubState.savedLineups })
+          .eq('id', clubState.session.user.id);
+
+        if (error) {
+          console.error('Error guardando alineación en Supabase:', error.message);
+          if (showFeedback) alert(`⚠️ Se guardó en local, pero hubo un error con la base de datos: ${error.message}`);
+          return;
+        }
+      } else {
+        saveLocalClub();
+      }
+
       if (showFeedback) {
         alert(`✅ ¡Tu equipo titular para ${format} se ha guardado correctamente!`);
       }
@@ -5207,13 +5325,16 @@
         .sort((a, b) => (posOrder[getPos(a.name)] || 9) - (posOrder[getPos(b.name)] || 9) || b.overall - a.overall);
 
       const renderCardBtn = (card, isRec) => {
-        const inOtherSlot = currentLineup.indexOf(card.id);
+        const cardBase = cleanPlayerName(card.id);
+        const samePlayerIdx = currentLineup.findIndex(id => cleanPlayerName(id) === cardBase);
         const pos = getPos(card.name);
-        const badge = card.id === currentId ? ' · Actual' : (inOtherSlot !== -1 ? ' · En pista' : '');
+        const badge = card.id === currentId
+          ? ' · Actual'
+          : (samePlayerIdx !== -1 ? ' · En pista' : '');
         return `
           <button type="button" class="ut-swap-option ${isRec ? 'recommended' : ''}" data-pitch-pick="${card.id}">
-            <img src="${cardImage(card)}" alt="${escapeHtml(card.name)}">
-            <span>[${escapeHtml(pos)}] ${escapeHtml(card.name)}${badge}</span>
+            <img src="${cardImage(card)}" alt="${escapeHtml(cleanPlayerName(card.name))}">
+            <span>[${escapeHtml(pos)}] ${escapeHtml(cleanPlayerName(card.name))}${badge}</span>
           </button>
         `;
       };
@@ -5251,9 +5372,14 @@
           return;
         }
 
-        const existingIndex = currentLineup.indexOf(pickedId);
+        const pickedBase = cleanPlayerName(pickedId);
+        const existingIndex = currentLineup.findIndex(id => cleanPlayerName(id) === pickedBase);
+
+        // Si el jugador (o su otra carta oro/especial) ya estaba en otra posición de la pizarra, los intercambiamos
         if (existingIndex !== -1 && existingIndex !== slotIndex) {
-          currentLineup[existingIndex] = currentId;
+          if (cleanPlayerName(currentId) !== pickedBase) {
+            currentLineup[existingIndex] = currentId;
+          }
         }
         currentLineup[slotIndex] = pickedId;
 
@@ -5270,28 +5396,96 @@
       document.body.appendChild(modal);
     }
 
+    function renderSpecialEventCard(cardId) {
+      const card = cardById(cardId);
+      if (!card) return '';
+      const owned = clubState.ownedIds.has(card.id);
+      const canBuy = !owned && Number(clubState.profile?.coins || 0) >= card.price;
+      const priceText = `${card.price.toLocaleString('es-ES')} 🪙`;
+      return `
+        <article class="ut-special-card" data-ut-card="${card.id}">
+          <img src="${cardImage(card)}" alt="${escapeHtml(card.displayName || card.name)}">
+          ${owned
+            ? '<button type="button" class="ut-special-buy" disabled>En tu club</button>'
+            : `<button type="button" class="ut-special-buy" data-ut-buy="${card.id}" ${canBuy ? '' : 'disabled'}>
+                 ${canBuy ? `Fichar · ${priceText}` : `Insuficiente · ${priceText}`}
+               </button>`
+          }
+        </article>
+      `;
+    }
+
     function renderUltimateClub(root) {
-      loadSavedLineups(true);
+      loadSavedLineups(false);
       const owned = clubState.catalog.filter(card => clubState.ownedIds.has(card.id));
       const cards = owned.length ? owned.map(card => renderUltimateCard(card, true)).join('') : '<div class="ut-empty">Tu álbum está vacío.</div>';
-      const marketCards = clubState.catalog.length > 3
-        ? Array.from({ length: 3 }, (_, offset) => clubState.catalog[(simulationState.marketIndex + offset) % clubState.catalog.length])
-        : clubState.catalog;
+
+      // El carrusel normal del mercado solo muestra cartas estándar
+      const regularCatalog = clubState.catalog.filter(card => !card.isSpecial && !ULTIMATE_SPECIAL_CARDS.some(s => s.id === card.id));
+      const marketCards = regularCatalog.length > 3
+        ? Array.from({ length: 3 }, (_, offset) => regularCatalog[(simulationState.marketIndex + offset) % regularCatalog.length])
+        : regularCatalog;
       const market = marketCards.map(card => renderUltimateCard(card, clubState.ownedIds.has(card.id))).join('');
 
       let content = '';
 
       if (simulationState.clubView === 'market') {
         content = `
-          <div class="ut-title-row"><div><h2>Mercado</h2><p>Explora tres cartas con las flechas.</p></div></div>
-          <div class="ut-market-carousel">
-            <button type="button" class="ut-market-arrow" id="ut-market-prev" aria-label="Cartas anteriores">‹</button>
-            <div class="ut-market-window"><div class="ut-market-track">${market}</div></div>
-            <button type="button" class="ut-market-arrow" id="ut-market-next" aria-label="Cartas siguientes">›</button>
+          <div class="ut-market-wrap">
+            <div class="ut-title-row"><div><h2>Mercado</h2><p>Explora tres cartas con las flechas.</p></div></div>
+            <div class="ut-market-carousel">
+              <button type="button" class="ut-market-arrow" id="ut-market-prev" aria-label="Cartas anteriores">‹</button>
+              <div class="ut-market-window"><div class="ut-market-track">${market}</div></div>
+              <button type="button" class="ut-market-arrow" id="ut-market-next" aria-label="Cartas siguientes">›</button>
+            </div>
+            <button type="button" class="ut-events-fab" id="ut-open-events">✨ Eventos especiales</button>
+          </div>
+        `;
+      } else if (simulationState.clubView === 'events') {
+        const evIdx = simulationState.specialEventIndex || 0;
+        const eventTitle = evIdx === 0
+          ? 'Equipo de la Semana (TOTW)'
+          : 'Evento Especial · Record Breaker';
+        const eventSub = evIdx === 0
+          ? 'Cartas IF y MOTM. Pulsa una carta para ver sus atributos.'
+          : 'Carta histórica Record Breaker de asistencias. Pulsa para ver sus atributos.';
+
+        content = `
+          <div class="ut-title-row">
+            <div>
+              <h2 id="ut-event-title">${eventTitle}</h2>
+              <p id="ut-event-sub">${eventSub}</p>
+            </div>
+            <button type="button" class="sim-action-button" id="ut-back-market">Volver al Mercado</button>
+          </div>
+
+          <div class="ut-events-stage">
+            <button type="button" class="ut-event-nav-arrow prev" id="ut-event-prev" aria-label="Evento anterior"><span>‹</span></button>
+            <div class="ut-events-slider" style="transform:translateX(-${evIdx * 100}%);">
+              <!-- SLIDE 1: JUGADORES DE LA SEMANA (TOTW + MOTM) -->
+              <div class="ut-event-slide" style="background-image:url('images/Fondo_TOTW.jpg');">
+                <div class="ut-event-cards-row">
+                  ${renderSpecialEventCard('aleix_if')}
+                  ${renderSpecialEventCard('jamo_motm')}
+                  ${renderSpecialEventCard('diaz_if')}
+                </div>
+              </div>
+              <!-- SLIDE 2: RECORD BREAKER -->
+              <div class="ut-event-slide" style="background-image:url('images/Fondo_Record_Breaker.png');">
+                <div class="ut-event-cards-row">
+                  ${renderSpecialEventCard('eric_record_breaker')}
+                </div>
+              </div>
+            </div>
+            <button type="button" class="ut-event-nav-arrow next" id="ut-event-next" aria-label="Siguiente evento"><span>›</span></button>
+          </div>
+
+          <div class="ut-event-dots">
+            <button type="button" class="ut-event-dot ${evIdx === 0 ? 'active' : ''}" data-ut-event-dot="0">🔥 Jugadores de la Semana</button>
+            <button type="button" class="ut-event-dot ${evIdx === 1 ? 'active' : ''}" data-ut-event-dot="1">⚡ Record Breaker</button>
           </div>
         `;
       } else if (simulationState.clubView === 'lineup') {
-        // Inicializar borrador con copia limpia de los guardados si aún no existe
         if (!simulationState.lineupDraft) {
           simulationState.lineupDraft = JSON.parse(JSON.stringify(clubState.savedLineups));
           simulationState.lineupDirty = false;
@@ -5312,7 +5506,7 @@
                 : `<div class="ut-pitch-slot-empty">+</div>`}
               <div class="ut-pitch-slot-label">
                 <span class="ut-pitch-slot-pos">${escapeHtml(slot.role)}</span>
-                ${escapeHtml(card ? card.name : 'Vacío')}
+                ${escapeHtml(card ? (card.displayName || card.name) : 'Vacío')}
               </div>
             </div>
           `;
@@ -5358,13 +5552,56 @@
       bindUltimateCommon(root);
 
       root.querySelector('#ut-market-prev')?.addEventListener('click', () => {
-        simulationState.marketIndex = (simulationState.marketIndex - 1 + clubState.catalog.length) % clubState.catalog.length;
+        simulationState.marketIndex = (simulationState.marketIndex - 1 + regularCatalog.length) % regularCatalog.length;
         renderSimulationScreen();
       });
       root.querySelector('#ut-market-next')?.addEventListener('click', () => {
-        simulationState.marketIndex = (simulationState.marketIndex + 1) % clubState.catalog.length;
+        simulationState.marketIndex = (simulationState.marketIndex + 1) % regularCatalog.length;
         renderSimulationScreen();
       });
+      root.querySelector('#ut-open-events')?.addEventListener('click', () => {
+        simulationState.clubView = 'events';
+        renderSimulationScreen();
+      });
+      root.querySelector('#ut-back-market')?.addEventListener('click', () => {
+        simulationState.clubView = 'market';
+        renderSimulationScreen();
+      });
+
+      const switchEventSlide = (newIdx) => {
+        const idx = (newIdx + 2) % 2;
+        simulationState.specialEventIndex = idx;
+
+        const slider = root.querySelector('.ut-events-slider');
+        if (slider) {
+          slider.style.transform = `translateX(-${idx * 100}%)`;
+        }
+
+        const titleEl = root.querySelector('#ut-event-title');
+        const subEl = root.querySelector('#ut-event-sub');
+        if (titleEl) {
+          titleEl.textContent = idx === 0
+            ? 'Equipo de la Semana (TOTW)'
+            : 'Evento Especial · Record Breaker';
+        }
+        if (subEl) {
+          subEl.textContent = idx === 0
+            ? 'Cartas IF y MOTM. Pulsa una carta para ver sus atributos.'
+            : 'Carta histórica Record Breaker de asistencias. Pulsa para ver sus atributos.';
+        }
+
+        root.querySelectorAll('[data-ut-event-dot]').forEach(dot => {
+          dot.classList.toggle('active', Number(dot.dataset.utEventDot) === idx);
+        });
+      };
+
+      // Conectar las flechas y los botones inferiores con switchEventSlide
+      root.querySelector('#ut-event-prev')?.addEventListener('click', () => switchEventSlide((simulationState.specialEventIndex || 0) - 1));
+      root.querySelector('#ut-event-next')?.addEventListener('click', () => switchEventSlide((simulationState.specialEventIndex || 0) + 1));
+      root.querySelectorAll('[data-ut-event-dot]').forEach(dot => {
+        dot.addEventListener('click', () => switchEventSlide(Number(dot.dataset.utEventDot)));
+      });
+
       root.querySelector('#ut-open-lineup')?.addEventListener('click', () => {
         simulationState.lineupDraft = JSON.parse(JSON.stringify(clubState.savedLineups));
         simulationState.lineupDirty = false;
@@ -5389,11 +5626,11 @@
         simulationState.lineupFormat = event.target.value;
         renderSimulationScreen();
       });
-      root.querySelector('#ut-save-lineup')?.addEventListener('click', () => {
+      root.querySelector('#ut-save-lineup')?.addEventListener('click', async () => {
         const fmt = simulationState.lineupFormat || '5vs5';
         const draftToSave = simulationState.lineupDraft?.[fmt] || clubState.savedLineups[fmt] || [];
-        saveCurrentLineup(fmt, draftToSave, true);
         simulationState.lineupDirty = false;
+        await saveCurrentLineup(fmt, draftToSave, true);
         renderSimulationScreen();
       });
       root.querySelectorAll('[data-pitch-slot]').forEach(slotEl => {
@@ -5434,7 +5671,7 @@
       const enoughCards = owned.length >= playersPerTeam && selectedIds.length === playersPerTeam;
       if (!simulationState.previewTeamB.length) refreshOpponentPreview();
       const previewTeamB = simulationState.previewTeamB.map(name => cardById(norm(name)) || { name }).map(card => `<article class="ut-play-card"><img src="${cardImage(card)}" alt="CPU ${escapeHtml(card.name)}"><div class="ut-play-meta">${escapeHtml(obtenerPerfil(card.name).posicion)}</div></article>`).join('');
-      const previewTeamA = simulationState.selectedTeamA.map((cardId, slotIndex) => { const card = cardById(cardId); return card ? `<article class="ut-play-card selected" data-ut-swap-slot="${slotIndex}"><img src="${cardImage(card)}" alt="${escapeHtml(card.name)}"><div class="ut-play-meta">Cambiar por · ${escapeHtml(card.name)} · ${escapeHtml(obtenerPerfil(card.name).posicion)}</div></article>` : ''; }).join('');
+      const previewTeamA = simulationState.selectedTeamA.map((cardId, slotIndex) => { const card = cardById(cardId); return card ? `<article class="ut-play-card selected" data-ut-swap-slot="${slotIndex}"><img src="${cardImage(card)}" alt="${escapeHtml(cleanPlayerName(card.name))}"><div class="ut-play-meta">Cambiar por · ${escapeHtml(cleanPlayerName(card.name))} · ${escapeHtml(obtenerPerfil(card.name).posicion)}</div></article>` : ''; }).join('');
       root.innerHTML = `<div class="ut-shell">${renderUltimateHeader()}${renderUltimateNav()}<div class="ut-title-row"><div><h2>Jugar</h2><p>Selecciona ${playersPerTeam} titulares. Pulsa una carta para cambiarla por otra de tu club.</p></div></div><div class="sim-config"><label for="sim-format-select">Formato<select id="sim-format-select">${SIMULATION_FORMAT_OPTIONS.map(option => `<option value="${option.value}" ${simulationState.settings.format === option.value ? 'selected' : ''}>${option.label}</option>`).join('')}</select></label><label for="sim-win-select">Victoria<select id="sim-win-select">${SIMULATION_WIN_OPTIONS.map(option => `<option value="${option.value}" ${simulationState.settings.winScore === option.score ? 'selected' : ''}>${option.label}</option>`).join('')}</select></label></div><div class="ut-match-preview"><div><div class="ut-side-label">TU EQUIPO · ${simulationState.selectedTeamA.length}/${playersPerTeam}</div><div class="ut-match-team">${previewTeamA || '<div class="ut-empty">Sin cartas</div>'}</div></div><span class="ut-vs">VS</span><div><div class="ut-side-label">RIVAL <button type="button" class="ut-dice" id="ut-reroll" aria-label="Cambiar rival" title="Cambiar rival">⚄</button></div><div class="ut-match-team">${previewTeamB}</div></div></div><div class="ut-actions sim-actions"><button type="button" class="ut-primary sim-action-button" id="sim-start-btn" ${enoughCards ? '' : 'disabled'}>Iniciar partido</button><button type="button" class="sim-action-button" data-ut-view="market">Ir al mercado</button></div>${enoughCards ? '' : `<div class="ut-error">Selecciona suficientes cartas para el formato ${format?.label || ''}, o consigue más en el Mercado.</div>`}</div>`;
       bindUltimateCommon(root);
       root.querySelectorAll('[data-ut-swap-slot]').forEach(card => card.addEventListener('click', () => openLineupSwap(Number(card.dataset.utSwapSlot))));
@@ -5738,7 +5975,7 @@
             const rating = stats.pts + (stats.reb || 0) + stats.ast + stats.stl + stats.blk - stats.tov;
             return `
               <tr class="${mvp && mvp.team === team && mvp.player === player ? 'mvp-row' : ''}">
-                <td>${player}${mvp && mvp.team === team && mvp.player === player ? '<span class="sim-mvp-badge">MVP</span>' : ''}</td>
+                <td>${cleanPlayerName(player)}${mvp && mvp.team === team && mvp.player === player ? '<span class="sim-mvp-badge">MVP</span>' : ''}</td>
                 <td>${stats.pts}</td>
                 <td>${reb}</td>
                 <td>${stats.ast}</td>
@@ -5759,19 +5996,19 @@
                 <h2>¡${winner} ha ganado el partido!</h2>
                 <div class="sim-score" style="font-size:22px; margin-top:10px;">Equipo A ${simulationState.score.A} - ${simulationState.score.B} Equipo B</div>
                 <div class="sim-mvp">${simulationState.winner === 'A' ? `¡Victoria! +${winCoins} monedas añadidas a tu club.` : `Derrota: +${lossCoins} monedas.`}</div>
-                <div class="sim-mvp">MVP: ${mvp ? `${mvp.player} (${mvp.rating} VAL)` : 'Sin datos'}</div>
+                <div class="sim-mvp">MVP: ${mvp ? `${cleanPlayerName(mvp.player)} (${mvp.rating} VAL)` : 'Sin datos'}</div>
               </div>
               <div class="sim-finish-grid">
                 <div class="sim-result-card">
                   <h3>Jugadores del equipo ganador</h3>
                   <div class="sim-result-team">
-                    ${winnerPlayers.map(player => `<span class="sim-result-player winner"><img src="${getPlayerPhoto(player)}" alt="${player}" style="width:28px;height:28px;border-radius:50%;"/> ${player}</span>`).join('')}
+                    ${winnerPlayers.map(player => `<span class="sim-result-player winner"><img src="${getPlayerPhoto(player)}" alt="${cleanPlayerName(player)}" style="width:28px;height:28px;border-radius:50%;"/> ${cleanPlayerName(player)}</span>`).join('')}
                   </div>
                 </div>
                 <div class="sim-result-card">
                   <h3>Jugadores del equipo perdedor</h3>
                   <div class="sim-result-team">
-                    ${loserPlayers.map(player => `<span class="sim-result-player"><img src="${getPlayerPhoto(player)}" alt="${player}" style="width:28px;height:28px;border-radius:50%;"/> ${player}</span>`).join('')}
+                    ${loserPlayers.map(player => `<span class="sim-result-player"><img src="${getPlayerPhoto(player)}" alt="${cleanPlayerName(player)}" style="width:28px;height:28px;border-radius:50%;"/> ${cleanPlayerName(player)}</span>`).join('')}
                   </div>
                 </div>
               </div>

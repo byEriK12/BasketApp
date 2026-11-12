@@ -55,6 +55,10 @@ insert into public.cards (id, name, overall, price, image_path) values
   ('ot', 'Ot', 68, 3000, 'cards/Ot_Card.png'),
   ('pep', 'Pep', 64, 1000, 'cards/Pep_Card.png'),
   ('raset', 'Raset', 68, 3500, 'cards/Raset_Card.png')
+  ('aleix_if', 'Aleix_IF', 78, 10000, 'cards/Aleix_IF_Card.png'),
+  ('diaz_if', 'Diaz_IF', 79, 10000, 'cards/Diaz_IF_Card.png'),
+  ('jamo_motm', 'Jamo_MOTM', 84, 20000, 'cards/Jamo_MOTM_Card.png'),
+  ('eric_record_breaker', 'Eric_Record_Breaker', 87, 50000, 'cards/Eric_Record_Breaker_Card.png')
 on conflict (id) do update set name = excluded.name, overall = excluded.overall, price = excluded.price, image_path = excluded.image_path;
 
 -- Keeps an existing project in sync with the editable overall-based pricing rule.
@@ -207,6 +211,8 @@ begin
   return json_build_object('success', true, 'reward', 100, 'new_coins', v_coins + 100);
 end;
 $$;
+
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS lineups jsonb DEFAULT '{}'::jsonb;
 
 grant execute on function public.purchase_card(text) to authenticated;
 grant execute on function public.record_match_result(boolean, integer) to authenticated;
