@@ -2087,21 +2087,23 @@
       .ut-primary { background:#d9ff8d !important; border-color:#d9ff8d !important; color:#102021 !important; font-weight:900; }
       .ut-error { min-height:18px; color:#ff9e91; font-size:12px; }
       .ut-modal-backdrop { position:fixed; inset:0; z-index:200; display:grid; place-items:center; padding:16px; background:rgba(2,8,10,.82); }
-      .ut-modal { position:relative; display:grid; grid-template-columns:minmax(180px,250px) 1fr; gap:22px; width:min(720px,100%); max-height:90vh; overflow:auto; padding:20px; background:#102021; border:1px solid #d9ff8d; border-radius:12px; box-shadow:0 24px 80px rgba(0,0,0,.6); }
+      .ut-modal { position:relative; display:grid; grid-template-columns:260px 1fr; gap:20px; width:min(820px,100%); max-height:95vh; overflow-y:auto; padding:16px 20px; background:#102021; border:1px solid #d9ff8d; border-radius:12px; box-shadow:0 24px 80px rgba(0,0,0,.6); align-items:start; }
       .ut-card-column { min-width:0; }
-      .ut-card-column > img { display:block; width:100%; border-radius:7px; }
-      .ut-modal h2 { margin:0; font-size:28px; color:#d9ff8d; }
+      .ut-card-column > img { display:block; width:100%; max-width:245px; margin:0 auto; border-radius:8px; }
+      .ut-modal h2 { margin:0; font-size:24px; color:#d9ff8d; }
       .ut-modal p { color:#9cbab3; }
-      .ut-close { position:absolute; right:10px; top:10px; border:0; background:transparent; color:#fff; font-size:24px; padding:2px 8px; box-shadow:none; }
+      .ut-close { position:absolute; right:10px; top:8px; border:0; background:transparent; color:#fff; font-size:24px; padding:2px 8px; box-shadow:none; z-index:5; }
       .ut-attributes { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
-      .ut-attribute { display:flex; justify-content:space-between; gap:8px; padding:7px; background:#152b2c; border-radius:6px; color:#b5cfca; font-size:11px; }
+      .ut-attribute { display:flex; justify-content:space-between; gap:8px; padding:6px; background:#152b2c; border-radius:6px; color:#b5cfca; font-size:11px; }
       .ut-attribute strong { color:#fff; }
-      .ut-profile-attributes { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:14px; }
-      .ut-profile-attributes .type-card { min-width:0; padding:9px; }
-      .ut-profile-attributes .attribute-row { padding:6px 0; }
-      .ut-stat-heading { margin-top:18px; padding-top:12px; border-top:1px solid #315c59; color:#d9ff8d; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
-      .ut-game-stats { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin-top:8px; }
-      .ut-game-stat { display:flex; justify-content:space-between; gap:8px; padding:7px; border:1px solid #315c59; border-radius:6px; background:#132628; color:#a9c2bd; font-size:11px; }
+      .ut-profile-attributes { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:4px; }
+      .ut-profile-attributes .type-card { min-width:0; padding:8px 10px; }
+      .ut-profile-attributes .type-card .title { margin-bottom:4px; font-size:11px; }
+      .ut-profile-attributes .attribute-row { padding:4px 0; }
+      .ut-profile-attributes .attribute-bar { height:5px; margin-top:4px; }
+      .ut-stat-heading { margin-top:10px; padding-top:8px; border-top:1px solid #315c59; color:#d9ff8d; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+      .ut-game-stats { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; margin-top:6px; }
+      .ut-game-stat { display:flex; justify-content:space-between; gap:6px; padding:5px 7px; border:1px solid #315c59; border-radius:6px; background:#132628; color:#a9c2bd; font-size:11px; }
       .ut-game-stat strong { color:#fff; }
       .ut-pack { display:flex; justify-content:center; gap:12px; min-height:260px; margin:24px 0; perspective:900px; }
       .ut-pack-card { width:170px; transform:rotateY(180deg); opacity:.35; transition:transform .7s ease,opacity .35s ease; }
@@ -2123,18 +2125,33 @@
       .ut-match-team { align-items:flex-start; display:grid; grid-template-columns:repeat(2,minmax(100px,150px)); }
       .ut-match-team img { width:100%; max-width:150px; border:1px solid #37605c; border-radius:5px; }
       .ut-swap-backdrop { position:fixed; inset:0; z-index:210; display:grid; place-items:center; padding:16px; background:rgba(2,8,10,.78); }
-      .ut-swap-window { width:min(680px,100%); max-height:82vh; overflow:auto; padding:20px; background:#102021; border:1px solid #d9ff8d; border-radius:12px; box-shadow:0 24px 80px rgba(0,0,0,.6); }
+      .ut-swap-window { position:relative; width:min(700px,100%); max-height:86vh; overflow-y:auto; padding:20px; background:#102021; border:1px solid #d9ff8d; border-radius:12px; box-shadow:0 24px 80px rgba(0,0,0,.6); }
       .ut-swap-window h3 { margin:0; color:#d9ff8d; }
-      .ut-swap-window p { color:#9cbab3; font-size:13px; }
-      .ut-swap-options { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,150px)); justify-content:start; gap:12px; }
-      .ut-swap-option { padding:8px; text-align:left; background:#132628; border:1px solid #37605c; border-radius:8px; }
-      .ut-swap-option:hover { border-color:#d9ff8d; }
-      .ut-swap-option img { display:block; width:100%; aspect-ratio:2 / 3; object-fit:cover; border-radius:6px; }
-      .ut-swap-option span { display:block; padding-top:6px; color:#d9ff8d; font-size:11px; font-weight:800; }
+      .ut-swap-window p { margin:6px 0 0; color:#9cbab3; font-size:13px; }
+      .ut-swap-options { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px; width:100%; }
+      .ut-swap-option { padding:10px; text-align:left; background:#132628; border:1px solid #37605c; border-radius:10px; width:100%; }
+      .ut-swap-option:hover { border-color:#d9ff8d; transform:translateY(-2px); }
+      .ut-swap-option img { display:block; width:100%; aspect-ratio:2 / 3; object-fit:cover; border-radius:7px; }
+      .ut-swap-option span { display:block; padding-top:8px; color:#d9ff8d; font-size:12px; font-weight:800; text-align:center; }
       .ut-vs { font-weight:900; color:#d9ff8d; }
-      @media (max-width:600px) { .ut-shell { padding:12px; } .ut-nav { grid-template-columns:1fr; } .ut-modal { grid-template-columns:1fr; } .ut-match-preview { grid-template-columns:1fr; } }
+      @media (max-width:600px) { .ut-shell { padding:12px; } .ut-nav { grid-template-columns:1fr; } .ut-modal { grid-template-columns:1fr; } .ut-match-preview { grid-template-columns:1fr; } .ut-swap-options { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
       @media (max-width: 900px) { .sim-live-grid, .sim-setup, .sim-finish-grid { grid-template-columns:1fr; } .sim-config { grid-template-columns:1fr; } .sim-profile-attributes { grid-template-columns:repeat(2, minmax(145px, 1fr)); } }
       @media (max-width: 520px) { .sim-profile-attributes { grid-template-columns:1fr; } }
+      .ut-club-Wrap { position:relative; padding-bottom:64px; }
+      .ut-lineup-fab { position:fixed; right:32px; bottom:32px; z-index:90; padding:12px 20px; border-radius:999px; background:#d9ff8d; color:#102021; border:2px solid #102021; font-size:14px; font-weight:900; text-transform:uppercase; letter-spacing:.06em; box-shadow:0 12px 30px rgba(0,0,0,.55); cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
+      .ut-lineup-fab:hover { transform:translateY(-2px); box-shadow:0 16px 36px rgba(217,255,141,.35); }
+      .ut-pitch-board { position:relative; width:100%; max-width:860px; margin:0 auto; aspect-ratio:2400 / 1792; border:2px solid #37605c; border-radius:14px; overflow:hidden; background:#0a1215 url('images/pizarra_original_media_pista.jpg') center/cover no-repeat; box-shadow:0 20px 50px rgba(0,0,0,.5); }
+      .ut-pitch-slot { position:absolute; transform:translate(-50%, -50%); width:clamp(64px, 10.2vw, 96px); cursor:pointer; transition:transform .16s ease, filter .16s ease; text-align:center; z-index:2; }
+      .ut-pitch-slot:hover { transform:translate(-50%, -54%) scale(1.06); filter:drop-shadow(0 12px 20px rgba(217,255,141,.35)); z-index:5; }
+      .ut-pitch-slot img { display:block; width:100%; aspect-ratio:2 / 3; object-fit:cover; border-radius:8px; border:2px solid #d9ff8d; background:#102021; box-shadow:0 8px 20px rgba(0,0,0,.6); }
+      .ut-pitch-slot-empty { display:grid; place-items:center; width:100%; aspect-ratio:2 / 3; border-radius:8px; border:2px dashed #d9ff8d; background:rgba(16,32,33,.82); color:#d9ff8d; font-size:24px; font-weight:900; }
+      .ut-pitch-slot-label { margin-top:4px; padding:2px 6px; border-radius:6px; background:rgba(10,18,21,.92); border:1px solid #37605c; color:#fff; font-size:10px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .ut-pitch-slot-pos { display:inline-block; color:#d9ff8d; margin-right:3px; }
+      .ut-lineup-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; padding:12px 14px; background:#102021; border:1px solid #315c59; border-radius:12px; }
+      .ut-lineup-controls { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+      .ut-lineup-controls select { width:auto; min-width:130px; background:#0a1517; border:1px solid #37605c; color:#fff; font-weight:700; padding:8px 12px; border-radius:8px; }
+      .ut-swap-section-title { margin:14px 0 8px; padding-bottom:4px; border-bottom:1px solid #285050; color:#d9ff8d; font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.06em; }
+      .ut-swap-option.recommended { border-color:#d9ff8d; background:linear-gradient(180deg, rgba(217,255,141,.14), #132628); box-shadow:0 0 12px rgba(217,255,141,.18); }
     `;
 
     if (!document.getElementById('sim-style-root')) {
@@ -2173,6 +2190,9 @@
       statsRecorded: false,
       selectionFormat: null,
       marketIndex: 0,
+      lineupFormat: '5vs5', // <-- Formato activo en la pizarra de Mi Quinteto
+      lineupDraft: null,      // <-- Borrador temporal de la pizarra
+      lineupDirty: false,     // <-- Indica si hay cambios sin guardar
       canvas: null,
       pendingCanvasCountdown: false,
       // --- CONTROL DEL RELOJ DE POSESIÓN ---
@@ -2188,6 +2208,7 @@
       catalog: ULTIMATE_CARD_CATALOG,
       ownedIds: new Set(),
       playerStats: {},
+      savedLineups: { '2vs2': [], '3vs3': [], '4vs4': [], '5vs5': [] }, // <-- Quintetos guardados
       loading: false,
       initialized: false,
       error: '',
@@ -5006,25 +5027,243 @@
       return `<article class="ut-card" data-ut-card="${card.id}"><img src="${cardImage(card)}" alt="${escapeHtml(card.name)}">${owned ? '<button type="button" disabled>En tu club</button>' : `<button type="button" data-ut-buy="${card.id}" title="${canBuy ? `Fichar por ${price}` : `Monedas insuficientes. Precio: ${price}`}" ${canBuy ? '' : 'disabled'}>${canBuy ? `Fichar por ${price}` : `Insuficiente · ${price}`}</button>`}</article>`;
     }
 
+    function confirmDiscardLineupChanges() {
+      if (simulationState.clubView === 'lineup' && simulationState.lineupDirty) {
+        const discard = window.confirm('⚠️ Tienes cambios sin guardar en tu alineación. ¿Seguro que quieres salir y descartar los cambios?');
+        if (!discard) return false;
+        simulationState.lineupDraft = null;
+        simulationState.lineupDirty = false;
+      }
+      return true;
+    }
+
     function bindUltimateCommon(root) {
-      root.querySelectorAll('[data-ut-view]').forEach(button => button.addEventListener('click', () => { simulationState.clubView = button.dataset.utView; renderSimulationScreen(); }));
-      root.querySelector('#ut-signout')?.addEventListener('click', signOutClub);
+      root.querySelectorAll('[data-ut-view]').forEach(button => button.addEventListener('click', () => {
+        if (!confirmDiscardLineupChanges()) return;
+        simulationState.clubView = button.dataset.utView;
+        renderSimulationScreen();
+      }));
+      root.querySelector('#ut-signout')?.addEventListener('click', () => {
+        if (!confirmDiscardLineupChanges()) return;
+        signOutClub();
+      });
       root.querySelectorAll('[data-ut-card]').forEach(card => card.addEventListener('click', event => { if (!event.target.closest('[data-ut-buy]')) showClubCard(card.dataset.utCard); }));
       root.querySelectorAll('[data-ut-buy]').forEach(button => button.addEventListener('click', () => purchaseClubCard(button.dataset.utBuy)));
     }
 
     function openLineupSwap(slotIndex) {
+      const fmt = simulationState.settings.format || '3vs3';
+      const coords = PITCH_LINEUP_COORDS[fmt] || PITCH_LINEUP_COORDS['3vs3'];
+      const slotInfo = coords[slotIndex] || { role: 'Titular', rec: [] };
+      const recommendedPositions = slotInfo.rec || [];
+
       const owned = clubState.catalog.filter(card => clubState.ownedIds.has(card.id));
       const currentId = simulationState.selectedTeamA[slotIndex];
-      const options = owned.filter(card => card.id === currentId || !simulationState.selectedTeamA.includes(card.id));
+      const posOrder = { 'BA': 1, 'ES': 2, 'AL': 3, 'AP': 4, 'P': 5 };
+      const getPos = name => obtenerPerfil(name).posicion || 'Jugador';
+
+      const recommendedCards = owned
+        .filter(card => recommendedPositions.includes(getPos(card.name)))
+        .sort((a, b) => (posOrder[getPos(a.name)] || 9) - (posOrder[getPos(b.name)] || 9) || b.overall - a.overall);
+
+      const otherCards = owned
+        .filter(card => !recommendedPositions.includes(getPos(card.name)))
+        .sort((a, b) => (posOrder[getPos(a.name)] || 9) - (posOrder[getPos(b.name)] || 9) || b.overall - a.overall);
+
+      const renderCardBtn = (card, isRec) => {
+        const inOtherSlot = simulationState.selectedTeamA.indexOf(card.id);
+        const pos = getPos(card.name);
+        const badge = card.id === currentId ? ' · Actual' : (inOtherSlot !== -1 ? ' · En equipo' : '');
+        return `
+          <button type="button" class="ut-swap-option ${isRec ? 'recommended' : ''}" data-ut-swap-card="${card.id}">
+            <img src="${cardImage(card)}" alt="${escapeHtml(card.name)}">
+            <span>[${escapeHtml(pos)}] ${escapeHtml(card.name)}${badge}</span>
+          </button>
+        `;
+      };
+
       const modal = document.createElement('div');
       modal.className = 'ut-swap-backdrop';
-      modal.innerHTML = `<div class="ut-swap-window"><button class="ut-close" type="button" aria-label="Cerrar">×</button><h3>Cambiar jugador</h3><p>Elige una carta de tu club para ocupar este puesto.</p><div class="ut-swap-options">${options.map(card => `<button type="button" class="ut-swap-option" data-ut-swap-card="${card.id}"><img src="${cardImage(card)}" alt="${escapeHtml(card.name)}"><span>${escapeHtml(card.name)} · ${escapeHtml(obtenerPerfil(card.name).posicion)}</span></button>`).join('')}</div></div>`;
+      modal.innerHTML = `
+        <div class="ut-swap-window">
+          <button class="ut-close" type="button" aria-label="Cerrar">×</button>
+          <h3>Cambiar jugador · ${escapeHtml(slotInfo.role)}</h3>
+          <p>Posición ideal: <strong>${recommendedPositions.join(' / ')}</strong></p>
+          ${recommendedCards.length ? `
+            <div class="ut-swap-section-title">⭐ Recomendados (${recommendedPositions.join(', ')})</div>
+            <div class="ut-swap-options">${recommendedCards.map(c => renderCardBtn(c, true)).join('')}</div>
+          ` : ''}
+          ${otherCards.length ? `
+            <div class="ut-swap-section-title">Resto de tu club (por posición)</div>
+            <div class="ut-swap-options">${otherCards.map(c => renderCardBtn(c, false)).join('')}</div>
+          ` : ''}
+        </div>
+      `;
       modal.addEventListener('click', event => {
         if (event.target === modal || event.target.closest('.ut-close')) { modal.remove(); return; }
         const option = event.target.closest('[data-ut-swap-card]');
         if (!option) return;
-        simulationState.selectedTeamA[slotIndex] = option.dataset.utSwapCard;
+        const pickedId = option.dataset.utSwapCard;
+        const existingIdx = simulationState.selectedTeamA.indexOf(pickedId);
+        if (existingIdx !== -1 && existingIdx !== slotIndex) {
+          simulationState.selectedTeamA[existingIdx] = currentId;
+        }
+        simulationState.selectedTeamA[slotIndex] = pickedId;
+        saveCurrentLineup(simulationState.settings.format, simulationState.selectedTeamA, false);
+        modal.remove();
+        renderSimulationScreen();
+      });
+      document.body.appendChild(modal);
+    }
+
+    // Posiciones sobre la pizarra (2400x1792) espaciadas limpiamente para que ninguna carta se pise
+    const PITCH_LINEUP_COORDS = {
+      '2vs2': [
+        { x: 1200, y: 1260, role: 'Exterior', rec: ['BA', 'ES', 'AL'] },
+        { x: 760,  y: 780,  role: 'Interior', rec: ['AP', 'P'] }
+      ],
+      '3vs3': [
+        { x: 1200, y: 1280, role: 'Exterior', rec: ['BA', 'ES'] },
+        { x: 640,  y: 940,  role: 'Alero',    rec: ['AL', 'ES'] },
+        { x: 1760, y: 940,  role: 'Interior', rec: ['AP', 'P'] }
+      ],
+      '4vs4': [
+        { x: 1200, y: 1320, role: 'Base',    rec: ['BA'] },
+        { x: 580,  y: 1000, role: 'Escolta', rec: ['ES', 'BA'] },
+        { x: 1820, y: 1000, role: 'Alero',   rec: ['AL', 'AP'] },
+        { x: 1200, y: 540,  role: 'Pívot',   rec: ['P', 'AP'] }
+      ],
+      '5vs5': [
+        { x: 1200, y: 1340, role: 'BA', rec: ['BA'] },
+        { x: 540,  y: 1040, role: 'ES', rec: ['ES'] },
+        { x: 1860, y: 1040, role: 'AL', rec: ['AL'] },
+        { x: 780,  y: 540,  role: 'AP', rec: ['AP'] },
+        { x: 1620, y: 540,  role: 'P',  rec: ['P'] }
+      ]
+    };
+
+    function getLineupStorageKey() {
+      const identity = clubState.session?.user?.id || clubState.profile?.email || 'guest';
+      return `basket-club-lineups-${String(identity).toLowerCase()}`;
+    }
+
+    function loadSavedLineups(forceReload = false) {
+      try {
+        const raw = localStorage.getItem(getLineupStorageKey());
+        const parsed = raw ? JSON.parse(raw) : {};
+        const owned = [...clubState.ownedIds];
+        ['2vs2', '3vs3', '4vs4', '5vs5'].forEach(fmt => {
+          const count = parseInt(fmt, 10) || 3;
+          // Si ya hay una alineación editándose en memoria y no forzamos recarga, la respetamos
+          const currentMem = clubState.savedLineups[fmt];
+          if (!forceReload && Array.isArray(currentMem) && currentMem.length === count && currentMem.every(id => clubState.ownedIds.has(id))) {
+            return;
+          }
+          const savedList = Array.isArray(parsed[fmt]) ? parsed[fmt].filter(id => clubState.ownedIds.has(id)) : [];
+          for (const cardId of owned) {
+            if (savedList.length >= count) break;
+            if (!savedList.includes(cardId)) savedList.push(cardId);
+          }
+          clubState.savedLineups[fmt] = savedList.slice(0, count);
+        });
+      } catch (e) {
+        console.warn('Error cargando quintetos:', e);
+      }
+    }
+
+    function saveCurrentLineup(format, lineupArray, showFeedback = false) {
+      clubState.savedLineups[format] = [...lineupArray];
+      localStorage.setItem(getLineupStorageKey(), JSON.stringify(clubState.savedLineups));
+      if (simulationState.settings.format === format) {
+        simulationState.selectedTeamA = [...lineupArray];
+        simulationState.selectionFormat = format;
+      }
+      if (showFeedback) {
+        alert(`✅ ¡Tu equipo titular para ${format} se ha guardado correctamente!`);
+      }
+    }
+
+    function openPitchSlotSwap(format, slotIndex) {
+      const count = parseInt(format, 10) || 5;
+      const coords = PITCH_LINEUP_COORDS[format] || PITCH_LINEUP_COORDS['5vs5'];
+      const slotInfo = coords[slotIndex] || { role: 'Jugador', rec: [] };
+      const recommendedPositions = slotInfo.rec || [];
+
+      // Usamos el borrador activo (o inicializamos uno desde la alineación guardada)
+      const baseLineup = simulationState.lineupDraft?.[format] || clubState.savedLineups[format] || [];
+      const currentLineup = [...baseLineup];
+      const owned = clubState.catalog.filter(card => clubState.ownedIds.has(card.id));
+      const currentId = currentLineup[slotIndex];
+
+      const posOrder = { 'BA': 1, 'ES': 2, 'AL': 3, 'AP': 4, 'P': 5 };
+      const getPos = name => obtenerPerfil(name).posicion || 'Jugador';
+
+      const recommendedCards = owned
+        .filter(card => recommendedPositions.includes(getPos(card.name)))
+        .sort((a, b) => (posOrder[getPos(a.name)] || 9) - (posOrder[getPos(b.name)] || 9) || b.overall - a.overall);
+
+      const otherCards = owned
+        .filter(card => !recommendedPositions.includes(getPos(card.name)))
+        .sort((a, b) => (posOrder[getPos(a.name)] || 9) - (posOrder[getPos(b.name)] || 9) || b.overall - a.overall);
+
+      const renderCardBtn = (card, isRec) => {
+        const inOtherSlot = currentLineup.indexOf(card.id);
+        const pos = getPos(card.name);
+        const badge = card.id === currentId ? ' · Actual' : (inOtherSlot !== -1 ? ' · En pista' : '');
+        return `
+          <button type="button" class="ut-swap-option ${isRec ? 'recommended' : ''}" data-pitch-pick="${card.id}">
+            <img src="${cardImage(card)}" alt="${escapeHtml(card.name)}">
+            <span>[${escapeHtml(pos)}] ${escapeHtml(card.name)}${badge}</span>
+          </button>
+        `;
+      };
+
+      const modal = document.createElement('div');
+      modal.className = 'ut-swap-backdrop';
+      modal.innerHTML = `
+        <div class="ut-swap-window">
+          <button class="ut-close" type="button" aria-label="Cerrar">×</button>
+          <h3>Puesto: ${escapeHtml(slotInfo.role)} (${format})</h3>
+          <p>Posición recomendada: <strong>${recommendedPositions.join(' / ')}</strong>. Haz clic en una carta para asignarla.</p>
+          ${recommendedCards.length ? `
+            <div class="ut-swap-section-title">⭐ Recomendados para ${escapeHtml(slotInfo.role)} (${recommendedPositions.join(', ')})</div>
+            <div class="ut-swap-options">
+              ${recommendedCards.map(c => renderCardBtn(c, true)).join('')}
+            </div>
+          ` : ''}
+          ${otherCards.length ? `
+            <div class="ut-swap-section-title">Resto de tu club (por posición)</div>
+            <div class="ut-swap-options">
+              ${otherCards.map(c => renderCardBtn(c, false)).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+
+      modal.addEventListener('click', event => {
+        if (event.target === modal || event.target.closest('.ut-close')) { modal.remove(); return; }
+        const option = event.target.closest('[data-pitch-pick]');
+        if (!option) return;
+        const pickedId = option.dataset.pitchPick;
+
+        if (pickedId === currentId) {
+          modal.remove();
+          return;
+        }
+
+        const existingIndex = currentLineup.indexOf(pickedId);
+        if (existingIndex !== -1 && existingIndex !== slotIndex) {
+          currentLineup[existingIndex] = currentId;
+        }
+        currentLineup[slotIndex] = pickedId;
+
+        // Guardamos ÚNICAMENTE en el borrador temporal y marcamos que hay cambios pendientes
+        if (!simulationState.lineupDraft) {
+          simulationState.lineupDraft = JSON.parse(JSON.stringify(clubState.savedLineups));
+        }
+        simulationState.lineupDraft[format] = currentLineup.slice(0, count);
+        simulationState.lineupDirty = true;
+
         modal.remove();
         renderSimulationScreen();
       });
@@ -5032,17 +5271,92 @@
     }
 
     function renderUltimateClub(root) {
+      loadSavedLineups(true);
       const owned = clubState.catalog.filter(card => clubState.ownedIds.has(card.id));
       const cards = owned.length ? owned.map(card => renderUltimateCard(card, true)).join('') : '<div class="ut-empty">Tu álbum está vacío.</div>';
       const marketCards = clubState.catalog.length > 3
         ? Array.from({ length: 3 }, (_, offset) => clubState.catalog[(simulationState.marketIndex + offset) % clubState.catalog.length])
         : clubState.catalog;
       const market = marketCards.map(card => renderUltimateCard(card, clubState.ownedIds.has(card.id))).join('');
-      const content = simulationState.clubView === 'market'
-        ? `<div class="ut-title-row"><div><h2>Mercado</h2><p>Explora tres cartas con las flechas.</p></div></div><div class="ut-market-carousel"><button type="button" class="ut-market-arrow" id="ut-market-prev" aria-label="Cartas anteriores">‹</button><div class="ut-market-window"><div class="ut-market-track">${market}</div></div><button type="button" class="ut-market-arrow" id="ut-market-next" aria-label="Cartas siguientes">›</button></div>`
-        : `<div class="ut-title-row"><div><h2>Mi club</h2><p>Cartas desbloqueadas: ${owned.length} / ${clubState.catalog.length}</p></div></div><div class="ut-card-grid">${cards}</div>`;
+
+      let content = '';
+
+      if (simulationState.clubView === 'market') {
+        content = `
+          <div class="ut-title-row"><div><h2>Mercado</h2><p>Explora tres cartas con las flechas.</p></div></div>
+          <div class="ut-market-carousel">
+            <button type="button" class="ut-market-arrow" id="ut-market-prev" aria-label="Cartas anteriores">‹</button>
+            <div class="ut-market-window"><div class="ut-market-track">${market}</div></div>
+            <button type="button" class="ut-market-arrow" id="ut-market-next" aria-label="Cartas siguientes">›</button>
+          </div>
+        `;
+      } else if (simulationState.clubView === 'lineup') {
+        // Inicializar borrador con copia limpia de los guardados si aún no existe
+        if (!simulationState.lineupDraft) {
+          simulationState.lineupDraft = JSON.parse(JSON.stringify(clubState.savedLineups));
+          simulationState.lineupDirty = false;
+        }
+
+        const fmt = simulationState.lineupFormat || '5vs5';
+        const coords = PITCH_LINEUP_COORDS[fmt] || PITCH_LINEUP_COORDS['5vs5'];
+        const currentIds = simulationState.lineupDraft[fmt] || clubState.savedLineups[fmt] || [];
+
+        const slotsHtml = coords.map((slot, idx) => {
+          const leftPct = (slot.x / 2400 * 100).toFixed(2);
+          const topPct = (slot.y / 1792 * 100).toFixed(2);
+          const card = cardById(currentIds[idx]);
+          return `
+            <div class="ut-pitch-slot" style="left:${leftPct}%; top:${topPct}%;" data-pitch-slot="${idx}" title="Cambiar jugador">
+              ${card
+                ? `<img src="${cardImage(card)}" alt="${escapeHtml(card.name)}">`
+                : `<div class="ut-pitch-slot-empty">+</div>`}
+              <div class="ut-pitch-slot-label">
+                <span class="ut-pitch-slot-pos">${escapeHtml(slot.role)}</span>
+                ${escapeHtml(card ? card.name : 'Vacío')}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        content = `
+          <div class="ut-title-row">
+            <div>
+              <h2>Mi quinteto ${simulationState.lineupDirty ? '<span style="font-size:13px; color:#ffb454; font-weight:700;">(Cambios sin guardar)</span>' : ''}</h2>
+              <p>Haz clic sobre cualquier carta en la pista para cambiar el titular y pulsa Guardar para confirmar.</p>
+            </div>
+          </div>
+          <div class="ut-lineup-toolbar">
+            <div class="ut-lineup-controls">
+              <label for="ut-lineup-format" style="color:#cfe1ff; font-weight:700;">Formato:</label>
+              <select id="ut-lineup-format">
+                <option value="2vs2" ${fmt === '2vs2' ? 'selected' : ''}>Pareja (2 vs 2)</option>
+                <option value="3vs3" ${fmt === '3vs3' ? 'selected' : ''}>Trío (3 vs 3)</option>
+                <option value="4vs4" ${fmt === '4vs4' ? 'selected' : ''}>Cuarteto (4 vs 4)</option>
+                <option value="5vs5" ${fmt === '5vs5' ? 'selected' : ''}>Quinteto (5 vs 5)</option>
+              </select>
+            </div>
+            <div class="ut-lineup-controls">
+              <button type="button" class="ut-primary sim-action-button" id="ut-save-lineup">💾 Guardar alineación</button>
+              <button type="button" class="sim-action-button" id="ut-back-club">Volver a Mi Club</button>
+            </div>
+          </div>
+          <div class="ut-pitch-board">
+            ${slotsHtml}
+          </div>
+        `;
+      } else {
+        content = `
+          <div class="ut-club-Wrap">
+            <div class="ut-title-row"><div><h2>Mi club</h2><p>Cartas desbloqueadas: ${owned.length} / ${clubState.catalog.length}</p></div></div>
+            <div class="ut-card-grid">${cards}</div>
+            <button type="button" class="ut-lineup-fab" id="ut-open-lineup">📋 Mi quinteto</button>
+          </div>
+        `;
+      }
+
       root.innerHTML = `<div class="ut-shell">${renderUltimateHeader()}${renderUltimateNav()}${content}<div class="ut-error">${escapeHtml(clubState.error)}</div></div>`;
       bindUltimateCommon(root);
+
       root.querySelector('#ut-market-prev')?.addEventListener('click', () => {
         simulationState.marketIndex = (simulationState.marketIndex - 1 + clubState.catalog.length) % clubState.catalog.length;
         renderSimulationScreen();
@@ -5050,6 +5364,43 @@
       root.querySelector('#ut-market-next')?.addEventListener('click', () => {
         simulationState.marketIndex = (simulationState.marketIndex + 1) % clubState.catalog.length;
         renderSimulationScreen();
+      });
+      root.querySelector('#ut-open-lineup')?.addEventListener('click', () => {
+        simulationState.lineupDraft = JSON.parse(JSON.stringify(clubState.savedLineups));
+        simulationState.lineupDirty = false;
+        simulationState.clubView = 'lineup';
+        renderSimulationScreen();
+      });
+      root.querySelector('#ut-back-club')?.addEventListener('click', () => {
+        if (!confirmDiscardLineupChanges()) return;
+        simulationState.clubView = 'club';
+        renderSimulationScreen();
+      });
+      root.querySelector('#ut-lineup-format')?.addEventListener('change', event => {
+        if (simulationState.lineupDirty) {
+          const discard = window.confirm('⚠️ Tienes cambios sin guardar en este formato. ¿Quieres cambiar de formato y descartarlos?');
+          if (!discard) {
+            event.target.value = simulationState.lineupFormat || '5vs5';
+            return;
+          }
+          simulationState.lineupDraft = JSON.parse(JSON.stringify(clubState.savedLineups));
+          simulationState.lineupDirty = false;
+        }
+        simulationState.lineupFormat = event.target.value;
+        renderSimulationScreen();
+      });
+      root.querySelector('#ut-save-lineup')?.addEventListener('click', () => {
+        const fmt = simulationState.lineupFormat || '5vs5';
+        const draftToSave = simulationState.lineupDraft?.[fmt] || clubState.savedLineups[fmt] || [];
+        saveCurrentLineup(fmt, draftToSave, true);
+        simulationState.lineupDirty = false;
+        renderSimulationScreen();
+      });
+      root.querySelectorAll('[data-pitch-slot]').forEach(slotEl => {
+        slotEl.addEventListener('click', () => {
+          const fmt = simulationState.lineupFormat || '5vs5';
+          openPitchSlotSwap(fmt, Number(slotEl.dataset.pitchSlot));
+        });
       });
     }
 
@@ -5059,20 +5410,27 @@
     }
 
     function renderUltimatePlayLobby(root) {
-      const format = SIMULATION_FORMAT_OPTIONS.find(option => option.value === simulationState.settings.format);
+      loadSavedLineups();
+      const fmtKey = simulationState.settings.format;
+      const format = SIMULATION_FORMAT_OPTIONS.find(option => option.value === fmtKey);
       const playersPerTeam = format?.playersPerTeam || 3;
       const owned = clubState.catalog.filter(card => clubState.ownedIds.has(card.id));
-      const validSelected = simulationState.selectedTeamA.filter(cardId => owned.some(card => card.id === cardId));
-      const selectedIds = [...validSelected];
-      const formatChanged = simulationState.selectionFormat !== simulationState.settings.format;
-      if (simulationState.selectedTeamA.length === 0 || formatChanged) {
+      const formatChanged = simulationState.selectionFormat !== fmtKey;
+
+      let selectedIds = simulationState.selectedTeamA.filter(cardId => owned.some(card => card.id === cardId));
+
+      // Si acabamos de entrar o cambiamos de formato, cargar el equipo titular guardado en Mi Quinteto
+      if (selectedIds.length === 0 || formatChanged) {
+        const savedForFormat = (clubState.savedLineups[fmtKey] || []).filter(cardId => owned.some(card => card.id === cardId));
+        selectedIds = [...savedForFormat];
         for (const card of owned) {
           if (selectedIds.length >= playersPerTeam) break;
           if (!selectedIds.includes(card.id)) selectedIds.push(card.id);
         }
       }
+
       simulationState.selectedTeamA = selectedIds.slice(0, playersPerTeam);
-      simulationState.selectionFormat = simulationState.settings.format;
+      simulationState.selectionFormat = fmtKey;
       const enoughCards = owned.length >= playersPerTeam && selectedIds.length === playersPerTeam;
       if (!simulationState.previewTeamB.length) refreshOpponentPreview();
       const previewTeamB = simulationState.previewTeamB.map(name => cardById(norm(name)) || { name }).map(card => `<article class="ut-play-card"><img src="${cardImage(card)}" alt="CPU ${escapeHtml(card.name)}"><div class="ut-play-meta">${escapeHtml(obtenerPerfil(card.name).posicion)}</div></article>`).join('');
