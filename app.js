@@ -3303,41 +3303,117 @@
       if (state.mode === CANVAS_STATES.PAUSED || simulationState.matchOver) return;
       if (state.mode === CANVAS_STATES.CELEBRATION) return;
       const active = state.players.find(player => player.name === simulationState.activePlayer);
-      if (state.mode === CANVAS_STATES.OFFENSE_LIVE && active && simulationState.possession === 'A') {
-        // Descuento del reloj de posesión (dt = ~1 frame a 60fps = 1/60s)
-        simulationState.shotClock = Math.max(0, simulationState.shotClock - (dt / 60));
 
-        // VIOLACIÓN DE POSESIÓN: Agotados los 24 segundos
-        if (simulationState.shotClock <= 0) {
-          simulationState.shotClock = 0;
-          updateBoxScore('A', active.name, 'tov');
+      // =========================================================================
+      // 1. CONTROL DEL JUGADOR ACTIVO (EN ATAQUE VIVO, VUELO DE TIRO Y REBOTE)
+      // =========================================================================
+      const canControlActive = active && simulationState.possession === 'A' && (
+        state.mode === CANVAS_STATES.OFFENSE_LIVE ||
+        state.mode === CANVAS_STATES.BALL_REBOUND ||
+        // Tras tirar, espera 350ms de mecánica de tiro y permite moverse para ir al rebote
+        (state.mode === CANVAS_STATES.BALL_IN_SHOT && state.ball && (time - state.ball.started > 350))
+      );
 
-          const defCarrier = getDefenderForAttacker('A', active.name);
-          const tovMsg = `¡Fin de posesión! Se agotan los 24 segundos. Pérdida de ${active.name}.`;
-          
-          canvasMessage(tovMsg, 'warning', `¡Fin de posesión! 24 segundos.`);
-          
-          simulationState.possession = 'B';
-          simulationState.activePlayer = defCarrier;
-          simulationState.userTurn = false;
-          simulationState.shotClock = 24;
-          simulationState.shotClockLimit = 24;
+      if (canControlActive) {
+        if (state.mode === CANVAS_STATES.OFFENSE_LIVE) {
+          // Descuento del reloj de posesión solo mientras la jugada está viva
+          simulationState.shotClock = Math.max(0, simulationState.shotClock - (dt / 60));
 
-          switchToDefensePbp();
-          return;
+          if (simulationState.shotClock <= 0) {
+            simulationState.shotClock = 0;
+            updateBoxScore('A', active.name, 'tov');
+
+            const defCarrier = getDefenderForAttacker('A', active.name);
+            const tovMsg = `¡Fin de posesión! Se agotan los 24 segundos. Pérdida de ${active.name}.`;
+            
+            canvasMessage(tovMsg, 'warning', `¡Fin de posesión! 24 segundos.`);
+            
+            simulationState.possession = 'B';
+            simulationState.activePlayer = defCarrier;
+            simulationState.userTurn = false;
+            simulationState.shotClock = 24;
+            simulationState.shotClockLimit = 24;
+
+            switchToDefensePbp();
+            return;
+          }
         }
 
         const stats = getSimulationStats(active.name);
-        const speed = 4 + stats.velocidad * .05 + stats.agilidad * .03;
+        // Mientras el balón está en el aire tras tirar, se mueve un 15% más lento por la inercia del salto
+        const modeSpeedMod = state.mode === CANVAS_STATES.BALL_IN_SHOT ? 0.85 : 1.0;
+        const speed = (4 + stats.velocidad * .05 + stats.agilidad * .03) * modeSpeedMod;
+
         active.vx = (CANVAS_KEYS.has('d') || CANVAS_KEYS.has('arrowright') ? 1 : 0) - (CANVAS_KEYS.has('a') || CANVAS_KEYS.has('arrowleft') ? 1 : 0);
         active.vy = (CANVAS_KEYS.has('s') || CANVAS_KEYS.has('arrowdown') ? 1 : 0) - (CANVAS_KEYS.has('w') || CANVAS_KEYS.has('arrowup') ? 1 : 0);
         const length = Math.hypot(active.vx, active.vy) || 1;
         active.x += active.vx / length * speed * dt;
         active.y += active.vy / length * speed * dt;
         canvasClamp(active);
-        state.ball = { x: active.x + 58, y: active.y - 8 };
+
+        if (state.mode === CANVAS_STATES.OFFENSE_LIVE) {
+          state.ball = { x: active.x + 58, y: active.y - 8 };
+        }
       }
+
+      // =========================================================================
+      // 2. MOVIMIENTO DE LA IA (DEFENSORES Y COMPAÑEROS SIN BALÓN)
+      // =========================================================================
       state.players.forEach(player => {
+        // --- CASO ESPECIAL: EL BALÓN ESTÁ EN EL AIRE (TIRO) O REBOTANDO ---
+        if (state.mode === CANVAS_STATES.BALL_IN_SHOT || state.mode === CANVAS_STATES.BALL_REBOUND) {
+          // El jugador que controla el usuario se mueve con las teclas (arriba), no con IA
+          if (player === active) return;
+
+          const pStats = getSimulationStats(player.name);
+          const rebAttr = player.team === 'A' ? pStats.rebote_ofensivo : pStats.rebote_defensivo;
+
+          // Si es el defensor del tirador, aguanta 350ms punteando el tiro antes de girar al rebote
+          if (state.mode === CANVAS_STATES.BALL_IN_SHOT && state.ball?.shooter) {
+            const shooterDef = getDefenderForAttacker('A', state.ball.shooter.name);
+            if (player.name === shooterDef && (time - state.ball.started < 350)) {
+              return;
+            }
+          }
+
+          let targetX, targetY;
+
+          if (state.mode === CANVAS_STATES.BALL_IN_SHOT) {
+            // FASE A: El balón vuela hacia el aro -> Cerrar el rebote / Cargar la pintura
+            // Cada jugador busca una posición en semicírculo bajo el aro según su phase
+            const spreadAngle = (Math.PI * 0.22) + ((player.phase % 1.8) / 1.8) * (Math.PI * 0.56);
+            // Los defensores cierran más cerca del aro (box out ~165px), los atacantes entran a ~215px
+            const boxOutRadius = player.team === 'B' ? 165 : 215;
+            targetX = CANVAS_COURT.hoop.x + Math.cos(spreadAngle) * boxOutRadius * (player.phase % 2 > 1 ? 1 : -1);
+            targetY = CANVAS_COURT.hoop.y + Math.sin(spreadAngle) * boxOutRadius;
+          } else if (state.ball) {
+            // FASE B: El tiro ya ha fallado -> Ir directo a por el balón suelto
+            targetX = state.ball.x;
+            targetY = state.ball.y;
+          } else {
+            return;
+          }
+
+          const dx = targetX - player.x;
+          const dy = targetY - player.y;
+          const dist = Math.hypot(dx, dy) || 1;
+
+          if (dist > 25) {
+            // La velocidad de ir al rebote escala con la velocidad física y el instinto reboteador
+            const crashSpeed = (3.4 + (pStats.velocidad * 0.04) + (rebAttr * 0.025)) * dt;
+            const step = Math.min(dist, crashSpeed);
+            const targetVx = (dx / dist) * (step / Math.max(dt, 0.001));
+            const targetVy = (dy / dist) * (step / Math.max(dt, 0.001));
+            player.vx = player.vx + (targetVx - player.vx) * 0.25;
+            player.vy = player.vy + (targetVy - player.vy) * 0.25;
+            player.x += player.vx * dt;
+            player.y += player.vy * dt;
+          }
+          canvasClamp(player);
+          return;
+        }
+
+        // --- MOVIMIENTO NORMAL EN JUEGO VIVO (OFFENSE_LIVE) ---
         if (player.team === 'B') {
           const marked = state.players.find(candidate => candidate.name === getDefenderForAttacker('B', player.name));
           if (marked) {
@@ -3345,9 +3421,6 @@
             const atkStats = getSimulationStats(marked.name);
             const isCarrier = marked.name === simulationState.activePlayer;
 
-            // 1. FLOTACIÓN DINÁMICA: ¿El atacante es tirador o penetrador?
-            // Si el atacante tiene poco triple (<70), el defensor flota más lejos para proteger la entrada.
-            // Si tiene 80+, el defensor busca pegarse más.
             let baseDistance = 145;
             if (isCarrier) {
               const shooterThreat = (atkStats.triple + atkStats.tiro_media_distancia) / 2;
@@ -3355,22 +3428,18 @@
               baseDistance = clamp(170 - (shooterThreat * 0.45) + ((80 - defAggression) * 0.4), 100, 185);
               if (state.mode === CANVAS_STATES.BALL_IN_SHOT) baseDistance = 80;
             } else {
-              baseDistance = 210; // Lejos del balón deja más espacio para ver el juego
+              baseDistance = 210;
             }
 
-            // 2. DETECCIÓN DE CAMBIO DE RITMO / ARRANQUE DEL ATACANTE
             const atkSpeedNow = Math.hypot(marked.vx, marked.vy);
             const atkSpeedPrev = Math.hypot(player.lastAttackerVx || 0, player.lastAttackerVy || 0);
             const dotDirection = (marked.vx * (player.lastAttackerVx || 0)) + (marked.vy * (player.lastAttackerVy || 0));
 
-            // Si el atacante arranca desde parado o hace un cambio brusco de dirección:
             const startedMoving = atkSpeedPrev < 0.15 && atkSpeedNow > 0.5;
             const changedDirection = dotDirection < 0 && atkSpeedNow > 0.5;
 
             if (isCarrier && (startedMoving || changedDirection)) {
-              // Ventaja del atacante por agilidad / velocidad frente a la defensa
               const agilityAdvantage = (atkStats.agilidad * 0.6 + atkStats.velocidad * 0.4) - (defStats.defensa_exterior * 0.5 + defStats.agilidad * 0.5);
-              // Posibilidad de que el defensor "pique" o tarde en reaccionar (entre 120ms y 380ms)
               if (Math.random() < clamp(0.40 + (agilityAdvantage * 0.008), 0.20, 0.75)) {
                 const reactionLag = clamp(180 + (agilityAdvantage * 4), 100, 420);
                 player.reactionDelayUntil = time + reactionLag;
@@ -3379,7 +3448,6 @@
             player.lastAttackerVx = marked.vx;
             player.lastAttackerVy = marked.vy;
 
-            // 3. CÁLCULO DEL VECTOR DE MOVIMIENTO
             const toHoopX = CANVAS_COURT.hoop.x - marked.x;
             const toHoopY = CANVAS_COURT.hoop.y - marked.y;
             const toHoopDistance = Math.hypot(toHoopX, toHoopY) || 1;
@@ -3390,25 +3458,20 @@
             const dy = targetY - player.y;
             const targetDistanceNow = Math.hypot(dx, dy) || 1;
 
-            // 4. FACTORES DE VELOCIDAD E INERCIA
             let speedFactor = 1.0;
-            // Bloqueado en pantalla
             if (player.screenStunUntil && player.screenStunUntil > time) {
               speedFactor = 0.15;
-            }
-            // Retraso de percepción / arranque
-            else if (player.reactionDelayUntil && player.reactionDelayUntil > time) {
-              speedFactor = 0.35; // Tarda en arrancar los pies
+            } else if (player.reactionDelayUntil && player.reactionDelayUntil > time) {
+              speedFactor = 0.35;
             }
 
             const baseDefSpeed = 3.8 + defStats.velocidad * 0.045 + defStats.agilidad * 0.025;
             const defensiveSpeed = baseDefSpeed * speedFactor;
             const travel = Math.min(targetDistanceNow, defensiveSpeed * dt);
 
-            // Suavizado de aceleración (evita giros robóticos instantáneos)
             const targetVx = (dx / targetDistanceNow) * (travel / Math.max(dt, 0.001));
             const targetVy = (dy / targetDistanceNow) * (travel / Math.max(dt, 0.001));
-            const lerpSpeed = 0.22; // Inercia física
+            const lerpSpeed = 0.22;
             player.vx = player.vx + (targetVx - player.vx) * lerpSpeed;
             player.vy = player.vy + (targetVy - player.vy) * lerpSpeed;
 
@@ -3419,9 +3482,6 @@
           const stats = getSimulationStats(player.name);
           const offensiveSpeed = 4.0 + stats.velocidad * 0.05 + stats.agilidad * 0.03;
 
-          // ========================================================
-          // FASE 1: CARRERA A LA POSICIÓN DEL BLOQUEO (SIN TELEPORT)
-          // ========================================================
           if (player.isSettingScreen && player.screenTargetDefender && !player.screenPlanted) {
             const def = player.screenTargetDefender;
             const hnd = player.screenHandler || active;
@@ -3487,11 +3547,7 @@
                 canvasMessage(`Pick and roll: ${def.name} supera el bloqueo y mantiene su marca.`, 'warning');
               }
             }
-          }
-          // ========================================================
-          // FASE 2: BLOQUEO PLANTADO
-          // ========================================================
-          else if (player.screenPlanted) {
+          } else if (player.screenPlanted) {
             player.x = player.screenAnchorX;
             player.y = player.screenAnchorY;
             player.vx = 0;
@@ -3505,38 +3561,28 @@
               player.screenTargetDefender = null;
               player.screenHandler = null;
 
-              // Inicia el corte hacia debajo del aro
               player.rollTarget = { x: CANVAS_COURT.hoop.x, y: CANVAS_COURT.hoop.y + 130 };
               player.paintStayUntil = 0;
               player.isClearingPaint = false;
             }
-          }
-          // ========================================================
-          // FASE 3: CORTE ACTIVO HACIA CANASTA
-          // ========================================================
-          else if (player.rollTarget && !player.isClearingPaint) {
+          } else if (player.rollTarget && !player.isClearingPaint) {
             const dx = player.rollTarget.x - player.x;
             const dy = player.rollTarget.y - player.y;
             const distance = Math.hypot(dx, dy) || 1;
 
             if (distance >= 50 && !player.paintStayUntil) {
-              // Avanza hacia el aro a velocidad natural
               const rollSpeed = (offensiveSpeed * 0.85) * dt;
               player.x += (dx / distance) * Math.min(distance, rollSpeed);
               player.y += (dy / distance) * Math.min(distance, rollSpeed);
             } else if (!player.paintStayUntil) {
-              // LLEGÓ BAJO EL ARO: Inicia la cuenta atrás de 3 segundos
               player.paintStayUntil = time + 3000;
             } else if (time < player.paintStayUntil) {
-              // Espera ofreciéndose bajo el aro durante los 3 segundos
               player.x += Math.sin(time / 450 + player.phase) * 0.25 * dt;
               player.y += Math.cos(time / 550 + player.phase) * 0.15 * dt;
             } else {
-              // HAN PASADO LOS 3 SEGUNDOS: EVACUAR LA PINTURA
               player.paintStayUntil = 0;
               player.isClearingPaint = true;
 
-              // Comprobar dónde están los demás compañeros de A para ir al lado libre
               const teammates = state.players.filter(p => p.team === 'A' && p !== player);
               let rightCount = 0;
               let leftCount = 0;
@@ -3545,46 +3591,37 @@
                 else leftCount++;
               });
 
-              // Si hay más en la derecha, sale a la izquierda (-1), y viceversa
               const exitSide = rightCount >= leftCount ? -1 : 1;
-
-              // Destino fuera de la botella, hacia el triple / 45 grados
               player.rollTarget = {
                 x: CANVAS_COURT.hoop.x + exitSide * 580,
                 y: 860
               };
             }
-          }
-          // ========================================================
-          // FASE 4: SALIENDO DE LA BOTELLA HACIA EL PERÍMETRO
-          // ========================================================
-          else if (player.rollTarget && player.isClearingPaint) {
+          } else if (player.rollTarget && player.isClearingPaint) {
             const dx = player.rollTarget.x - player.x;
             const dy = player.rollTarget.y - player.y;
             const distance = Math.hypot(dx, dy) || 1;
 
-            // Camina hacia fuera de la zona
             const clearSpeed = (offensiveSpeed * 0.9) * dt;
             player.x += (dx / distance) * Math.min(distance, clearSpeed);
             player.y += (dy / distance) * Math.min(distance, clearSpeed);
 
-            // Al llegar fuera de la zona, finaliza el corte y vuelve a jugar normal
             if (distance < 50) {
               player.rollTarget = null;
               player.isClearingPaint = false;
               player.paintStayUntil = 0;
             }
-          }
-          // ========================================================
-          // FASE 5: MOVIMIENTO REGULAR DE ESPACIO
-          // ========================================================
-          else {
+          } else {
             player.x += Math.sin(time / 900 + player.phase) * 0.35 * dt;
             player.y += Math.cos(time / 1100 + player.phase) * 0.25 * dt;
           }
         }
         canvasClamp(player);
       });
+
+      // =========================================================================
+      // 3. COLISIONES FÍSICAS ENTRE JUGADORES (BOX OUT NATURAL)
+      // =========================================================================
       for (let first = 0; first < state.players.length; first++) {
         for (let second = first + 1; second < state.players.length; second++) {
           const a = state.players[first];
@@ -3604,6 +3641,10 @@
           }
         }
       }
+
+      // =========================================================================
+      // 4. VUELO DEL PASE
+      // =========================================================================
       if (state.mode === CANVAS_STATES.BALL_IN_PASS && state.ball) {
         const target = state.ball.target;
         const dx = target.x - state.ball.x;
@@ -3620,6 +3661,10 @@
           state.ball.y += dy / distance * 28 * dt;
         }
       }
+
+      // =========================================================================
+      // 5. VUELO DEL TIRO Y RESOLUCIÓN
+      // =========================================================================
       if (state.mode === CANVAS_STATES.BALL_IN_SHOT && state.ball && !state.shotResolved) {
         const shooter = state.ball.shooter;
         const progress = clamp((time - state.ball.started) / 950, 0, 1);
@@ -3638,7 +3683,7 @@
 
           if (blocked) {
             updateBoxScore('B', defender, 'blk');
-            const blockProb = clamp(.04 + (getSimulationStats(defender).tapon - getSimulationStats(shooter)[state.ball.shotType]) * .0015, .005, .12);
+            const blockProb = clamp(.045 + (getSimulationStats(defender).tapon - getSimulationStats(shooter)[state.ball.shotType]) * .0025, .008, .15);
             const blockMsg = buildOutcomeText({
               successChance: (1 - blockProb) * 100,
               failChance: blockProb * 100,
@@ -3664,7 +3709,6 @@
             const shotPct = Math.round(shotChance * 100);
             const missPct = 100 - shotPct;
 
-            // Formato estructurado para el feed / play-by-play
             const madeMsg = buildOutcomeText({
               successChance: shotPct,
               failChance: missPct,
@@ -3672,12 +3716,9 @@
               outcomeText: passer ? `Asistencia de ${passer}.` : `Defendido por ${defender}.`
             });
 
-            // Texto sin HTML que saldrá en la animación grande del canvas y en el cartel inferior
             const madeBanner = `¡CANASTA! ${shooter.name} (+${points} pts · ${shotPct}% acierto)${passer ? ` · Asistencia: ${passer}` : ''}`;
-            
             canvasMessage(madeMsg, 'info', madeBanner);
 
-            // Pasamos el nombre del tirador que acaba de anotar
             checkForMatchWin(shooter.name);
 
             if (simulationState.matchOver) {
@@ -3693,17 +3734,11 @@
                 scoreB: simulationState.score.B
               };
               state.celebrationText = `¡CANASTA GANADORA!`;
-              state.countdownUntil = null; // Sin 3-2-1
+              state.countdownUntil = null;
             } else {
               state.isGameWinner = false;
               state.mode = CANVAS_STATES.OFFENSE_LIVE;
               state.ball = null;
-              canvasResetCheckPositions(state, true, shooter.name, 'basket');
-              renderSimulationScreen();
-            }
-            state.mode = simulationState.matchOver ? CANVAS_STATES.CELEBRATION : CANVAS_STATES.OFFENSE_LIVE;
-            state.ball = null;
-            if (!simulationState.matchOver) {
               canvasResetCheckPositions(state, true, shooter.name, 'basket');
               renderSimulationScreen();
             }
@@ -3722,33 +3757,48 @@
           }
         }
       }
+
+      // =========================================================================
+      // 6. DISPUTA DEL REBOTE EN PISTA
+      // =========================================================================
       if (state.mode === CANVAS_STATES.BALL_REBOUND && state.ball) {
-        // Aumentamos el tiempo de vuelo del rebote a 1400ms para dar margen a atraparlo en pista
         const elapsed = clamp((time - state.ball.started) / 1400, 0, 1);
         const angle = state.ball.angle;
         state.ball.x = 1200 + Math.cos(angle) * (140 + elapsed * 320);
         state.ball.y = 349 + Math.sin(angle) * (140 + elapsed * 320);
 
-        // Comprobación ESTRICTA de salida de pista: solo si cruza las líneas blancas
         const isOutOfBounds = (
           state.ball.x <= CANVAS_COURT.left ||
           state.ball.x >= CANVAS_COURT.right ||
           state.ball.y >= CANVAS_COURT.bottom
         );
 
-        // Jugador más cercano al balón
+        // Ponderamos la distancia efectiva: los jugadores con más rebote/fuerza tienen mayor alcance de captura
         const winner = state.players
           .filter(player => player.team === 'A' || player.team === 'B')
-          .sort((a, b) => Math.hypot(a.x - state.ball.x, a.y - state.ball.y) - Math.hypot(b.x - state.ball.x, b.y - state.ball.y))[0];
+          .sort((a, b) => {
+            const statsA = getSimulationStats(a.name);
+            const statsB = getSimulationStats(b.name);
+            const rebA = a.team === 'A' ? statsA.rebote_ofensivo : statsA.rebote_defensivo;
+            const rebB = b.team === 'A' ? statsB.rebote_ofensivo : statsB.rebote_defensivo;
+            // Bonus de alcance en píxeles según atributo de rebote y fuerza
+            const reachBonusA = ((rebA - 65) * 0.7) + ((statsA.fuerza - 65) * 0.3);
+            const reachBonusB = ((rebB - 65) * 0.7) + ((statsB.fuerza - 65) * 0.3);
 
-        const playerCaughtBall = winner && Math.hypot(winner.x - state.ball.x, winner.y - state.ball.y) < 75;
+            const distA = Math.hypot(a.x - state.ball.x, a.y - state.ball.y) - reachBonusA;
+            const distB = Math.hypot(b.x - state.ball.x, b.y - state.ball.y) - reachBonusB;
+            return distA - distB;
+          })[0];
 
-        // Solo se resuelve si alguien lo atrapa, o si el balón ha cruzado físicamente la línea
+        const winnerStats = winner ? getSimulationStats(winner.name) : null;
+        const winnerRebAttr = winner ? (winner.team === 'A' ? winnerStats.rebote_ofensivo : winnerStats.rebote_defensivo) : 60;
+        const catchRadius = 65 + Math.max(0, (winnerRebAttr - 60) * 0.8);
+        const playerCaughtBall = winner && Math.hypot(winner.x - state.ball.x, winner.y - state.ball.y) < catchRadius;
+
         if (playerCaughtBall || isOutOfBounds || elapsed >= 1.0) {
           state.ball = null;
           state.mode = CANVAS_STATES.OFFENSE_LIVE;
 
-          // CASO A: EL BALÓN SALE REALMENTE FUERA DE LA PISTA (muy raro)
           if (isOutOfBounds) {
             const receiver = simulationState.teams.B[0];
             simulationState.possession = 'B';
@@ -3762,7 +3812,6 @@
             return;
           }
 
-          // CASO B: REBOTE EN PISTA (lo atrapa el jugador más cercano)
           const isOffensive = winner.team === 'A';
           updateBoxScore(winner.team, winner.name, 'reb', 1);
           updateBoxScore(winner.team, winner.name, isOffensive ? 'oreb' : 'dreb', 1);
@@ -3806,7 +3855,7 @@
         ctx.fillStyle = '#0a1215dd'; ctx.fillRect(player.x - 92, player.y + 55, 184, 31); ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 23px sans-serif'; ctx.fillText(player.name, player.x, player.y + 79);
         ctx.restore();
       });
-      if (active && simulationState.possession === 'A' && state.mode === CANVAS_STATES.OFFENSE_LIVE) {
+      if (active && simulationState.possession === 'A' && (state.mode === CANVAS_STATES.OFFENSE_LIVE || state.mode === CANVAS_STATES.BALL_IN_SHOT || state.mode === CANVAS_STATES.BALL_REBOUND)) {
           const dx = active.vx; const dy = active.vy; const length = Math.hypot(dx, dy);
           if (length > .1) {
             ctx.strokeStyle = '#d9ff8d'; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(active.x + dx / length * 60, active.y + dy / length * 60); ctx.lineTo(active.x + dx / length * 100, active.y + dy / length * 100); ctx.stroke();
