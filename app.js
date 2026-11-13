@@ -2189,6 +2189,12 @@
       .ut-event-dots { display:flex; justify-content:center; gap:10px; margin-top:12px; }
       .ut-event-dot { padding:7px 14px; border-radius:999px; font-size:12px; font-weight:800; background:#122526; border:1px solid #315c59; color:#9cbab3; cursor:pointer; }
       .ut-event-dot.active { background:#d9ff8d; color:#102021; border-color:#d9ff8d; }
+      .ut-club-filters { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+      .ut-club-select { width:auto; min-width:140px; padding:8px 12px; border-radius:8px; background:#122526; border:1px solid #315c59; color:#f4f7fb; font-size:12px; font-weight:800; outline:none; cursor:pointer; }
+      .ut-club-select:hover, .ut-club-select:focus { border-color:#d9ff8d; }
+      .ut-sort-btn { padding:8px 12px; border-radius:8px; background:#122526; border:1px solid #315c59; color:#9cbab3; font-size:12px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:all .15s ease; }
+      .ut-sort-btn:hover { border-color:#d9ff8d; color:#fff; }
+      .ut-sort-btn.active { background:#d9ff8d; border-color:#d9ff8d; color:#102021; }
     `;
 
     if (!document.getElementById('sim-style-root')) {
@@ -2231,6 +2237,8 @@
       lineupFormat: '5vs5', // <-- Formato activo en la pizarra de Mi Quinteto
       lineupDraft: null,      // <-- Borrador temporal de la pizarra
       lineupDirty: false,     // <-- Indica si hay cambios sin guardar
+      clubFilterTier: 'all',     // <-- 'all' | 'bronze' | 'silver' | 'gold' | 'special'
+      clubSortBy: 'overallDesc', // <-- 'overallDesc' | 'overallAsc' | 'alpha'
       canvas: null,
       pendingCanvasCountdown: false,
       // --- CONTROL DEL RELOJ DE POSESIÓN ---
@@ -2794,17 +2802,22 @@
     }
 
     function canvasProbability(player) {
-      if (!player) return { type: 'tiro_media_distancia', chance: 0.45 };
+      if (!player) return { type: 'tiro_media_distancia', chance: 0.45, contesters: [], primaryDefender: null };
 
       const type = canvasShotZone(player);
       const stats = getSimulationStats(player.name);
       const attr = stats[type] || stats.tiro_media_distancia || 60;
       const base = { tiro_cercano: .60, bandeja_en_carrera: .55, tiro_media_distancia: .45, triple: .38 }[type] || 0.45;
-      const min = { tiro_cercano: .30, bandeja_en_carrera: .25, tiro_media_distancia: .18, triple: .15 }[type] || 0.15;
+      const min = { tiro_cercano: .22, bandeja_en_carrera: .20, tiro_media_distancia: .14, triple: .10 }[type] || 0.12;
       const max = { tiro_cercano: .86, bandeja_en_carrera: .82, tiro_media_distancia: .72, triple: .62 }[type] || 0.65;
 
-      const defName = getDefenderForAttacker('A', player.name);
-      const defender = getSimulationStats(defName);
+      //Evaluamos todos los defensores que están delante o al lado del tirador
+      const contestInfo = evaluateMultiContest(simulationState.canvas, player, type);
+
+      // Si hay un defensor punteando más fuerte que su marca asignada, usamos su defensa como referencia
+      const assignedDefName = getDefenderForAttacker('A', player.name);
+      const primaryDefName = contestInfo.primaryDefender?.name || assignedDefName;
+      const defender = getSimulationStats(primaryDefName);
       const defense = (type === 'triple' || type === 'tiro_media_distancia') 
         ? (defender.defensa_exterior || 60) 
         : (defender.defensa_interior || 60);
@@ -2815,62 +2828,19 @@
       const distance = Math.hypot(player.x - hoopX, player.y - hoopY);
       const distancePenalty = Math.max(0, (distance - 300) * 0.00015);
 
-      // ==========================================================
-      // CÁLCULO DE PUNTEO DIRECCIONAL (FRENTE / LADO / ESPALDA)
-      // ==========================================================
-      let contestPenalty = 0;
-      const canvasPlayers = simulationState.canvas?.players || [];
-      const defenderObj = canvasPlayers.find(candidate => candidate.name === defName);
-
-      if (defenderObj) {
-        const contestDistance = Math.hypot(defenderObj.x - player.x, defenderObj.y - player.y);
-        
-        // Solo evaluamos punteo si está a distancia física de molestar (< 190 px)
-        if (contestDistance < 190 && contestDistance > 1) {
-          // Vector hacia el aro
-          const toHoopX = hoopX - player.x;
-          const toHoopY = hoopY - player.y;
-          const distHoop = Math.hypot(toHoopX, toHoopY) || 1;
-
-          // Vector hacia el defensor
-          const toDefX = defenderObj.x - player.x;
-          const toDefY = defenderObj.y - player.y;
-
-          // Coseno del ángulo entre la trayectoria al aro y la posición del defensor
-          const cosAngle = (toHoopX * toDefX + toHoopY * toDefY) / (distHoop * contestDistance);
-
-          let positionFactor = 0;
-
-          if (cosAngle > 0.65) {
-            // 1. TOTALMENTE DELANTE (cono frontal directo a canasta)
-            positionFactor = 1.0;
-          } else if (cosAngle > 0.15) {
-            // 2. EN EL COSTADO / LATERAL (punteo parcial de ayuda o persecución)
-            positionFactor = 0.35 + (cosAngle - 0.15) * 0.5;
-          } else {
-            // 3. DETRÁS / ESPALDA GANADA (cosAngle <= 0.15) -> 0 punteo
-            positionFactor = 0;
-          }
-
-          if (positionFactor > 0) {
-            const now = performance.now();
-            const isLackingAwareness = Boolean(
-              (defenderObj.reactionDelayUntil && defenderObj.reactionDelayUntil > now) ||
-              (defenderObj.screenStunUntil && defenderObj.screenStunUntil > now)
-            );
-            
-            const awarenessMod = isLackingAwareness ? 0.35 : 1.0;
-            const qualityMod = (defense / 75); 
-
-            contestPenalty = (190 - Math.max(50, contestDistance)) * 0.0011 * qualityMod * awarenessMod * positionFactor;
-          }
-        }
-      }
-
       const attributeAdjustment = (attr - defense) * 0.009;
-      const finalChance = clamp(clamp(base + attributeAdjustment, min, max) - distancePenalty - contestPenalty, min, max);
+      const finalChance = clamp(
+        clamp(base + attributeAdjustment, min, max) - distancePenalty - contestInfo.totalPenalty,
+        min,
+        max
+      );
 
-      return { type, chance: finalChance };
+      return {
+        type,
+        chance: finalChance,
+        contesters: contestInfo.contesters,
+        primaryDefender: contestInfo.primaryDefender
+      };
     }
 
     function canvasPlayer(name, team, index) {
@@ -3121,12 +3091,44 @@
       if (!state || state.mode !== CANVAS_STATES.OFFENSE_LIVE || simulationState.possession !== 'A') return;
       const shooter = state.players.find(player => player.name === simulationState.activePlayer);
       if (!shooter) return;
-      const shotType = canvasShotZone(shooter);
-      state.ball = { x: shooter.x, y: shooter.y, shooter, shotType, started: performance.now() };
+
+      // 1. Antes de calcular el tiro, cualquier defensor en rango frontal/lateral da un paso hacia el tirador (closeout)
+      const preContest = evaluateMultiContest(state, shooter);
+      preContest.contesters.forEach((c, idx) => {
+        const closeoutStep = idx === 0 ? 30 : 24;
+        if (c.dist > 78) {
+          const ux = (shooter.x - c.defender.x) / (c.dist || 1);
+          const uy = (shooter.y - c.defender.y) / (c.dist || 1);
+          c.defender.x += ux * Math.min(closeoutStep, c.dist - 74);
+          c.defender.y += uy * Math.min(closeoutStep, c.dist - 74);
+          canvasClamp(c.defender);
+        }
+      });
+
+      // 2. Calculamos y congelamos la probabilidad exacta en el instante de soltar el tiro
+      const shotInfo = canvasProbability(shooter);
+      const shotType = shotInfo.type;
+      const contesterNames = (shotInfo.contesters || []).map(c => cleanPlayerName(c.defender.name));
+      const primaryContesterObj = shotInfo.primaryDefender || state.players.find(p => p.name === getDefenderForAttacker('A', shooter.name));
+
+      state.ball = {
+        x: shooter.x,
+        y: shooter.y,
+        shooter,
+        shotType,
+        shotChance: shotInfo.chance,
+        contesterNames,
+        primaryDefenderName: primaryContesterObj ? primaryContesterObj.name : getDefenderForAttacker('A', shooter.name),
+        started: performance.now()
+      };
       state.mode = CANVAS_STATES.BALL_IN_SHOT;
       state.shotResolved = false;
       registerAttempt('A', shooter.name, shotType);
-      canvasMessage(`${shooter.name} prepara ${getShotPhrase(shotType)}.`);
+
+      const contestTag = contesterNames.length >= 2
+        ? ` (punteado por ${contesterNames.slice(0, 2).join(' y ')})`
+        : '';
+      canvasMessage(`${cleanPlayerName(shooter.name)} prepara ${getShotPhrase(shotType)}${contestTag}.`);
     }
     
     function canvasPickAndRoll() {
@@ -3744,7 +3746,7 @@
         }
       }
 
-      // =========================================================================
+     // =========================================================================
       // 5. VUELO DEL TIRO Y RESOLUCIÓN
       // =========================================================================
       if (state.mode === CANVAS_STATES.BALL_IN_SHOT && state.ball && !state.shotResolved) {
@@ -3755,30 +3757,45 @@
         state.ball.y = shooter.y + (349 - shooter.y) * progress - arc * 300;
         if (progress >= 1) {
           state.shotResolved = true;
-          const chance = canvasProbability(shooter).chance;
-          const defender = getDefenderForAttacker('A', shooter.name);
-          const defenderPlayer = state.players.find(player => player.name === defender);
-          const blocked = defenderPlayer && Math.hypot(defenderPlayer.x - shooter.x, defenderPlayer.y - shooter.y) < 90 && Math.random() < clamp(.045 + (getSimulationStats(defender).tapon - getSimulationStats(shooter)[state.ball.shotType]) * .0025, .008, .15);
-          const shotInfo = canvasProbability(shooter);
-          const shotChance = shotInfo.chance;
+
+          const shotChance = state.ball.shotChance ?? canvasProbability(shooter).chance;
           const missChance = 1 - shotChance;
+          const contesters = state.ball.contesterNames || [];
+          const defender = state.ball.primaryDefenderName || getDefenderForAttacker('A', shooter.name);
+          const defenderPlayer = state.players.find(player => player.name === defender);
+
+          const multiBlockBonus = contesters.length >= 2 ? 0.025 : 0;
+          const blockProb = clamp(.045 + multiBlockBonus + (getSimulationStats(defender).tapon - getSimulationStats(shooter)[state.ball.shotType]) * .0025, .008, .18);
+          const blocked = defenderPlayer && Math.hypot(defenderPlayer.x - shooter.x, defenderPlayer.y - shooter.y) < 105 && Math.random() < blockProb;
+
+          const cleanDef = cleanPlayerName(defender);
+
+          // Etiqueta corta para los porcentajes, banners de canasta y tarjeta ganadora
+          const contestTag = contesters.length >= 2
+            ? `Doble punteo`
+            : (contesters.length === 1 ? `Punteado` : 'Tiro abierto');
+
+          // Frase narrativa para el texto del Play-by-Play
+          const contestOutcomeText = contesters.length >= 2
+            ? `Doble punteo de ${contesters.slice(0, 2).join(' y ')}${contesters.length > 2 ? ' (+ayuda)' : ''}.`
+            : (contesters.length === 1 ? `Punteado por ${contesters[0]}.` : `Tiro abierto.`);
 
           if (blocked) {
             updateBoxScore('B', defender, 'blk');
-            const blockProb = clamp(.045 + (getSimulationStats(defender).tapon - getSimulationStats(shooter)[state.ball.shotType]) * .0025, .008, .15);
             const blockMsg = buildOutcomeText({
               successChance: (1 - blockProb) * 100,
               failChance: blockProb * 100,
-              actionText: `${shooter.name} intenta ${getShotPhrase(state.ball.shotType)}.`,
-              outcomeText: `${defender} tapona el tiro y recupera.`
+              actionText: `${cleanPlayerName(shooter.name)} intenta ${getShotPhrase(state.ball.shotType)}.`,
+              outcomeText: `${cleanDef} tapona el tiro y recupera.`,
+              contestTag
             });
-            canvasMessage(blockMsg, 'warning', `${defender} tapona el tiro de ${shooter.name}.`);
+            canvasMessage(blockMsg, 'warning', `${cleanDef} tapona el tiro de ${cleanPlayerName(shooter.name)}.`);
             simulationState.possession = 'B';
             simulationState.activePlayer = defender;
             simulationState.userTurn = false;
             state.mode = CANVAS_STATES.OFFENSE_LIVE;
             switchToDefensePbp();
-          } else if (Math.random() < chance) {
+          } else if (Math.random() < shotChance) {
             simulationState.shotClock = 24;
             simulationState.shotClockLimit = 24;
             const points = state.ball.shotType === 'triple' ? 3 : 2;
@@ -3791,33 +3808,45 @@
             const shotPct = Math.round(shotChance * 100);
             const missPct = 100 - shotPct;
 
+            const cleanScorer = cleanPlayerName(shooter.name);
+            const cleanPasser = passer ? cleanPlayerName(passer) : null;
+
             const madeMsg = buildOutcomeText({
               successChance: shotPct,
               failChance: missPct,
-              actionText: `¡CANASTA! ${shooter.name} anota (+${points} pts) tras ${humanizeShotType(state.ball.shotType)}.`,
-              outcomeText: passer ? `Asistencia de ${passer}.` : `Defendido por ${defender}.`
+              actionText: `¡CANASTA! ${cleanScorer} anota (+${points} pts) tras ${humanizeShotType(state.ball.shotType)}.`,
+              outcomeText: cleanPasser ? `Asistencia de ${cleanPasser}. ${contestOutcomeText}` : contestOutcomeText,
+              contestTag
             });
 
-            const madeBanner = `¡CANASTA! ${shooter.name} (+${points} pts · ${shotPct}% acierto)${passer ? ` · Asistencia: ${passer}` : ''}`;
+            // Banner de cuenta atrás tras meter canasta (incluye también el tipo de punteo)
+            const madeBanner = `¡CANASTA! ${cleanScorer} (+${points} pts · ${shotPct}% · ${contestTag})${cleanPasser ? ` · Asist: ${cleanPasser}` : ''}`;
             canvasMessage(madeMsg, 'info', madeBanner);
 
-            checkForMatchWin(shooter.name);
+            // Datos completos para la tarjeta de Canasta Ganadora (incluyendo contestTag)
+            const winPayload = {
+              scorer: cleanScorer,
+              points: points,
+              pct: shotPct,
+              shotType: humanizeShotType(state.ball.shotType),
+              passer: cleanPasser,
+              contestTag: contestTag,
+              scoreA: simulationState.score.A,
+              scoreB: simulationState.score.B
+            };
+
+            checkForMatchWin(cleanScorer);
 
             if (simulationState.matchOver) {
-              state.mode = CANVAS_STATES.CELEBRATION;
+              simulationState.winnerData = winPayload;
+              state.winnerData = winPayload;
               state.isGameWinner = true;
-              state.winnerData = {
-                scorer: shooter.name,
-                points: points,
-                pct: shotPct,
-                shotType: humanizeShotType(state.ball.shotType),
-                passer: passer,
-                scoreA: simulationState.score.A,
-                scoreB: simulationState.score.B
-              };
-              state.celebrationText = `¡CANASTA GANADORA!`;
+              state.mode = CANVAS_STATES.CELEBRATION;
+              state.celebrationText = '¡CANASTA GANADORA!';
               state.countdownUntil = null;
+              state.ball = null;
             } else {
+              simulationState.winnerData = null;
               state.isGameWinner = false;
               state.mode = CANVAS_STATES.OFFENSE_LIVE;
               state.ball = null;
@@ -3832,10 +3861,11 @@
             const missMsg = buildOutcomeText({
               successChance: shotChance * 100,
               failChance: missChance * 100,
-              actionText: `${shooter.name} falla ${getShotPhrase(state.ball.shotType)}.`,
-              outcomeText: `${defender} puntea el tiro.`
+              actionText: `${cleanPlayerName(shooter.name)} falla ${getShotPhrase(state.ball.shotType)}.`,
+              outcomeText: contestOutcomeText,
+              contestTag
             });
-            canvasMessage(missMsg, 'warning', `${shooter.name} falla ${getShotPhrase(state.ball.shotType)}.`);
+            canvasMessage(missMsg, 'warning', `${cleanPlayerName(shooter.name)} falla ${getShotPhrase(state.ball.shotType)} (${contestTag}).`);
           }
         }
       }
@@ -3952,11 +3982,12 @@
         ctx.fillStyle = '#0a1215ea';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        if (state.isGameWinner && state.winnerData) {
+        const winData = state.winnerData || simulationState.winnerData;
+
+        if ((state.isGameWinner || simulationState.matchOver) && winData) {
           // ==========================================
           // TARJETA ESPECIAL DE CANASTA GANADORA (ESCALA 2400x1792)
           // ==========================================
-          const d = state.winnerData;
           const cx = canvas.width / 2;
           const cy = canvas.height / 2;
 
@@ -3988,7 +4019,7 @@
           }
           ctx.shadowBlur = 0;
 
-          // 3. Badge superior "¡GAME WINNER!"
+          // 3. Badge superior "¡CANASTA GANADORA!"
           ctx.fillStyle = '#d9ff8d';
           const badgeW = 600;
           const badgeH = 80;
@@ -4007,22 +4038,25 @@
           ctx.textAlign = 'center';
           ctx.fillText('¡CANASTA GANADORA!', cx, badgeY + 56);
 
-          // 4. Nombre del anotador (tamaño equivalente a la canasta normal)
+          // 4. Nombre del anotador
           ctx.fillStyle = '#ffffff';
           ctx.font = '900 130px sans-serif';
-          ctx.fillText(cleanPlayerName(d.scorer), cx, cardY + 310);
+          ctx.textAlign = 'center';
+          ctx.fillText(cleanPlayerName(winData.scorer || 'Jugador'), cx, cardY + 310);
 
-          // 5. Subtítulo de la acción
+          // 5. Subtítulo de la acción (+2/+3 puntos tras tipo de tiro · Punteo)
           ctx.fillStyle = '#9cbab3';
-          ctx.font = '700 52px sans-serif';
-          ctx.fillText(`+${d.points} puntos tras ${d.shotType}`, cx, cardY + 410);
+          ctx.font = '700 48px sans-serif';
+          ctx.textAlign = 'center';
+          const subtitleContest = winData.contestTag ? ` · ${winData.contestTag}` : '';
+          ctx.fillText(`+${winData.points || 2} puntos tras ${winData.shotType || 'tiro'}${subtitleContest}`, cx, cardY + 410);
 
-          // 6. Píldoras estadísticas gigantes
+          // 6. Píldoras estadísticas gigantes (Acierto, Asistencia y Marcador)
           const statY = cardY + 530;
           const statsList = [
-            `Acierto: ${d.pct}%`,
-            d.passer ? `Asistencia: ${cleanPlayerName(d.passer)}` : 'Tiro individual'
-            `Marcador: ${d.scoreA} - ${d.scoreB}`
+            `Acierto: ${winData.pct ?? 50}%`,
+            winData.passer ? `Asistencia: ${cleanPlayerName(winData.passer)}` : (winData.contestTag || 'Tiro individual'),
+            `Marcador: ${winData.scoreA ?? simulationState.score.A} - ${winData.scoreB ?? simulationState.score.B}`
           ];
 
           ctx.font = '800 42px sans-serif';
@@ -4047,6 +4081,7 @@
             }
 
             ctx.fillStyle = '#d9ff8d';
+            ctx.textAlign = 'center';
             ctx.fillText(text, startPillX + pillW / 2, statY + 70);
             startPillX += pillW + pillGap;
           });
@@ -4054,6 +4089,7 @@
           // 7. Pie de tarjeta
           ctx.fillStyle = '#6d948c';
           ctx.font = '700 38px sans-serif';
+          ctx.textAlign = 'center';
           ctx.fillText('Cargando estadísticas finales del partido...', cx, cardY + 880);
 
           ctx.restore();
@@ -4080,7 +4116,11 @@
       const feedback = document.getElementById('sim-canvas-feedback');
       if (feedback && active) {
         const probability = canvasProbability(active);
-        feedback.innerHTML = `Zona: <strong>${humanizeShotType(probability.type)}</strong><br>Acierto estimado: <strong>${Math.round(probability.chance * 100)}%</strong><br>${escapeHtml(simulationState.currentEvent || 'En ataque')}`;
+        const numContesters = probability.contesters?.length || 0;
+        const contestLabel = numContesters >= 2
+          ? `<span style="color:#ff6b6b">Doble punteo (${numContesters})</span>`
+          : (numContesters === 1 ? `<span style="color:#ffb454">Punteado</span>` : `<span style="color:#d9ff8d">Abierto</span>`);
+        feedback.innerHTML = `Zona: <strong>${humanizeShotType(probability.type)}</strong> · ${contestLabel}<br>Acierto estimado: <strong>${Math.round(probability.chance * 100)}%</strong><br>${escapeHtml(simulationState.currentEvent || 'En ataque')}`;
       }
       const score = document.querySelector('.sim-canvas-score');
       if (score) score.textContent = `A ${simulationState.score.A} - ${simulationState.score.B} B`;
@@ -4264,6 +4304,7 @@
       simulationState.matchOver = false;
       simulationState.mismatchActive = false;
       simulationState.lastPass = null;
+      simulationState.winnerData = null;
       simulationState.currentEvent = '';
       simulationState.boxScore = {};
       simulationState.messageQueue = [];
@@ -4331,6 +4372,97 @@
       if (shotType === 'triple') {
         entry.tpm += 1;
       }
+    }
+
+    function evaluateMultiContest(state, shooter, shotType = null) {
+      const canvasState = state || simulationState.canvas;
+      if (!canvasState || !shooter) return { totalPenalty: 0, contesters: [], primaryDefender: null };
+
+      const hoopX = (CANVAS_COURT && CANVAS_COURT.hoop) ? CANVAS_COURT.hoop.x : 1200;
+      const hoopY = (CANVAS_COURT && CANVAS_COURT.hoop) ? CANVAS_COURT.hoop.y : 349;
+      const zone = shotType || canvasShotZone(shooter);
+      const isPerimeter = (zone === 'triple' || zone === 'tiro_media_distancia');
+
+      const defenders = (canvasState.players || []).filter(p => p.team === 'B');
+      if (!defenders.length) return { totalPenalty: 0, contesters: [], primaryDefender: null };
+
+      // Vector desde el tirador hacia el aro
+      const toHoopX = hoopX - shooter.x;
+      const toHoopY = hoopY - shooter.y;
+      const distHoop = Math.hypot(toHoopX, toHoopY) || 1;
+
+      const MAX_CONTEST_DIST = 235; // Radio en el que un defensor cercano llega a puntear
+      const now = performance.now();
+      const contesters = [];
+
+      defenders.forEach(def => {
+        const contestDistance = Math.hypot(def.x - shooter.x, def.y - shooter.y);
+        if (contestDistance >= MAX_CONTEST_DIST || contestDistance <= 1) return;
+
+        const toDefX = def.x - shooter.x;
+        const toDefY = def.y - shooter.y;
+
+        // Coseno del ángulo entre la línea tirador->aro y tirador->defensor
+        const cosAngle = (toHoopX * toDefX + toHoopY * toDefY) / (distHoop * contestDistance);
+
+        let positionFactor = 0;
+        if (cosAngle > 0.65) {
+          // 1. TOTALMENTE DELANTE (cono frontal entre tirador y canasta)
+          positionFactor = 1.0;
+        } else if (cosAngle > 0.12) {
+          // 2. EN EL COSTADO / LATERAL (punteo lateral reducido)
+          positionFactor = 0.35 + (cosAngle - 0.12) * 0.55;
+        } else {
+          // 3. DETRÁS / ESPALDA GANADA (cosAngle <= 0.12) -> 0 punteo
+          positionFactor = 0;
+        }
+
+        if (positionFactor <= 0) return;
+
+        const isLackingAwareness = Boolean(
+          (def.reactionDelayUntil && def.reactionDelayUntil > now) ||
+          (def.screenStunUntil && def.screenStunUntil > now)
+        );
+        const awarenessMod = isLackingAwareness ? 0.35 : 1.0;
+
+        const defStats = getSimulationStats(def.name);
+        const defAttr = isPerimeter ? (defStats.defensa_exterior || 60) : (defStats.defensa_interior || 60);
+        const qualityMod = ((defAttr * 0.8) + ((defStats.tapon || 60) * 0.2)) / 75;
+
+        // Penalización individual de este defensor
+        const individualPenalty = (MAX_CONTEST_DIST - Math.max(50, contestDistance)) * 0.00105 * qualityMod * awarenessMod * positionFactor;
+
+        if (individualPenalty > 0.015) {
+          contesters.push({
+            defender: def,
+            dist: contestDistance,
+            cosAngle,
+            positionFactor,
+            penalty: individualPenalty
+          });
+        }
+      });
+
+      // Ordenamos de mayor a menor impacto en el punteo
+      contesters.sort((a, b) => b.penalty - a.penalty);
+
+      let totalPenalty = 0;
+      contesters.forEach((c, idx) => {
+        if (idx === 0) {
+          // Defensor que más puntea el tiro (sea su marca o una ayuda que estaba delante)
+          totalPenalty += c.penalty;
+        } else {
+          // 2º, 3º defensor punteando a la vez: suman penalización extra acumulada
+          const multiHandFactor = idx === 1 ? 0.65 : 0.40;
+          totalPenalty += (c.penalty * multiHandFactor) + 0.035;
+        }
+      });
+
+      return {
+        totalPenalty: Math.min(0.48, totalPenalty),
+        contesters,
+        primaryDefender: contesters[0]?.defender || null
+      };
     }
 
     function assignAssist(team, passFrom, scorer) {
@@ -4750,7 +4882,41 @@
       };
       const shotAttr = shotAttrMap[shotType] || 'tiro_cercano';
       const defenseKey = (shotType === 'tiro_cercano' || shotType === 'bandeja_en_carrera') ? 'defensa_interior' : 'defensa_exterior';
-      const blockProb = clamp(0.045 + ((defender.tapon - shooter[shotAttr]) * 0.0025), 0.008, 0.15);
+
+      // Evaluar en PBP si el tiro sale abierto, punteado por su marca o con doble punteo de un compañero de ayuda
+      const defTeam = team === 'A' ? 'B' : 'A';
+      const otherDefenders = (simulationState.teams[defTeam] || []).filter(p => p !== defenderName);
+      const helpDefenderName = otherDefenders.length ? otherDefenders[Math.floor(Math.random() * otherDefenders.length)] : null;
+      const helpStats = helpDefenderName ? getSimulationStats(helpDefenderName) : null;
+
+      const rollContest = Math.random();
+      let pbpContestPenalty = 0;
+      let contestTag = '';
+      let contestOutcomeText = '';
+
+      const cleanDef = cleanPlayerName(defenderName);
+      const cleanHelp = helpDefenderName ? cleanPlayerName(helpDefenderName) : null;
+
+      if (cleanHelp && rollContest < 0.25) {
+        // 25% de las veces en PBP llega una ayuda defensiva y hacen doble punteo
+        const helpDefVal = helpStats[defenseKey] || 65;
+        pbpContestPenalty = 0.08 + ((helpDefVal - 65) * 0.0015);
+        contestTag = `Doble punteo`;
+        contestOutcomeText = `Doble punteo entre ${cleanDef} y ${cleanHelp}.`;
+      } else if (rollContest < 0.80) {
+        // 55% de las veces punteo individual de su defensor
+        pbpContestPenalty = 0.03;
+        contestTag = `Punteado`;
+        contestOutcomeText = `Punteado por ${cleanDef}.`;
+      } else {
+        // 20% logra tirar abierto
+        pbpContestPenalty = -0.04;
+        contestTag = 'Tiro abierto';
+        contestOutcomeText = `Logra tirar abierto ante ${cleanDef}.`;
+      }
+
+      const multiBlockBonus = contestTag.startsWith('Doble') ? 0.025 : 0;
+      const blockProb = clamp(0.045 + multiBlockBonus + ((defender.tapon - shooter[shotAttr]) * 0.0025), 0.008, 0.16);
       const baseMap = {
         tiro_cercano: 0.60,
         bandeja_en_carrera: 0.55,
@@ -4758,34 +4924,39 @@
         triple: 0.38
       };
       const clampMap = {
-        tiro_cercano: [0.30, 0.86],
-        bandeja_en_carrera: [0.25, 0.82],
-        tiro_media_distancia: [0.18, 0.72],
-        triple: [0.15, 0.62]
+        tiro_cercano: [0.22, 0.86],
+        bandeja_en_carrera: [0.20, 0.82],
+        tiro_media_distancia: [0.14, 0.72],
+        triple: [0.10, 0.62]
       };
       const base = baseMap[shotType] || 0.60;
       const delta = shooter[shotAttr] - defender[defenseKey];
-      const shotChance = clamp(base + (delta * 0.008), clampMap[shotType][0], clampMap[shotType][1]);
-      const missChance = clamp(1 - shotChance, 0.15, 0.70);
+      const shotChance = clamp(base + (delta * 0.008) - pbpContestPenalty, clampMap[shotType][0], clampMap[shotType][1]);
+      const missChance = clamp(1 - shotChance, 0.14, 0.88);
       registerAttempt(team, shooterName, shotType);
+
       if (Math.random() < blockProb) {
         const blockEntry = getBoxScoreEntry(team === 'A' ? 'B' : 'A', defenderName);
         if (blockEntry) blockEntry.blk += 1;
         pushSimulationMessage(buildOutcomeText({
           successChance: shotChance * 100,
           failChance: missChance * 100,
-          actionText: `${shooterName} intenta ${getShotPhrase(shotType)}.`
+          actionText: `${cleanPlayerName(shooterName)} intenta ${getShotPhrase(shotType)}.`,
+          outcomeText: contestOutcomeText,
+          contestTag
         }), 'warning');
         scheduleSimulationFollowup(() => {
           pushSimulationMessage(buildOutcomeText({
             successChance: blockProb * 100,
             failChance: (1 - blockProb) * 100,
-            actionText: `${defenderName} tapona ${getShotPhrase(shotType)} de ${shooterName}.`
+            actionText: `${cleanDef} tapona ${getShotPhrase(shotType)} de ${cleanPlayerName(shooterName)}.`,
+            contestTag
           }), 'warning');
           resolveLooseBallAfterBlock(team, shooterName, defenderName, shotType);
         });
         return;
       }
+
       const made = Math.random() < shotChance;
       const points = shotType === 'triple' ? 3 : 2;
       if (made) {
@@ -4801,12 +4972,12 @@
         pushSimulationMessage(buildOutcomeText({
           successChance: shotChance * 100,
           failChance: missChance * 100,
-          actionText: `¡${points} puntos anotados por ${shooterName}!`,
-          outcomeText: `Intento de ${humanizeShotType(shotType)} contra ${defenderName}.`
+          actionText: `¡${points} puntos anotados por ${cleanPlayerName(shooterName)} tras ${humanizeShotType(shotType)}!`,
+          outcomeText: contestOutcomeText,
+          contestTag
         }), 'info');
-        checkForMatchWin();
+        checkForMatchWin(shooterName);
         if (!simulationState.matchOver) {
-          // Make it, take it: same team keeps possession after scoring.
           simulationState.possession = team;
           simulationState.activePlayer = shooterName;
           simulationState.userTurn = team === 'A';
@@ -4821,8 +4992,9 @@
         pushSimulationMessage(buildOutcomeText({
           successChance: shotChance * 100,
           failChance: missChance * 100,
-          actionText: `${shooterName} falla ${getShotPhrase(shotType)}.`,
-          outcomeText: `${defenderName} le defiende y controla la zona.`
+          actionText: `${cleanPlayerName(shooterName)} falla ${getShotPhrase(shotType)}.`,
+          outcomeText: contestOutcomeText,
+          contestTag
         }), 'warning');
         scheduleSimulationFollowup(() => resolveRebound(team, shooterName, defenderName, shotType));
       }
@@ -5539,10 +5711,59 @@
           </div>
         `;
       } else {
+        const filterTier = simulationState.clubFilterTier || 'all';
+        const sortBy = simulationState.clubSortBy || 'alpha';
+
+        // 1. Filtrar por tipo de carta (Bronce <= 64, Plata 65-74, Oro >= 75, Especiales)
+        const isSpecialCard = c => Boolean(c.isSpecial || ULTIMATE_SPECIAL_CARDS.some(s => s.id === c.id));
+        const filteredOwned = owned.filter(card => {
+          if (filterTier === 'special') return isSpecialCard(card);
+          if (filterTier === 'gold') return !isSpecialCard(card) && card.overall > 74;
+          if (filterTier === 'silver') return !isSpecialCard(card) && card.overall > 64 && card.overall <= 74;
+          if (filterTier === 'bronze') return !isSpecialCard(card) && card.overall <= 64;
+          return true; // 'all'
+        });
+
+        // 2. Ordenar según el criterio activo
+        filteredOwned.sort((a, b) => {
+          const nameA = cleanPlayerName(a.name);
+          const nameB = cleanPlayerName(b.name);
+          if (sortBy === 'overallDesc') return (b.overall - a.overall) || nameA.localeCompare(nameB);
+          if (sortBy === 'overallAsc') return (a.overall - b.overall) || nameA.localeCompare(nameB);
+          return nameA.localeCompare(nameB) || (b.overall - a.overall);
+        });
+
+        const filteredCardsHtml = filteredOwned.length
+          ? filteredOwned.map(card => renderUltimateCard(card, true)).join('')
+          : '<div class="ut-empty">No tienes cartas de este tipo en tu club.</div>';
+
+        const isOverallSort = sortBy === 'overallDesc' || sortBy === 'overallAsc';
+        const overallArrow = sortBy === 'overallAsc' ? '↑' : '↓';
+
         content = `
           <div class="ut-club-Wrap">
-            <div class="ut-title-row"><div><h2>Mi club</h2><p>Cartas desbloqueadas: ${owned.length} / ${clubState.catalog.length}</p></div></div>
-            <div class="ut-card-grid">${cards}</div>
+            <div class="ut-title-row">
+              <div>
+                <h2>Mi club</h2>
+                <p>Cartas desbloqueadas: ${owned.length} / ${clubState.catalog.length} ${filterTier !== 'all' ? `· Mostrando ${filteredOwned.length}` : ''}</p>
+              </div>
+              <div class="ut-club-filters">
+                <select id="ut-club-tier-filter" class="ut-club-select" aria-label="Filtrar por tipo de carta">
+                  <option value="all" ${filterTier === 'all' ? 'selected' : ''}>Todas las cartas</option>
+                  <option value="special" ${filterTier === 'special' ? 'selected' : ''}>✨ Especiales</option>
+                  <option value="gold" ${filterTier === 'gold' ? 'selected' : ''}>🥇 Oro (75+)</option>
+                  <option value="silver" ${filterTier === 'silver' ? 'selected' : ''}>🥈 Plata (65-74)</option>
+                  <option value="bronze" ${filterTier === 'bronze' ? 'selected' : ''}>🥉 Bronce (≤64)</option>
+                </select>
+                <button type="button" class="ut-sort-btn ${isOverallSort ? 'active' : ''}" id="ut-sort-overall" title="Alternar orden por media">
+                  Media ${overallArrow}
+                </button>
+                <button type="button" class="ut-sort-btn ${sortBy === 'alpha' ? 'active' : ''}" id="ut-sort-alpha" title="Ordenar alfabéticamente">
+                  A-Z
+                </button>
+              </div>
+            </div>
+            <div class="ut-card-grid">${filteredCardsHtml}</div>
             <button type="button" class="ut-lineup-fab" id="ut-open-lineup">📋 Mi quinteto</button>
           </div>
         `;
@@ -5638,6 +5859,19 @@
           const fmt = simulationState.lineupFormat || '5vs5';
           openPitchSlotSwap(fmt, Number(slotEl.dataset.pitchSlot));
         });
+      });
+
+      root.querySelector('#ut-club-tier-filter')?.addEventListener('change', event => {
+        simulationState.clubFilterTier = event.target.value;
+        renderSimulationScreen();
+      });
+      root.querySelector('#ut-sort-overall')?.addEventListener('click', () => {
+        simulationState.clubSortBy = simulationState.clubSortBy === 'overallDesc' ? 'overallAsc' : 'overallDesc';
+        renderSimulationScreen();
+      });
+      root.querySelector('#ut-sort-alpha')?.addEventListener('click', () => {
+        simulationState.clubSortBy = 'alpha';
+        renderSimulationScreen();
       });
     }
 
