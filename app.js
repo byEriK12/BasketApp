@@ -3090,6 +3090,40 @@
       canvasMessage(`${from.name} pasa a ${target.name}.`);
     }
 
+    function computeShotMeterParams(shooter, shotInfo) {
+      const chance = shotInfo.chance;
+      const stats = getSimulationStats(shooter.name);
+      const rawAttr = stats[shotInfo.type] || 60;
+      const numContesters = shotInfo.contesters?.length || 0;
+
+      // 1. Normalizamos probabilidad (0.12 a 0.78) y atributo puro (50 a 95)
+      const normChance = clamp((chance - 0.12) / 0.66, 0, 1);
+      const normAttr = clamp((rawAttr - 52) / 43, 0, 1);
+
+      // Combinamos el % real de la jugada (70%) con la calidad pura del tirador en esa zona (30%)
+      const combined = (normChance * 0.70) + (normAttr * 0.30);
+
+      // 2. Curva exponencial: castiga mucho los tiros malos/medios y solo abre ventana en tiros muy claros
+      let ease = Math.pow(combined, 1.85);
+
+      // Penalización adicional directa en la barra si tienes defensores punteando en la cara
+      if (numContesters === 1) ease *= 0.70;
+      else if (numContesters >= 2) ease *= 0.30;
+
+      ease = clamp(ease, 0, 1);
+
+      // 3. Velocidad de subida:
+      // Mal tiro / punteado -> 310ms | Tiro medio -> ~430ms | Tiro liberado de especialista -> 620ms
+      const chargeDurationMs = Math.round(310 + (ease * 310));
+
+      // 4. Margen de verde en la cima:
+      // Mal tiro / punteado -> 0.025 (2.5%, casi 2 píxeles) | Tiro perfecto -> 0.145 (14.5%, unos 12 píxeles)
+      const greenWindow = Number((0.025 + (ease * 0.120)).toFixed(4));
+      const greenThreshold = 1 - greenWindow;
+
+      return { chargeDurationMs, greenWindow, greenThreshold };
+    }
+
     function startCanvasShotMeter() {
       const state = simulationState.canvas;
       if (!state || state.mode !== CANVAS_STATES.OFFENSE_LIVE || simulationState.possession !== 'A') return;
@@ -3109,21 +3143,9 @@
         }
       });
 
-      // 2. Obtenemos la probabilidad real (0.10 a 0.86) según atributos, distancia y punteo
+      // 2. Calculamos velocidad y ventana verde con la nueva curva exigente
       const shotInfo = canvasProbability(shooter);
-      const chance = shotInfo.chance;
-
-      // Normalizamos la facilidad del tiro entre 0 (muy difícil/punteado) y 1 (muy fácil/99 atributo)
-      const ease = clamp((chance - 0.12) / 0.68, 0, 1);
-
-      // Duración de subida hasta el tope:
-      // Tiro muy difícil (ease=0) -> 350ms (rapidísimo) | Tiro muy fácil (ease=1) -> 680ms (lento y cómodo)
-      const chargeDurationMs = Math.round(350 + ease * 330);
-
-      // Tamaño de la zona verde en la cima (de 0 a 1):
-      // Tiro muy difícil (ease=0) -> 0.045 (4.5% del tope) | Tiro muy fácil (ease=1) -> 0.21 (21% del tope)
-      const greenWindow = Number((0.045 + ease * 0.165).toFixed(3));
-      const greenThreshold = 1 - greenWindow;
+      const { chargeDurationMs, greenWindow, greenThreshold } = computeShotMeterParams(shooter, shotInfo);
 
       shooter.vx = 0;
       shooter.vy = 0;
@@ -3138,7 +3160,7 @@
         greenThreshold,
         greenWindow,
         value: 0,
-        direction: 1, // 1 subiendo hacia el tope, -1 bajando tras pasarse
+        direction: 1,
         released: false,
         isGreen: false,
         releaseLabel: ''
@@ -3156,11 +3178,9 @@
       // Recalcular punteo final por si algún defensor más llegó durante el armado del tiro
       const liveShotInfo = canvasProbability(shooter);
       const finalChance = liveShotInfo.chance;
-      const finalEase = clamp((finalChance - 0.12) / 0.68, 0, 1);
-      const finalGreenThreshold = 1 - (0.045 + finalEase * 0.165);
+      const { greenThreshold: finalGreenThreshold } = computeShotMeterParams(shooter, liveShotInfo);
 
       const val = meter.value;
-      // Es VERDE si suelta la F estando dentro de la franja verde del tope
       const isGreen = !forcedLate && val >= finalGreenThreshold;
 
       let timingTag = '';
@@ -3544,30 +3564,30 @@
       // --- ACTUALIZACIÓN DE LA BARRA DE TIRO (MODO TIMING 2K) ---
       if (state.mode === CANVAS_STATES.SHOT_METER && state.shotMeter) {
         const meter = state.shotMeter;
+        meter.shooter.x = meter.anchorX;
+        meter.shooter.y = meter.anchorY;
+
         const elapsed = time - meter.startedAt;
         const rawProgress = elapsed / meter.chargeDurationMs;
 
-        // Sube de 0 a 1; si el usuario sigue apretando la F pasado el tope, rebota y baja de 1 a 0
+        // Sube de 0 a 1; si te pasas del tope, cae un 75% más rápido penalizando mantener pulsado de más
         if (rawProgress <= 1) {
           meter.value = clamp(rawProgress, 0, 1);
           meter.direction = 1;
         } else {
-          const returnProgress = (rawProgress - 1) * 1.25; // Baja un 25% más rápido tras pasarse
+          const returnProgress = (rawProgress - 1) * 1.55;
           meter.value = clamp(1 - returnProgress, 0, 1);
           meter.direction = -1;
         }
 
-        // Actualizar umbral verde en vivo por si un defensor se acerca mientras cargas
-        meter.shooter.x = meter.anchorX;
-        meter.shooter.y = meter.anchorY;
+        // Actualizar umbral verde en vivo por si un defensor llega a puntear mientras cargas
         const liveProb = canvasProbability(meter.shooter);
-        const liveEase = clamp((liveProb.chance - 0.12) / 0.68, 0, 1);
-        meter.greenWindow = 0.045 + liveEase * 0.165;
-        meter.greenThreshold = 1 - meter.greenWindow;
+        const liveParams = computeShotMeterParams(meter.shooter, liveProb);
+        meter.greenWindow = liveParams.greenWindow;
+        meter.greenThreshold = liveParams.greenThreshold;
 
         state.ball = { x: meter.shooter.x + 42, y: meter.shooter.y - 36 };
 
-        // Si no suelta la F y la barra vuelve abajo del todo (o se agota el reloj), suelta forzado (fallo)
         simulationState.shotClock = Math.max(0, simulationState.shotClock - (dt / 60));
         if ((meter.direction === -1 && meter.value <= 0.08) || simulationState.shotClock <= 0) {
           releaseCanvasShotMeter(true);
@@ -4233,7 +4253,7 @@
         ctx.shadowBlur = 0;
 
         // 2. Zona objetivo VERDE marcada en la cima de la barra (para que veas el margen que tienes)
-        const greenZoneH = Math.max(6, (1 - activeMeter.greenThreshold) * (barH - 8));
+        const greenZoneH = Math.max(2, (1 - activeMeter.greenThreshold) * (barH - 8));
         const greenZoneY = barY + 4;
         ctx.fillStyle = 'rgba(57, 255, 136, 0.28)';
         ctx.fillRect(barX + 4, greenZoneY, barW - 8, greenZoneH);
