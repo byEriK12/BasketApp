@@ -1925,6 +1925,10 @@
       "defensa_interior","defensa_exterior","robo","tapon","rebote_ofensivo","rebote_defensivo",
       "velocidad","agilidad","fuerza"
     ];
+    const SIMULATION_SHOT_MODE_OPTIONS = [
+      { value: 'classic', label: 'Clásica' },
+      { value: 'meter', label: 'Barra de tiro' }
+    ];
     const SIMULATION_PLAYER_ATTRS = {
       Aleix: { tiro_cercano: 84, bandeja_en_carrera: 86, tiro_media_distancia: 75, triple: 67, precision_pase: 83, manejo_balon: 81, defensa_interior: 64, defensa_exterior: 79, robo: 60, tapon: 51, rebote_ofensivo: 59, rebote_defensivo: 68, velocidad: 85, agilidad: 84, fuerza: 62 },
       Arnau: { tiro_cercano: 78, bandeja_en_carrera: 92, tiro_media_distancia: 78, triple: 87, precision_pase: 81, manejo_balon: 80, defensa_interior: 61, defensa_exterior: 82, robo: 75, tapon: 64, rebote_ofensivo: 63, rebote_defensivo: 73, velocidad: 79, agilidad: 89, fuerza: 68 },
@@ -2009,7 +2013,7 @@
       .sim-stat-bar.best span { background:#46d39a; }
       .sim-stat-bar.worst span { background:#ff8b7b; }
       .sim-stat-bar.neutral span { background:#4f9cff; }
-      .sim-config { display:grid; grid-template-columns:1fr 1fr; gap:12px; width:min(520px,100%); margin:0 auto; }
+      .sim-config { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; width:min(740px,100%); margin:0 auto; }
       .sim-config label { display:grid; gap:6px; color:#a7bedf; font-size:12px; text-align:left; }
       .sim-config select { width:100%; background:#0f1521; border:1px solid #2a3b57; color:#eaf2ff; border-radius:10px; padding:9px 10px; }
       .sim-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
@@ -2224,7 +2228,7 @@
       pendingFollowupTimeout: null,
       accessGranted: true,
       accessError: '',
-      settings: { format: '3vs3', winScore: SIMULATION_WIN_SCORE },
+      settings: { format: '3vs3', winScore: SIMULATION_WIN_SCORE, shotMode: 'classic' },
       clubView: 'club',
       leaveRequested: false
       ,rewardApplied: false,
@@ -2327,7 +2331,7 @@
     }
 
     async function loadClubData() {
-      clubState.loading = true;
+      if (!clubState.initialized) clubState.loading = true;
       clubState.error = '';
       if (!supabaseClient) {
         clubState.profile = null;
@@ -2742,7 +2746,7 @@
 
     const CANVAS_COURT = { width: 2400, height: 1792, hoop: { x: 1200, y: 349 }, left: 273, right: 2128, top: 152, bottom: 1788, radius: 48 };
     const CANVAS_KEYS = new Set();
-    const CANVAS_STATES = { OFFENSE_LIVE: 'OFFENSE_LIVE', BALL_IN_PASS: 'BALL_IN_PASS', BALL_IN_SHOT: 'BALL_IN_SHOT', BALL_REBOUND: 'BALL_REBOUND', CELEBRATION: 'CELEBRATION', PAUSED: 'PAUSED' };
+    const CANVAS_STATES = { OFFENSE_LIVE: 'OFFENSE_LIVE', SHOT_METER: 'SHOT_METER', BALL_IN_PASS: 'BALL_IN_PASS', BALL_IN_SHOT: 'BALL_IN_SHOT', BALL_REBOUND: 'BALL_REBOUND', CELEBRATION: 'CELEBRATION', PAUSED: 'PAUSED' };
 
     function canvasShotZone(point) {
       const { x, y } = point;
@@ -3086,13 +3090,13 @@
       canvasMessage(`${from.name} pasa a ${target.name}.`);
     }
 
-    function canvasShoot() {
+    function startCanvasShotMeter() {
       const state = simulationState.canvas;
       if (!state || state.mode !== CANVAS_STATES.OFFENSE_LIVE || simulationState.possession !== 'A') return;
       const shooter = state.players.find(player => player.name === simulationState.activePlayer);
       if (!shooter) return;
 
-      // 1. Antes de calcular el tiro, cualquier defensor en rango frontal/lateral da un paso hacia el tirador (closeout)
+      // 1. Los defensores cercanos dan el paso de punteo (closeout) en cuanto armas el brazo
       const preContest = evaluateMultiContest(state, shooter);
       preContest.contesters.forEach((c, idx) => {
         const closeoutStep = idx === 0 ? 30 : 24;
@@ -3105,7 +3109,151 @@
         }
       });
 
-      // 2. Calculamos y congelamos la probabilidad exacta en el instante de soltar el tiro
+      // 2. Obtenemos la probabilidad real (0.10 a 0.86) según atributos, distancia y punteo
+      const shotInfo = canvasProbability(shooter);
+      const chance = shotInfo.chance;
+
+      // Normalizamos la facilidad del tiro entre 0 (muy difícil/punteado) y 1 (muy fácil/99 atributo)
+      const ease = clamp((chance - 0.12) / 0.68, 0, 1);
+
+      // Duración de subida hasta el tope:
+      // Tiro muy difícil (ease=0) -> 350ms (rapidísimo) | Tiro muy fácil (ease=1) -> 680ms (lento y cómodo)
+      const chargeDurationMs = Math.round(350 + ease * 330);
+
+      // Tamaño de la zona verde en la cima (de 0 a 1):
+      // Tiro muy difícil (ease=0) -> 0.045 (4.5% del tope) | Tiro muy fácil (ease=1) -> 0.21 (21% del tope)
+      const greenWindow = Number((0.045 + ease * 0.165).toFixed(3));
+      const greenThreshold = 1 - greenWindow;
+
+      shooter.vx = 0;
+      shooter.vy = 0;
+
+      state.shotMeter = {
+        shooter,
+        anchorX: shooter.x,
+        anchorY: shooter.y,
+        shotInfo,
+        startedAt: performance.now(),
+        chargeDurationMs,
+        greenThreshold,
+        greenWindow,
+        value: 0,
+        direction: 1, // 1 subiendo hacia el tope, -1 bajando tras pasarse
+        released: false,
+        isGreen: false,
+        releaseLabel: ''
+      };
+      state.mode = CANVAS_STATES.SHOT_METER;
+    }
+
+    function releaseCanvasShotMeter(forcedLate = false) {
+      const state = simulationState.canvas;
+      if (!state || state.mode !== CANVAS_STATES.SHOT_METER || !state.shotMeter) return;
+
+      const meter = state.shotMeter;
+      const shooter = meter.shooter;
+
+      // Recalcular punteo final por si algún defensor más llegó durante el armado del tiro
+      const liveShotInfo = canvasProbability(shooter);
+      const finalChance = liveShotInfo.chance;
+      const finalEase = clamp((finalChance - 0.12) / 0.68, 0, 1);
+      const finalGreenThreshold = 1 - (0.045 + finalEase * 0.165);
+
+      const val = meter.value;
+      // Es VERDE si suelta la F estando dentro de la franja verde del tope
+      const isGreen = !forcedLate && val >= finalGreenThreshold;
+
+      let timingTag = '';
+      let timingColor = '#ff4d4d'; // Rojo por defecto
+
+      if (isGreen) {
+        timingTag = '¡EXCELENTE!';
+        timingColor = '#2eff7b'; // Verde brillante
+      } else if (forcedLate || meter.direction === -1) {
+        if (val > 0.75) {
+          timingTag = 'Tarde';
+          timingColor = '#ffb443'; // Naranja (casi)
+        } else {
+          timingTag = 'Muy tarde';
+          timingColor = '#ff4d4d'; // Rojo
+        }
+      } else {
+        if (val > 0.72) {
+          timingTag = 'Pronto';
+          timingColor = '#ffb443'; // Naranja (casi)
+        } else {
+          timingTag = 'Muy pronto';
+          timingColor = '#ff4d4d'; // Rojo
+        }
+      }
+
+      const timingHtml = `<strong style="color:${timingColor}">${timingTag}</strong>`;
+      const shotType = liveShotInfo.type;
+      const contesterNames = (liveShotInfo.contesters || []).map(c => cleanPlayerName(c.defender.name));
+      const primaryContesterObj = liveShotInfo.primaryDefender || state.players.find(p => p.name === getDefenderForAttacker('A', shooter.name));
+
+      // Guardamos una copia visual del resultado de la barra durante el vuelo del balón
+      state.lastMeterFeedback = {
+        x: shooter.x,
+        y: shooter.y,
+        value: val,
+        greenThreshold: finalGreenThreshold,
+        isGreen,
+        timingTag,
+        timingColor,
+        until: performance.now() + 950
+      };
+      state.shotMeter = null;
+
+      state.ball = {
+        x: shooter.x,
+        y: shooter.y,
+        shooter,
+        shotType,
+        shotChance: isGreen ? 1.0 : 0.0,
+        naturalChance: finalChance,
+        isMeterShot: true,
+        isGreenRelease: isGreen,
+        timingTag,
+        timingColor,
+        timingHtml,
+        contesterNames,
+        primaryDefenderName: primaryContesterObj ? primaryContesterObj.name : getDefenderForAttacker('A', shooter.name),
+        started: performance.now()
+      };
+
+      state.mode = CANVAS_STATES.BALL_IN_SHOT;
+      state.shotResolved = false;
+      registerAttempt('A', shooter.name, shotType);
+
+      const contestTag = contesterNames.length >= 2
+        ? ` (punteado por ${contesterNames.slice(0, 2).join(' y ')})`
+        : '';
+      canvasMessage(`${cleanPlayerName(shooter.name)} prepara ${getShotPhrase(shotType)}${contestTag}.`);
+    }
+
+    function canvasShoot() {
+      if (simulationState.settings?.shotMode === 'meter') {
+        startCanvasShotMeter();
+        return;
+      }
+      const state = simulationState.canvas;
+      if (!state || state.mode !== CANVAS_STATES.OFFENSE_LIVE || simulationState.possession !== 'A') return;
+      const shooter = state.players.find(player => player.name === simulationState.activePlayer);
+      if (!shooter) return;
+
+      const preContest = evaluateMultiContest(state, shooter);
+      preContest.contesters.forEach((c, idx) => {
+        const closeoutStep = idx === 0 ? 30 : 24;
+        if (c.dist > 78) {
+          const ux = (shooter.x - c.defender.x) / (c.dist || 1);
+          const uy = (shooter.y - c.defender.y) / (c.dist || 1);
+          c.defender.x += ux * Math.min(closeoutStep, c.dist - 74);
+          c.defender.y += uy * Math.min(closeoutStep, c.dist - 74);
+          canvasClamp(c.defender);
+        }
+      });
+
       const shotInfo = canvasProbability(shooter);
       const shotType = shotInfo.type;
       const contesterNames = (shotInfo.contesters || []).map(c => cleanPlayerName(c.defender.name));
@@ -3182,7 +3330,7 @@
         const rating = (stats.pts || 0) + reb + (stats.ast || 0) + (stats.stl || 0) + (stats.blk || 0) - (stats.tov || 0);
         return `<tr><td>${escapeHtml(cleanPlayerName(player))}</td><td>${stats.pts || 0}</td><td>${reb}</td><td>${stats.ast || 0}</td><td>${stats.stl || 0}</td><td>${stats.blk || 0}</td><td>${stats.tov || 0}</td><td>${stats.fgm || 0}/${stats.fga || 0} (${fgp}%)</td><td>${stats.tpm || 0}/${stats.tpa || 0} (${tpp}%)</td><td>${rating}</td></tr>`;
       }).join('');
-      const table = team => `<h4>Equipo ${team} · ${simulationState.score[team]} puntos</h4><table class="sim-canvas-box"><thead><tr><th>Jugador</th><th>PTS</th><th>REB</th><th>AST</th><th>ROB</th><th>TAP</th><th>TOV</th><th>TC</th><th>3P</th><th>VAL</th></tr></thead><tbody>${buildRows(team)}</tbody></table>`;
+      const table = team => `<h4>Equipo ${team} · ${simulationState.score[team]} puntos</h4><table class="sim-canvas-box"><thead><tr><th>Jugador</th><th>PTS</th><th>REB</th><th>AST</th><th>ROB</th><th>TAP</th><th>PER</th><th>TC</th><th>3P</th><th>VAL</th></tr></thead><tbody>${buildRows(team)}</tbody></table>`;
       return `<div class="sim-canvas-pause" id="sim-canvas-pause"><div class="sim-canvas-pause-card"><h3>Partido pausado · ${simulationState.score.A} - ${simulationState.score.B}</h3><p class="sim-canvas-help">WASD/Flechas: mover · Espacio: pase · F: tiro · R: bloqueo · Q: reanudar</p><div class="sim-canvas-pause-actions"><button type="button" class="sim-action-button primary" id="sim-canvas-resume">Reanudar partido</button><button type="button" class="sim-action-button" id="sim-canvas-exit">Salir al menú</button></div>${table('A')}${table('B')}</div></div>`;
     }
 
@@ -3367,7 +3515,13 @@
         else if (key === 'r') canvasPickAndRoll();
         else if (key === 'q') canvasTogglePause();
       };
-      state.onKeyUp = event => CANVAS_KEYS.delete(event.key.toLowerCase());
+      state.onKeyUp = event => {
+        const key = event.key.toLowerCase();
+        CANVAS_KEYS.delete(key);
+        if (key === 'f' && state.mode === CANVAS_STATES.SHOT_METER) {
+          releaseCanvasShotMeter(false);
+        }
+      };
       document.addEventListener('keydown', state.onKeyDown);
       document.addEventListener('keyup', state.onKeyUp);
       canvas.focus();
@@ -3387,7 +3541,38 @@
       if (state.mode === CANVAS_STATES.PAUSED || simulationState.matchOver) return;
       if (state.mode === CANVAS_STATES.CELEBRATION) return;
       const active = state.players.find(player => player.name === simulationState.activePlayer);
+      // --- ACTUALIZACIÓN DE LA BARRA DE TIRO (MODO TIMING 2K) ---
+      if (state.mode === CANVAS_STATES.SHOT_METER && state.shotMeter) {
+        const meter = state.shotMeter;
+        const elapsed = time - meter.startedAt;
+        const rawProgress = elapsed / meter.chargeDurationMs;
 
+        // Sube de 0 a 1; si el usuario sigue apretando la F pasado el tope, rebota y baja de 1 a 0
+        if (rawProgress <= 1) {
+          meter.value = clamp(rawProgress, 0, 1);
+          meter.direction = 1;
+        } else {
+          const returnProgress = (rawProgress - 1) * 1.25; // Baja un 25% más rápido tras pasarse
+          meter.value = clamp(1 - returnProgress, 0, 1);
+          meter.direction = -1;
+        }
+
+        // Actualizar umbral verde en vivo por si un defensor se acerca mientras cargas
+        meter.shooter.x = meter.anchorX;
+        meter.shooter.y = meter.anchorY;
+        const liveProb = canvasProbability(meter.shooter);
+        const liveEase = clamp((liveProb.chance - 0.12) / 0.68, 0, 1);
+        meter.greenWindow = 0.045 + liveEase * 0.165;
+        meter.greenThreshold = 1 - meter.greenWindow;
+
+        state.ball = { x: meter.shooter.x + 42, y: meter.shooter.y - 36 };
+
+        // Si no suelta la F y la barra vuelve abajo del todo (o se agota el reloj), suelta forzado (fallo)
+        simulationState.shotClock = Math.max(0, simulationState.shotClock - (dt / 60));
+        if ((meter.direction === -1 && meter.value <= 0.08) || simulationState.shotClock <= 0) {
+          releaseCanvasShotMeter(true);
+        }
+      }
       // =========================================================================
       // 1. CONTROL DEL JUGADOR ACTIVO (EN ATAQUE VIVO, VUELO DE TIRO Y REBOTE)
       // =========================================================================
@@ -3510,7 +3695,7 @@
               const shooterThreat = (atkStats.triple + atkStats.tiro_media_distancia) / 2;
               const defAggression = defStats.defensa_exterior;
               baseDistance = clamp(170 - (shooterThreat * 0.45) + ((80 - defAggression) * 0.4), 100, 185);
-              if (state.mode === CANVAS_STATES.BALL_IN_SHOT) baseDistance = 80;
+              if (state.mode === CANVAS_STATES.BALL_IN_SHOT || state.mode === CANVAS_STATES.SHOT_METER) baseDistance = 80;
             } else {
               baseDistance = 210;
             }
@@ -3706,6 +3891,8 @@
       // =========================================================================
       // 3. COLISIONES FÍSICAS ENTRE JUGADORES (BOX OUT NATURAL)
       // =========================================================================
+      const anchoredShooter = state.mode === CANVAS_STATES.SHOT_METER ? state.shotMeter?.shooter : null;
+
       for (let first = 0; first < state.players.length; first++) {
         for (let second = first + 1; second < state.players.length; second++) {
           const a = state.players[first];
@@ -3715,13 +3902,31 @@
           const distance = Math.hypot(dx, dy) || 1;
           const minimum = a.r + b.r + 5;
           if (distance < minimum) {
-            const push = (minimum - distance) / 2;
-            a.x -= dx / distance * push;
-            a.y -= dy / distance * push;
-            b.x += dx / distance * push;
-            b.y += dy / distance * push;
-            canvasClamp(a);
-            canvasClamp(b);
+            const overlap = minimum - distance;
+            const nx = dx / distance;
+            const ny = dy / distance;
+
+            // Un jugador en el aire tirando o con bloqueo plantado NO puede ser desplazado
+            const aFixed = (a === anchoredShooter) || Boolean(a.screenPlanted);
+            const bFixed = (b === anchoredShooter) || Boolean(b.screenPlanted);
+
+            if (aFixed && !bFixed) {
+              b.x += nx * overlap;
+              b.y += ny * overlap;
+              canvasClamp(b);
+            } else if (bFixed && !aFixed) {
+              a.x -= nx * overlap;
+              a.y -= ny * overlap;
+              canvasClamp(a);
+            } else if (!aFixed && !bFixed) {
+              const push = overlap / 2;
+              a.x -= nx * push;
+              a.y -= ny * push;
+              b.x += nx * push;
+              b.y += ny * push;
+              canvasClamp(a);
+              canvasClamp(b);
+            }
           }
         }
       }
@@ -3770,15 +3975,20 @@
 
           const cleanDef = cleanPlayerName(defender);
 
-          // Etiqueta corta para los porcentajes, banners de canasta y tarjeta ganadora
+          // Etiqueta limpia para los banners de canasta y tarjeta de Canasta Ganadora (sin ¡EXCELENTE!)
           const contestTag = contesters.length >= 2
-            ? `Doble punteo`
+            ? `Doble punteo (${contesters.slice(0, 2).join(' y ')}${contesters.length > 2 ? ' +ayuda' : ''})`
             : (contesters.length === 1 ? `Punteado` : 'Tiro abierto');
 
-          // Frase narrativa para el texto del Play-by-Play
+          // Frase limpia para cuando entra la canasta
           const contestOutcomeText = contesters.length >= 2
             ? `Doble punteo de ${contesters.slice(0, 2).join(' y ')}${contesters.length > 2 ? ' (+ayuda)' : ''}.`
             : (contesters.length === 1 ? `Punteado por ${contesters[0]}.` : `Tiro abierto.`);
+
+          // Frase con el fallo de timing (Pronto / Tarde) exclusiva para cuando se falla el tiro en modo barra
+          const missOutcomeText = state.ball.isMeterShot && state.ball.timingHtml
+            ? `${state.ball.timingHtml} · ${contestOutcomeText}`
+            : contestOutcomeText;
 
           if (blocked) {
             updateBoxScore('B', defender, 'blk');
@@ -3805,7 +4015,8 @@
             assignAssist('A', passer, shooter.name);
             simulationState.lastPass = null;
 
-            const shotPct = Math.round(shotChance * 100);
+            const displayChance = state.ball.isMeterShot ? (state.ball.naturalChance ?? 0.5) : shotChance;
+            const shotPct = Math.round(displayChance * 100);
             const missPct = 100 - shotPct;
 
             const cleanScorer = cleanPlayerName(shooter.name);
@@ -3862,8 +4073,7 @@
               successChance: shotChance * 100,
               failChance: missChance * 100,
               actionText: `${cleanPlayerName(shooter.name)} falla ${getShotPhrase(state.ball.shotType)}.`,
-              outcomeText: contestOutcomeText,
-              contestTag
+              outcomeText: missOutcomeText
             });
             canvasMessage(missMsg, 'warning', `${cleanPlayerName(shooter.name)} falla ${getShotPhrase(state.ball.shotType)} (${contestTag}).`);
           }
@@ -3976,6 +4186,91 @@
       if (state.ball) {
         const radius = state.mode === CANVAS_STATES.BALL_IN_SHOT ? 24 + Math.sin(clamp((time - (state.ball.started || time)) / 950, 0, 1) * Math.PI) * 12 : 24;
         ctx.fillStyle = '#ea580c'; ctx.strokeStyle = '#111'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(state.ball.x, state.ball.y, radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      }
+      // ==========================================================
+      // DIBUJO DE LA BARRA DE TIRO (MODO TIMING 2K)
+      // ==========================================================
+      const activeMeter = (state.mode === CANVAS_STATES.SHOT_METER && state.shotMeter)
+        ? {
+            x: state.shotMeter.shooter.x,
+            y: state.shotMeter.shooter.y,
+            value: state.shotMeter.value,
+            greenThreshold: state.shotMeter.greenThreshold,
+            isGreen: state.shotMeter.value >= state.shotMeter.greenThreshold,
+            timingTag: state.shotMeter.value >= state.shotMeter.greenThreshold ? '¡VERDE!' : '',
+            timingColor: '#2eff7b'
+          }
+        : (state.lastMeterFeedback && time < state.lastMeterFeedback.until ? state.lastMeterFeedback : null);
+
+      if (activeMeter) {
+        ctx.save();
+        const barW = 26;
+        const barH = 150;
+        // Colocar la barra a la derecha del jugador (o a la izquierda si está muy pegado a la banda derecha)
+        const offsetX = activeMeter.x > 1980 ? -90 : 66;
+        const barX = activeMeter.x + offsetX;
+        const barY = activeMeter.y - barH / 2 - 10;
+
+        // Resplandor verde si se ha soltado en verde o está ahora mismo dentro de la zona verde
+        if (activeMeter.isGreen) {
+          ctx.shadowColor = '#39ff88';
+          ctx.shadowBlur = 28;
+        }
+
+        // 1. Fondo oscuro de la barra
+        ctx.fillStyle = '#091216ee';
+        ctx.strokeStyle = activeMeter.isGreen ? '#39ff88' : '#e2e8f0';
+        ctx.lineWidth = 4;
+        if (ctx.roundRect) {
+          ctx.beginPath();
+          ctx.roundRect(barX, barY, barW, barH, 12);
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          ctx.fillRect(barX, barY, barW, barH);
+          ctx.strokeRect(barX, barY, barW, barH);
+        }
+        ctx.shadowBlur = 0;
+
+        // 2. Zona objetivo VERDE marcada en la cima de la barra (para que veas el margen que tienes)
+        const greenZoneH = Math.max(6, (1 - activeMeter.greenThreshold) * (barH - 8));
+        const greenZoneY = barY + 4;
+        ctx.fillStyle = 'rgba(57, 255, 136, 0.28)';
+        ctx.fillRect(barX + 4, greenZoneY, barW - 8, greenZoneH);
+
+        // Línea divisoria blanca/verde donde empieza el verde
+        ctx.strokeStyle = '#39ff88';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(barX + 2, greenZoneY + greenZoneH);
+        ctx.lineTo(barX + barW - 2, greenZoneY + greenZoneH);
+        ctx.stroke();
+
+        // 3. Relleno progresivo según lo que llevas pulsado (Rojo -> Naranja -> Verde al final)
+        const innerH = barH - 8;
+        const fillH = clamp(activeMeter.value, 0, 1) * innerH;
+        const fillY = barY + 4 + (innerH - fillH);
+
+        if (fillH > 0) {
+          let fillColor = '#ff4d4d'; // Rojo abajo
+          if (activeMeter.value >= activeMeter.greenThreshold) {
+            fillColor = '#2eff7b';   // Verde brillante en la cima
+          } else if (activeMeter.value >= 0.50) {
+            fillColor = '#ffb443';   // Naranja en el tramo medio-alto
+          }
+          ctx.fillStyle = fillColor;
+          ctx.fillRect(barX + 4, fillY, barW - 8, fillH);
+        }
+
+        // 4. Etiqueta flotante encima de la barra (¡EXCELENTE! / Pronto / Tarde)
+        if (activeMeter.timingTag) {
+          ctx.font = '900 24px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillStyle = activeMeter.timingColor || (activeMeter.isGreen ? '#2eff7b' : '#ffb454');
+          ctx.fillText(activeMeter.timingTag, barX + barW / 2, barY - 14);
+        }
+
+        ctx.restore();
       }
       if (state.mode === CANVAS_STATES.CELEBRATION) {
         // Fondo oscurecido con viñeta
@@ -5040,7 +5335,7 @@
 
       // Si el balón suelto lo gana tu equipo (A), pasamos a la jugabilidad en pista
       if (winningTeam === 'A') {
-        switchToOffenseAfterDefense(recoveredPlayer, fullMsg, `¡TAPÓN! ${cleanPlayerName(defenderName)} tapona a ${cleanPlayerName(shooterName)} y recupera.`);
+        switchToOffenseAfterDefense(recoveredPlayer, fullMsg, `${cleanPlayerName(defenderName)} tapona a ${cleanPlayerName(shooterName)} y recupera.`);
         return;
       }
 
@@ -5912,13 +6207,17 @@
       if (!simulationState.previewTeamB.length) refreshOpponentPreview();
       const previewTeamB = simulationState.previewTeamB.map(name => cardById(norm(name)) || { name }).map(card => `<article class="ut-play-card"><img src="${cardImage(card)}" alt="CPU ${escapeHtml(card.name)}"><div class="ut-play-meta">${escapeHtml(obtenerPerfil(card.name).posicion)}</div></article>`).join('');
       const previewTeamA = simulationState.selectedTeamA.map((cardId, slotIndex) => { const card = cardById(cardId); return card ? `<article class="ut-play-card selected" data-ut-swap-slot="${slotIndex}"><img src="${cardImage(card)}" alt="${escapeHtml(cleanPlayerName(card.name))}"><div class="ut-play-meta">Cambiar por · ${escapeHtml(cleanPlayerName(card.name))} · ${escapeHtml(obtenerPerfil(card.name).posicion)}</div></article>` : ''; }).join('');
-      root.innerHTML = `<div class="ut-shell">${renderUltimateHeader()}${renderUltimateNav()}<div class="ut-title-row"><div><h2>Jugar</h2><p>Selecciona ${playersPerTeam} titulares. Pulsa una carta para cambiarla por otra de tu club.</p></div></div><div class="sim-config"><label for="sim-format-select">Formato<select id="sim-format-select">${SIMULATION_FORMAT_OPTIONS.map(option => `<option value="${option.value}" ${simulationState.settings.format === option.value ? 'selected' : ''}>${option.label}</option>`).join('')}</select></label><label for="sim-win-select">Victoria<select id="sim-win-select">${SIMULATION_WIN_OPTIONS.map(option => `<option value="${option.value}" ${simulationState.settings.winScore === option.score ? 'selected' : ''}>${option.label}</option>`).join('')}</select></label></div><div class="ut-match-preview"><div><div class="ut-side-label">TU EQUIPO · ${simulationState.selectedTeamA.length}/${playersPerTeam}</div><div class="ut-match-team">${previewTeamA || '<div class="ut-empty">Sin cartas</div>'}</div></div><span class="ut-vs">VS</span><div><div class="ut-side-label">RIVAL <button type="button" class="ut-dice" id="ut-reroll" aria-label="Cambiar rival" title="Cambiar rival">⚄</button></div><div class="ut-match-team">${previewTeamB}</div></div></div><div class="ut-actions sim-actions"><button type="button" class="ut-primary sim-action-button" id="sim-start-btn" ${enoughCards ? '' : 'disabled'}>Iniciar partido</button><button type="button" class="sim-action-button" data-ut-view="market">Ir al mercado</button></div>${enoughCards ? '' : `<div class="ut-error">Selecciona suficientes cartas para el formato ${format?.label || ''}, o consigue más en el Mercado.</div>`}</div>`;
+      root.innerHTML = `<div class="ut-shell">${renderUltimateHeader()}${renderUltimateNav()}<div class="ut-title-row"><div><h2>Jugar</h2><p>Selecciona ${playersPerTeam} titulares. Pulsa una carta para cambiarla por otra de tu club.</p></div></div><div class="sim-config"><label for="sim-format-select">Formato<select id="sim-format-select">${SIMULATION_FORMAT_OPTIONS.map(option => `<option value="${option.value}" ${simulationState.settings.format === option.value ? 'selected' : ''}>${option.label}</option>`).join('')}</select></label><label for="sim-win-select">Victoria<select id="sim-win-select">${SIMULATION_WIN_OPTIONS.map(option => `<option value="${option.value}" ${simulationState.settings.winScore === option.score ? 'selected' : ''}>${option.label}</option>`).join('')}</select></label><label for="sim-shotmode-select">Mecánica de tiro<select id="sim-shotmode-select">${SIMULATION_SHOT_MODE_OPTIONS.map(option => `<option value="${option.value}" ${(simulationState.settings.shotMode || 'classic') === option.value ? 'selected' : ''}>${option.label}</option>`).join('')}</select></label></div><div class="ut-match-preview"><div><div class="ut-side-label">TU EQUIPO · ${simulationState.selectedTeamA.length}/${playersPerTeam}</div><div class="ut-match-team">${previewTeamA || '<div class="ut-empty">Sin cartas</div>'}</div></div><span class="ut-vs">VS</span><div><div class="ut-side-label">RIVAL <button type="button" class="ut-dice" id="ut-reroll" aria-label="Cambiar rival" title="Cambiar rival">⚄</button></div><div class="ut-match-team">${previewTeamB}</div></div></div><div class="ut-actions sim-actions"><button type="button" class="ut-primary sim-action-button" id="sim-start-btn" ${enoughCards ? '' : 'disabled'}>Iniciar partido</button><button type="button" class="sim-action-button" data-ut-view="market">Ir al mercado</button></div>${enoughCards ? '' : `<div class="ut-error">Selecciona suficientes cartas para el formato ${format?.label || ''}, o consigue más en el Mercado.</div>`}</div>`;
       bindUltimateCommon(root);
       root.querySelectorAll('[data-ut-swap-slot]').forEach(card => card.addEventListener('click', () => openLineupSwap(Number(card.dataset.utSwapSlot))));
       root.querySelector('#sim-start-btn')?.addEventListener('click', startSimulationRoster);
       root.querySelector('#ut-reroll')?.addEventListener('click', () => { refreshOpponentPreview(); renderSimulationScreen(); });
       root.querySelector('#sim-format-select')?.addEventListener('change', event => { simulationState.settings.format = event.target.value; simulationState.previewTeamB = []; renderSimulationScreen(); });
       root.querySelector('#sim-win-select')?.addEventListener('change', event => { simulationState.settings.winScore = Number(event.target.value); renderSimulationScreen(); });
+      root.querySelector('#sim-shotmode-select')?.addEventListener('change', event => {
+        simulationState.settings.shotMode = event.target.value;
+        renderSimulationScreen();
+      });
     }
 
     function renderSimulationScreen() {
@@ -5954,16 +6253,9 @@
                 <button type="button" class="sim-main-button btn-accent" id="sim-start-btn">Jugar</button>
               </div>
               <div class="sim-config">
-                <label for="sim-format-select">Formato
-                  <select id="sim-format-select">
-                    ${SIMULATION_FORMAT_OPTIONS.map(option => `<option value="${option.value}" ${simulationState.settings.format === option.value ? 'selected' : ''}>${option.label}</option>`).join('')}
-                  </select>
-                </label>
-                <label for="sim-win-select">Victoria
-                  <select id="sim-win-select">
-                    ${SIMULATION_WIN_OPTIONS.map(option => `<option value="${option.value}" ${simulationState.settings.winScore === option.score ? 'selected' : ''}>${option.label}</option>`).join('')}
-                  </select>
-                </label>
+                <label for="sim-format-select">Formato<select id="sim-format-select">${SIMULATION_FORMAT_OPTIONS.map(option => `<option value="${option.value}" ${simulationState.settings.format === option.value ? 'selected' : ''}>${option.label}</option>`).join('')}</select></label>
+                <label for="sim-win-select">Victoria<select id="sim-win-select">${SIMULATION_WIN_OPTIONS.map(option => `<option value="${option.value}" ${simulationState.settings.winScore === option.score ? 'selected' : ''}>${option.label}</option>`).join('')}</select></label>
+                <label for="sim-shotmode-select">Mecánica de tiro<select id="sim-shotmode-select">${SIMULATION_SHOT_MODE_OPTIONS.map(option => `<option value="${option.value}" ${(simulationState.settings.shotMode || 'classic') === option.value ? 'selected' : ''}>${option.label}</option>`).join('')}</select></label>
               </div>
               <div class="sim-available">
                 <h3>Jugadores disponibles</h3>
@@ -6187,7 +6479,9 @@
       if (simulationState.phase === 'finished') {
         recordSimulationPlayerStats();
         if (!simulationState.rewardApplied) {
-          applyMatchReward().then(() => renderSimulationScreen());
+          applyMatchReward().then(() => {
+            if (simulationState.phase === 'lobby') renderSimulationScreen();
+          });
         }
         const is21 = Number(simulationState.settings?.winScore) === 21;
         const winCoins = is21 ? 500 : 300;
@@ -6302,11 +6596,15 @@
             </div>
           </div>
         `;
-        document.getElementById('sim-replay')?.addEventListener('click', () => { startSimulationRoster(); });
+        document.getElementById('sim-replay')?.addEventListener('click', () => {
+          clubState.loading = false;
+          startSimulationRoster();
+        });
         document.getElementById('sim-finish-lobby')?.addEventListener('click', () => {
-          simulationState.selectedTeamA = [];
-          simulationState.selectionFormat = null;
+          clubState.loading = false;
+          resetSimulationStateForNewMatch();
           simulationState.phase = 'lobby';
+          simulationState.clubView = 'play';
           renderSimulationScreen();
         });
         return;
