@@ -4308,6 +4308,8 @@
       simulationState.currentEvent = '';
       simulationState.boxScore = {};
       simulationState.messageQueue = [];
+      simulationState.selectedTeamA = [];
+      simulationState.selectionFormat = null;
       simulationState.matchups = { A: {}, B: {} };
       simulationState.shotClock = 24;
       simulationState.shotClockLimit = 24;
@@ -5038,7 +5040,7 @@
 
       // Si el balón suelto lo gana tu equipo (A), pasamos a la jugabilidad en pista
       if (winningTeam === 'A') {
-        switchToOffenseAfterDefense(recoveredPlayer, fullMsg, `${recoveredPlayer} recupera el balón suelto.`);
+        switchToOffenseAfterDefense(recoveredPlayer, fullMsg, `¡TAPÓN! ${cleanPlayerName(defenderName)} tapona a ${cleanPlayerName(shooterName)} y recupera.`);
         return;
       }
 
@@ -5274,6 +5276,11 @@
     function bindUltimateCommon(root) {
       root.querySelectorAll('[data-ut-view]').forEach(button => button.addEventListener('click', () => {
         if (!confirmDiscardLineupChanges()) return;
+        // Si salimos de la vista 'play' o entramos de nuevo a ella, limpiamos la selección temporal
+        if (simulationState.clubView === 'play' || button.dataset.utView === 'play') {
+          simulationState.selectedTeamA = [];
+          simulationState.selectionFormat = null;
+        }
         simulationState.clubView = button.dataset.utView;
         renderSimulationScreen();
       }));
@@ -5359,7 +5366,6 @@
         }
         simulationState.selectedTeamA[slotIndex] = pickedId;
 
-        saveCurrentLineup(simulationState.settings.format, simulationState.selectedTeamA, false);
         modal.remove();
         renderSimulationScreen();
       });
@@ -6297,7 +6303,12 @@
           </div>
         `;
         document.getElementById('sim-replay')?.addEventListener('click', () => { startSimulationRoster(); });
-        document.getElementById('sim-finish-lobby')?.addEventListener('click', () => { simulationState.phase = 'lobby'; renderSimulationScreen(); });
+        document.getElementById('sim-finish-lobby')?.addEventListener('click', () => {
+          simulationState.selectedTeamA = [];
+          simulationState.selectionFormat = null;
+          simulationState.phase = 'lobby';
+          renderSimulationScreen();
+        });
         return;
       }
     }
