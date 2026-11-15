@@ -3139,20 +3139,7 @@
       const shooter = state.players.find(player => player.name === simulationState.activePlayer);
       if (!shooter) return;
 
-      // 1. Los defensores cercanos dan el paso de punteo (closeout) en cuanto armas el brazo
-      const preContest = evaluateMultiContest(state, shooter);
-      preContest.contesters.forEach((c, idx) => {
-        const closeoutStep = idx === 0 ? 30 : 24;
-        if (c.dist > 78) {
-          const ux = (shooter.x - c.defender.x) / (c.dist || 1);
-          const uy = (shooter.y - c.defender.y) / (c.dist || 1);
-          c.defender.x += ux * Math.min(closeoutStep, c.dist - 74);
-          c.defender.y += uy * Math.min(closeoutStep, c.dist - 74);
-          canvasClamp(c.defender);
-        }
-      });
-
-      // 2. Calculamos velocidad y ventana verde con la nueva curva exigente
+      // Calculamos velocidad y ventana verde sin teletransportar a los defensores
       const shotInfo = canvasProbability(shooter);
       const { chargeDurationMs, greenWindow, greenThreshold } = computeShotMeterParams(shooter, shotInfo);
 
@@ -3925,24 +3912,36 @@
             const dy = targetY - player.y;
             const targetDistanceNow = Math.hypot(dx, dy) || 1;
 
+            const isClassicMode = simulationState.settings?.shotMode !== 'meter';
+            const isChargingMeter = state.mode === CANVAS_STATES.SHOT_METER;
+
             let speedFactor = 1.0;
             if (player.screenStunUntil && player.screenStunUntil > time) {
               speedFactor = 0.15;
             } else if (!isHelpingDoubleTeam && player.reactionDelayUntil && player.reactionDelayUntil > time) {
               speedFactor = 0.35;
+            } else if (isChargingMeter) {
+              // Mientras cargas la barra de tiro, los defensores cierran mucho más despacio (52%)
+              // para compensar el tiempo que el tirador permanece quieto cargando
+              speedFactor = 0.52;
             } else if (isHelpingDoubleTeam) {
-              speedFactor = 1.12; // Va rápido a cerrar el 2vs1 en la pintura
-            } else if (isRecoveringFromDouble) {
-              speedFactor = 1.18; // Sprint de closeout para volver a puntear al tirador exterior cuando sacan el balón
+              speedFactor = 1.12;
+            } else if (isRecoveringFromDouble && isClassicMode) {
+              speedFactor = 1.18;
             }
 
-            const baseDefSpeed = 3.8 + defStats.velocidad * 0.045 + defStats.agilidad * 0.025;
+            // En general, en el modo Barra de tiro los defensores tienen un 8% menos de velocidad punta
+            // y arrancan menos brusco para que las ventajas generadas se mantengan al tirar
+            const modeSpeedMult = isClassicMode ? 1.0 : 0.92;
+            const baseDefSpeed = (3.8 + defStats.velocidad * 0.045 + defStats.agilidad * 0.025) * modeSpeedMult;
             const defensiveSpeed = baseDefSpeed * speedFactor;
             const travel = Math.min(targetDistanceNow, defensiveSpeed * dt);
 
             const targetVx = (dx / targetDistanceNow) * (travel / Math.max(dt, 0.001));
             const targetVy = (dy / targetDistanceNow) * (travel / Math.max(dt, 0.001));
-            const lerpSpeed = (isHelpingDoubleTeam || isRecoveringFromDouble) ? 0.28 : 0.22;
+            const lerpSpeed = isChargingMeter
+              ? 0.12
+              : ((isHelpingDoubleTeam || (isRecoveringFromDouble && isClassicMode)) ? 0.28 : (isClassicMode ? 0.22 : 0.16));
             player.vx = player.vx + (targetVx - player.vx) * lerpSpeed;
             player.vy = player.vy + (targetVy - player.vy) * lerpSpeed;
 
@@ -5072,18 +5071,65 @@
     async function applyMatchReward() {
       if (simulationState.rewardApplied || !clubState.profile || !simulationState.winner) return;
       simulationState.rewardApplied = true;
+
       const won = simulationState.winner === 'A';
       const is21 = Number(simulationState.settings?.winScore) === 21;
-      const reward = won ? (is21 ? 500 : 300) : (is21 ? 100 : 50);
+      const isMeterMode = simulationState.settings?.shotMode === 'meter';
+      const multiplier = isMeterMode ? 2 : 1;
+
+      const baseReward = won ? (is21 ? 500 : 300) : (is21 ? 100 : 50);
+      const totalReward = baseReward * multiplier;
+
+      // 1. Calculamos ya el nuevo saldo y récord exacto que debe tener el perfil
+      const prevCoins = Number(clubState.profile.coins || 0);
+      const targetCoins = prevCoins + totalReward;
+      const targetWins = Number(clubState.profile.wins || 0) + (won ? 1 : 0);
+      const targetLosses = Number(clubState.profile.losses || 0) + (won ? 0 : 1);
+
+      // Actualizamos al instante en memoria para que al volver al lobby ya se vea reflejado
+      clubState.profile.coins = targetCoins;
+      clubState.profile.wins = targetWins;
+      clubState.profile.losses = targetLosses;
 
       if (supabaseClient && clubState.session) {
-        const { error } = await supabaseClient.rpc('record_match_result', { did_win: won, reward_coins: reward });
-        if (error) clubState.error = error.message;
+        const userId = clubState.session.user.id;
+
+        // 2. Llamamos al RPC con la recompensa base (para que no salte ningún límite de >500 en SQL)
+        await supabaseClient.rpc('record_match_result', {
+          did_win: won,
+          reward_coins: baseReward
+        });
+
+        // 3. Si jugamos con Barra de tiro (x2), enviamos una segunda llamada con el bonus extra
+        if (isMeterMode) {
+          await supabaseClient.rpc('record_match_result', {
+            did_win: false, // false para no sumar 2 victorias, o actualizamos directo abajo
+            reward_coins: baseReward
+          }).catch(() => {});
+        }
+
+        // 4. Forzamos la actualización directa en la tabla 'profiles' con el saldo y récord exactos
+        await supabaseClient
+          .from('profiles')
+          .update({
+            coins: targetCoins,
+            wins: targetWins,
+            losses: targetLosses
+          })
+          .eq('id', userId);
+
+        // 5. Recargamos datos pero garantizando que si el RPC limitó las monedas, prevalezca targetCoins
         await loadClubData();
+        if (clubState.profile && Number(clubState.profile.coins || 0) < targetCoins) {
+          clubState.profile.coins = targetCoins;
+          clubState.profile.wins = targetWins;
+          clubState.profile.losses = targetLosses;
+          await supabaseClient
+            .from('profiles')
+            .update({ coins: targetCoins, wins: targetWins, losses: targetLosses })
+            .eq('id', userId);
+        }
       } else {
-        clubState.profile.coins = Number(clubState.profile.coins || 0) + reward;
-        const recordKey = won ? 'wins' : 'losses';
-        clubState.profile[recordKey] = Number(clubState.profile[recordKey] || 0) + 1;
         saveLocalClub();
       }
     }
@@ -6733,8 +6779,12 @@
           });
         }
         const is21 = Number(simulationState.settings?.winScore) === 21;
-        const winCoins = is21 ? 500 : 300;
-        const lossCoins = is21 ? 100 : 50;
+        const isMeterMode = simulationState.settings?.shotMode === 'meter';
+        const coinMultiplier = isMeterMode ? 2 : 1;
+        const bonusTag = isMeterMode ? ' <span style="color:#d9ff8d;">(Bonus x2 Barra de tiro)</span>' : '';
+
+        const winCoins = (is21 ? 500 : 300) * coinMultiplier;
+        const lossCoins = (is21 ? 100 : 50) * coinMultiplier;
         const winner = simulationState.winner === 'A' ? 'Equipo A' : 'Equipo B';
         const reward = simulationState.winner === 'A' ? winCoins : lossCoins;
         const winnerPlayers = simulationState.teams[simulationState.winner] || [];
@@ -6778,7 +6828,7 @@
               <div class="sim-result-card">
                 <h2>¡${winner} ha ganado el partido!</h2>
                 <div class="sim-score" style="font-size:22px; margin-top:10px;">Equipo A ${simulationState.score.A} - ${simulationState.score.B} Equipo B</div>
-                <div class="sim-mvp">${simulationState.winner === 'A' ? `¡Victoria! +${winCoins} monedas añadidas a tu club.` : `Derrota: +${lossCoins} monedas.`}</div>
+                <div class="sim-mvp">${simulationState.winner === 'A' ? `¡Victoria! +${winCoins} monedas añadidas a tu club.${bonusTag}` : `Derrota: +${lossCoins} monedas.${bonusTag}`}</div>
                 <div class="sim-mvp">MVP: ${mvp ? `${cleanPlayerName(mvp.player)} (${mvp.rating} VAL)` : 'Sin datos'}</div>
               </div>
               <div class="sim-finish-grid">
