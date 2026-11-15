@@ -2878,6 +2878,10 @@
         lastAttackerVx: 0,         // Para detectar cambios bruscos de dirección
         lastAttackerVy: 0,
         defensiveStanceDist: 140,  // Distancia personalizada de flotación
+        zoneTime: 0,               // <-- Segundos acumulados en zona de bandeja
+        zoneCountStarted: false,   // <-- True cuando el jugador con balón ya ha plantado los pies
+        isClearingDefZone: false,  // <-- True cuando el defensor sale a limpiar los 5s
+        defClearTarget: null,
         phase: index * 1.7 
       };
     }
@@ -2911,6 +2915,11 @@
         player.screenAnchorX = 0;
         player.screenAnchorY = 0;
         player.paintStayUntil = 0;
+        player.paintStayUntil = 0;
+        player.zoneTime = 0;
+        player.zoneCountStarted = false;
+        player.isClearingDefZone = false;
+        player.defClearTarget = null;
 
         if (player.team === 'A') {
           const index = user.indexOf(player.name);
@@ -3501,6 +3510,9 @@
                 <div class="sim-canvas-shotclock" id="sim-canvas-shotclock" style="display:flex; align-items:center; gap:6px; font-size:clamp(16px, 2.2vw, 26px); font-weight:800; color:#d9ff8d; border-left:1px solid #315c59; padding-left:10px;">
                   ⏱ <span id="sim-shotclock-val">24</span>
                 </div>
+                <div id="sim-canvas-zoneclock" style="display:none; align-items:center; gap:4px; font-size:12px; font-weight:800; color:#ffb454; background:#14282acc; border:1px solid #ffb454; border-radius:6px; padding:3px 8px; margin-left:4px;">
+                  Zona <span id="sim-zoneclock-val">3.0</span>s
+                </div>
               </div>
               <div class="sim-canvas-feedback" id="sim-canvas-feedback"></div>
             </div>
@@ -3643,11 +3655,103 @@
         if (state.mode === CANVAS_STATES.OFFENSE_LIVE) {
           state.ball = { x: active.x + 58, y: active.y - 8 };
         }
+        // --- REGLA DE 3 SEGUNDOS EN LA ZONA PARA EL JUGADOR CON BALÓN ---
+        if (state.mode === CANVAS_STATES.OFFENSE_LIVE) {
+          const inLayupZone = canvasShotZone(active) === 'bandeja_en_carrera';
+          const isPlanted = Math.hypot(active.vx, active.vy) < 0.1;
+
+          if (inLayupZone) {
+            // Empieza a contar en cuanto plantas los pies por primera vez; luego sigue contando aunque te muevas
+            if (isPlanted) {
+              active.zoneCountStarted = true;
+            }
+            if (active.zoneCountStarted) {
+              active.zoneTime = (active.zoneTime || 0) + (dt / 60);
+              if (active.zoneTime >= 3.0) {
+                active.zoneTime = 0;
+                active.zoneCountStarted = false;
+                updateBoxScore('A', active.name, 'tov');
+
+                const defCarrier = getDefenderForAttacker('A', active.name);
+                const cleanAct = cleanPlayerName(active.name);
+                canvasMessage(
+                  `¡Violación de 3 segundos en la zona! Pérdida de ${cleanAct}.`,
+                  'warning',
+                  `¡3 segundos en la zona de ${cleanAct}!`
+                );
+
+                simulationState.possession = 'B';
+                simulationState.activePlayer = defCarrier;
+                simulationState.userTurn = false;
+                simulationState.shotClock = 24;
+                simulationState.shotClockLimit = 24;
+
+                switchToDefensePbp();
+                return;
+              }
+            }
+          } else {
+            // Al pisar fuera de la zona de bandeja se resetea el contador
+            active.zoneTime = 0;
+            active.zoneCountStarted = false;
+          }
+        } else {
+          active.zoneTime = 0;
+          active.zoneCountStarted = false;
+        }
       }
 
       // =========================================================================
       // 2. MOVIMIENTO DE LA IA (DEFENSORES Y COMPAÑEROS SIN BALÓN)
       // =========================================================================
+      // --- EVALUACIÓN DINÁMICA DE 2 CONTRA 1 (DOUBLE TEAM EN ZONA DE BANDEJA) ---
+      let doubleTeamHelper = null;
+      const isLiveCarrierInLayupZone = Boolean(
+        active &&
+        simulationState.possession === 'A' &&
+        (state.mode === CANVAS_STATES.OFFENSE_LIVE || state.mode === CANVAS_STATES.SHOT_METER) &&
+        canvasShotZone(active) === 'bandeja_en_carrera'
+      );
+
+      if (isLiveCarrierInLayupZone) {
+        const primaryDefName = getDefenderForAttacker('A', active.name);
+        const atkStats = getSimulationStats(active.name);
+        const defStats = getSimulationStats(primaryDefName);
+
+        // Evaluamos superioridad interior (finalización + fuerza vs defensa interior + fuerza + tapón)
+        const atkInsidePower = (atkStats.bandeja_en_carrera * 0.45) + (atkStats.tiro_cercano * 0.30) + (atkStats.fuerza * 0.25);
+        const defInsidePower = (defStats.defensa_interior * 0.50) + (defStats.fuerza * 0.30) + (defStats.tapon * 0.20);
+        const mismatchDelta = atkInsidePower - defInsidePower;
+
+        // Probabilidad base 1vs1 sin ayudas
+        const rawBaseChance = 0.55 + ((atkStats.bandeja_en_carrera - defStats.defensa_interior) * 0.009);
+
+        // Salta el 2vs1 SOLO si el atacante supera claramente en atributos interiores/fuerza o probabilidad a su defensor actual
+        if (mismatchDelta >= 7 || rawBaseChance >= 0.60) {
+          const otherDefenders = state.players
+            .filter(p => p.team === 'B' && p.name !== primaryDefName)
+            .sort((a, b) => Math.hypot(a.x - active.x, a.y - active.y) - Math.hypot(b.x - active.x, b.y - active.y));
+
+          if (otherDefenders.length > 0) {
+            doubleTeamHelper = otherDefenders[0];
+          }
+        }
+      }
+
+      // Aviso en el Play-by-Play / HUD cuando salta un nuevo 2vs1
+      const currentDoubleKey = doubleTeamHelper && active ? `${doubleTeamHelper.name}->${active.name}` : null;
+      if (currentDoubleKey && state.lastDoubleTeamKey !== currentDoubleKey) {
+        state.lastDoubleTeamKey = currentDoubleKey;
+        const leftOpenName = getDefenderForAttacker('B', doubleTeamHelper.name);
+        canvasMessage(
+          `¡2 contra 1! ${cleanPlayerName(doubleTeamHelper.name)} va a la ayuda sobre ${cleanPlayerName(active.name)} y deja libre a ${cleanPlayerName(leftOpenName)}.`,
+          'info',
+          `¡2vs1 sobre ${cleanPlayerName(active.name)}! (${cleanPlayerName(leftOpenName)} libre)`
+        );
+      } else if (!currentDoubleKey) {
+        state.lastDoubleTeamKey = null;
+      }
+
       state.players.forEach(player => {
         // --- CASO ESPECIAL: EL BALÓN ESTÁ EN EL AIRE (TIRO) O REBOTANDO ---
         if (state.mode === CANVAS_STATES.BALL_IN_SHOT || state.mode === CANVAS_STATES.BALL_REBOUND) {
@@ -3657,10 +3761,11 @@
           const pStats = getSimulationStats(player.name);
           const rebAttr = player.team === 'A' ? pStats.rebote_ofensivo : pStats.rebote_defensivo;
 
-          // Si es el defensor del tirador, aguanta 350ms punteando el tiro antes de girar al rebote
+          // Si es el defensor del tirador (o estaba en el 2vs1 punteando), aguanta 350ms antes de girar al rebote
           if (state.mode === CANVAS_STATES.BALL_IN_SHOT && state.ball?.shooter) {
             const shooterDef = getDefenderForAttacker('A', state.ball.shooter.name);
-            if (player.name === shooterDef && (time - state.ball.started < 350)) {
+            const wasContesting = (state.ball.contesterNames || []).includes(cleanPlayerName(player.name));
+            if ((player.name === shooterDef || wasContesting) && (time - state.ball.started < 350)) {
               return;
             }
           }
@@ -3669,9 +3774,7 @@
 
           if (state.mode === CANVAS_STATES.BALL_IN_SHOT) {
             // FASE A: El balón vuela hacia el aro -> Cerrar el rebote / Cargar la pintura
-            // Cada jugador busca una posición en semicírculo bajo el aro según su phase
             const spreadAngle = (Math.PI * 0.22) + ((player.phase % 1.8) / 1.8) * (Math.PI * 0.56);
-            // Los defensores cierran más cerca del aro (box out ~165px), los atacantes entran a ~215px
             const boxOutRadius = player.team === 'B' ? 165 : 215;
             targetX = CANVAS_COURT.hoop.x + Math.cos(spreadAngle) * boxOutRadius * (player.phase % 2 > 1 ? 1 : -1);
             targetY = CANVAS_COURT.hoop.y + Math.sin(spreadAngle) * boxOutRadius;
@@ -3688,7 +3791,6 @@
           const dist = Math.hypot(dx, dy) || 1;
 
           if (dist > 25) {
-            // La velocidad de ir al rebote escala con la velocidad física y el instinto reboteador
             const crashSpeed = (3.4 + (pStats.velocidad * 0.04) + (rebAttr * 0.025)) * dt;
             const step = Math.min(dist, crashSpeed);
             const targetVx = (dx / dist) * (step / Math.max(dt, 0.001));
@@ -3702,47 +3804,123 @@
           return;
         }
 
-        // --- MOVIMIENTO NORMAL EN JUEGO VIVO (OFFENSE_LIVE) ---
+        // --- MOVIMIENTO NORMAL EN JUEGO VIVO (OFFENSE_LIVE / SHOT_METER / BALL_IN_PASS) ---
         if (player.team === 'B') {
+          // --- REGLA DE 5 SEGUNDOS EN LA ZONA PARA DEFENSORES (CPU) ---
+          if (state.mode === CANVAS_STATES.OFFENSE_LIVE) {
+            if (canvasShotZone(player) === 'bandeja_en_carrera') {
+              player.zoneTime = (player.zoneTime || 0) + (dt / 60);
+              if (player.zoneTime >= 5.0 && !player.isClearingDefZone) {
+                player.isClearingDefZone = true;
+                // Salir a la zona de tiro cercano más próxima (borde exterior de la zona de bandeja)
+                const clearX = player.x < 1100 ? 970 : (player.x > 1300 ? 1430 : player.x);
+                const clearY = Math.max(585, player.y);
+                player.defClearTarget = { x: clearX, y: clearY };
+              }
+            } else {
+              player.zoneTime = 0;
+              if (player.isClearingDefZone && player.defClearTarget) {
+                if (Math.hypot(player.x - player.defClearTarget.x, player.y - player.defClearTarget.y) < 35) {
+                  player.isClearingDefZone = false;
+                  player.defClearTarget = null;
+                }
+              } else {
+                player.isClearingDefZone = false;
+              }
+            }
+          } else {
+            player.zoneTime = 0;
+            player.isClearingDefZone = false;
+          }
+
+          if (player.isClearingDefZone && player.defClearTarget) {
+            const defStats = getSimulationStats(player.name);
+            const clearSpeed = (4.1 + defStats.velocidad * 0.045) * dt;
+            const dx = player.defClearTarget.x - player.x;
+            const dy = player.defClearTarget.y - player.y;
+            const dist = Math.hypot(dx, dy) || 1;
+            player.x += (dx / dist) * Math.min(dist, clearSpeed);
+            player.y += (dy / dist) * Math.min(dist, clearSpeed);
+            if (dist < 30 && canvasShotZone(player) !== 'bandeja_en_carrera') {
+              player.isClearingDefZone = false;
+              player.defClearTarget = null;
+              player.zoneTime = 0;
+            }
+            canvasClamp(player);
+            return;
+          }
           const marked = state.players.find(candidate => candidate.name === getDefenderForAttacker('B', player.name));
           if (marked) {
             const defStats = getSimulationStats(player.name);
             const atkStats = getSimulationStats(marked.name);
-            const isCarrier = marked.name === simulationState.activePlayer;
+            const isHelpingDoubleTeam = (player === doubleTeamHelper && active);
 
-            let baseDistance = 145;
-            if (isCarrier) {
-              const shooterThreat = (atkStats.triple + atkStats.tiro_media_distancia) / 2;
-              const defAggression = defStats.defensa_exterior;
-              baseDistance = clamp(170 - (shooterThreat * 0.45) + ((80 - defAggression) * 0.4), 100, 185);
-              if (state.mode === CANVAS_STATES.BALL_IN_SHOT || state.mode === CANVAS_STATES.SHOT_METER) baseDistance = 80;
+            let targetX, targetY;
+            let isRecoveringFromDouble = false;
+
+            if (isHelpingDoubleTeam) {
+              // POSICIÓN DE AYUDA 2VS1:
+              // Se coloca en el lado del aro pero ligeramente abierto hacia su propia marca (a 155px del balón).
+              // Así entra dentro del radio de Doble Punteo (<235px) sin hundirse debajo de la canasta,
+              // permitiéndole salir rápido al perímetro si el pívot saca el balón fuera.
+              player.wasDoublingUntil = time + 900;
+
+              const toHoopX = CANVAS_COURT.hoop.x - active.x;
+              const toHoopY = CANVAS_COURT.hoop.y - active.y;
+              const toHoopDist = Math.hypot(toHoopX, toHoopY) || 1;
+              const ux = toHoopX / toHoopDist;
+              const uy = toHoopY / toHoopDist;
+
+              // Vector perpendicular para abrirse un poco hacia el lado donde está su marca original
+              const sideSign = marked.x >= active.x ? 1 : -1;
+              const perpX = -uy * sideSign;
+              const perpY = ux * sideSign;
+
+              const helpFrontDist = (state.mode === CANVAS_STATES.SHOT_METER) ? 95 : 140;
+              const helpSideOffset = (state.mode === CANVAS_STATES.SHOT_METER) ? 45 : 68;
+
+              targetX = active.x + (ux * helpFrontDist) + (perpX * helpSideOffset);
+              targetY = active.y + (uy * helpFrontDist) + (perpY * helpSideOffset);
             } else {
-              baseDistance = 210;
-            }
+              // DEFENSA INDIVIDUAL A SU MARCA ASIGNADA (O RECUPERACIÓN TRAS PASAR EL BALÓN FUERA)
+              isRecoveringFromDouble = Boolean(player.wasDoublingUntil && player.wasDoublingUntil > time);
+              const isCarrier = marked.name === simulationState.activePlayer;
 
-            const atkSpeedNow = Math.hypot(marked.vx, marked.vy);
-            const atkSpeedPrev = Math.hypot(player.lastAttackerVx || 0, player.lastAttackerVy || 0);
-            const dotDirection = (marked.vx * (player.lastAttackerVx || 0)) + (marked.vy * (player.lastAttackerVy || 0));
-
-            const startedMoving = atkSpeedPrev < 0.15 && atkSpeedNow > 0.5;
-            const changedDirection = dotDirection < 0 && atkSpeedNow > 0.5;
-
-            if (isCarrier && (startedMoving || changedDirection)) {
-              const agilityAdvantage = (atkStats.agilidad * 0.6 + atkStats.velocidad * 0.4) - (defStats.defensa_exterior * 0.5 + defStats.agilidad * 0.5);
-              if (Math.random() < clamp(0.40 + (agilityAdvantage * 0.008), 0.20, 0.75)) {
-                const reactionLag = clamp(180 + (agilityAdvantage * 4), 100, 420);
-                player.reactionDelayUntil = time + reactionLag;
+              let baseDistance = 145;
+              if (isCarrier) {
+                const shooterThreat = (atkStats.triple + atkStats.tiro_media_distancia) / 2;
+                const defAggression = defStats.defensa_exterior;
+                baseDistance = clamp(170 - (shooterThreat * 0.45) + ((80 - defAggression) * 0.4), 100, 185);
+                if (state.mode === CANVAS_STATES.BALL_IN_SHOT || state.mode === CANVAS_STATES.SHOT_METER) baseDistance = 80;
+              } else {
+                baseDistance = 210;
               }
+
+              const atkSpeedNow = Math.hypot(marked.vx, marked.vy);
+              const atkSpeedPrev = Math.hypot(player.lastAttackerVx || 0, player.lastAttackerVy || 0);
+              const dotDirection = (marked.vx * (player.lastAttackerVx || 0)) + (marked.vy * (player.lastAttackerVy || 0));
+
+              const startedMoving = atkSpeedPrev < 0.15 && atkSpeedNow > 0.5;
+              const changedDirection = dotDirection < 0 && atkSpeedNow > 0.5;
+
+              if (isCarrier && (startedMoving || changedDirection)) {
+                const agilityAdvantage = (atkStats.agilidad * 0.6 + atkStats.velocidad * 0.4) - (defStats.defensa_exterior * 0.5 + defStats.agilidad * 0.5);
+                if (Math.random() < clamp(0.40 + (agilityAdvantage * 0.008), 0.20, 0.75)) {
+                  const reactionLag = clamp(180 + (agilityAdvantage * 4), 100, 420);
+                  player.reactionDelayUntil = time + reactionLag;
+                }
+              }
+              player.lastAttackerVx = marked.vx;
+              player.lastAttackerVy = marked.vy;
+
+              const toHoopX = CANVAS_COURT.hoop.x - marked.x;
+              const toHoopY = CANVAS_COURT.hoop.y - marked.y;
+              const toHoopDistance = Math.hypot(toHoopX, toHoopY) || 1;
+
+              targetX = marked.x + (toHoopX / toHoopDistance) * baseDistance;
+              targetY = marked.y + (toHoopY / toHoopDistance) * baseDistance;
             }
-            player.lastAttackerVx = marked.vx;
-            player.lastAttackerVy = marked.vy;
 
-            const toHoopX = CANVAS_COURT.hoop.x - marked.x;
-            const toHoopY = CANVAS_COURT.hoop.y - marked.y;
-            const toHoopDistance = Math.hypot(toHoopX, toHoopY) || 1;
-
-            const targetX = marked.x + (toHoopX / toHoopDistance) * baseDistance;
-            const targetY = marked.y + (toHoopY / toHoopDistance) * baseDistance;
             const dx = targetX - player.x;
             const dy = targetY - player.y;
             const targetDistanceNow = Math.hypot(dx, dy) || 1;
@@ -3750,8 +3928,12 @@
             let speedFactor = 1.0;
             if (player.screenStunUntil && player.screenStunUntil > time) {
               speedFactor = 0.15;
-            } else if (player.reactionDelayUntil && player.reactionDelayUntil > time) {
+            } else if (!isHelpingDoubleTeam && player.reactionDelayUntil && player.reactionDelayUntil > time) {
               speedFactor = 0.35;
+            } else if (isHelpingDoubleTeam) {
+              speedFactor = 1.12; // Va rápido a cerrar el 2vs1 en la pintura
+            } else if (isRecoveringFromDouble) {
+              speedFactor = 1.18; // Sprint de closeout para volver a puntear al tirador exterior cuando sacan el balón
             }
 
             const baseDefSpeed = 3.8 + defStats.velocidad * 0.045 + defStats.agilidad * 0.025;
@@ -3760,7 +3942,7 @@
 
             const targetVx = (dx / targetDistanceNow) * (travel / Math.max(dt, 0.001));
             const targetVy = (dy / targetDistanceNow) * (travel / Math.max(dt, 0.001));
-            const lerpSpeed = 0.22;
+            const lerpSpeed = (isHelpingDoubleTeam || isRecoveringFromDouble) ? 0.28 : 0.22;
             player.vx = player.vx + (targetVx - player.vx) * lerpSpeed;
             player.vy = player.vy + (targetVy - player.vy) * lerpSpeed;
 
@@ -3770,7 +3952,32 @@
         } else if (player !== active && state.mode === CANVAS_STATES.OFFENSE_LIVE) {
           const stats = getSimulationStats(player.name);
           const offensiveSpeed = 4.0 + stats.velocidad * 0.05 + stats.agilidad * 0.03;
+          // --- REGLA DE 3 SEGUNDOS EN LA ZONA PARA ATACANTES SIN BALÓN (SE ABREN AL TRIPLE) ---
+          if (canvasShotZone(player) === 'bandeja_en_carrera' && !player.isClearingPaint) {
+            player.zoneTime = (player.zoneTime || 0) + (dt / 60);
+            if (player.zoneTime >= 3.0) {
+              player.zoneTime = 0;
+              player.paintStayUntil = 0;
+              player.isClearingPaint = true;
 
+              // Contar dónde hay menos gente para abrirse a la línea de triple por ese lado
+              const teammates = state.players.filter(p => p.team === 'A' && p !== player);
+              let rightCount = 0;
+              let leftCount = 0;
+              teammates.forEach(tm => {
+                if (tm.x >= CANVAS_COURT.hoop.x) rightCount++;
+                else leftCount++;
+              });
+
+              const exitSide = rightCount >= leftCount ? -1 : 1;
+              player.rollTarget = {
+                x: CANVAS_COURT.hoop.x + exitSide * 780, // 420 (izq) o 1980 (der) -> Más allá del arco de 3 puntos
+                y: 860
+              };
+            }
+          } else if (canvasShotZone(player) !== 'bandeja_en_carrera') {
+            player.zoneTime = 0;
+          }
           if (player.isSettingScreen && player.screenTargetDefender && !player.screenPlanted) {
             const def = player.screenTargetDefender;
             const hnd = player.screenHandler || active;
@@ -4456,6 +4663,28 @@
           clockWrap.style.color = '#d9ff8d';
         }
       }
+      // Mostrar/ocultar el mini contador de 3 segundos en la zona para el jugador con balón
+      const zoneClockWrap = document.getElementById('sim-canvas-zoneclock');
+      const zoneClockVal = document.getElementById('sim-zoneclock-val');
+      if (zoneClockWrap && zoneClockVal) {
+        const showZoneTimer = Boolean(
+          active &&
+          simulationState.possession === 'A' &&
+          state.mode === CANVAS_STATES.OFFENSE_LIVE &&
+          active.zoneCountStarted &&
+          active.zoneTime > 0 &&
+          canvasShotZone(active) === 'bandeja_en_carrera'
+        );
+        if (showZoneTimer) {
+          const remainingZone = Math.max(0, 3.0 - active.zoneTime);
+          zoneClockWrap.style.display = 'flex';
+          zoneClockVal.textContent = remainingZone.toFixed(1);
+          zoneClockWrap.style.color = remainingZone <= 1.0 ? '#ff6b6b' : '#ffb454';
+          zoneClockWrap.style.borderColor = remainingZone <= 1.0 ? '#ff6b6b' : '#ffb454';
+        } else {
+          zoneClockWrap.style.display = 'none';
+        }
+      }
     }
 
     function startSimulationRoster() {
@@ -5028,8 +5257,8 @@
       simulationState.activePlayer = defenderName;
       simulationState.userTurn = (nextTeam === 'A');
 
-      // Solo el 30% de las pérdidas son robos directos; el resto son pérdidas de control o balones fuera
-      const isCleanSteal = Math.random() < 0.30;
+      // Solo el 40% de las pérdidas son robos directos; el resto son pérdidas de control o balones fuera
+      const isCleanSteal = Math.random() < 0.40;
 
       if (isCleanSteal) {
         const defEntry = getBoxScoreEntry(team === 'A' ? 'B' : 'A', defenderName);
