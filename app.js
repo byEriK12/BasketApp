@@ -2199,6 +2199,7 @@
       .ut-sort-btn { padding:8px 12px; border-radius:8px; background:#122526; border:1px solid #315c59; color:#9cbab3; font-size:12px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:all .15s ease; }
       .ut-sort-btn:hover { border-color:#d9ff8d; color:#fff; }
       .ut-sort-btn.active { background:#d9ff8d; border-color:#d9ff8d; color:#102021; }
+      .ut-coin-img { width:16px; height:16px; vertical-align:-2px; object-fit:contain; margin-right:2px; }
     `;
 
     if (!document.getElementById('sim-style-root')) {
@@ -2756,7 +2757,6 @@
       // ==========================================================
       // 1. COMPROBACIÓN DE TRIPLE (Geometría real FIBA / 3x3)
       // ==========================================================
-      // A) Esquinas rectas laterales (paralelas a la banda hasta el quiebro del arco)
       const tripleCornerLeft = 546;
       const tripleCornerRight = 1854;
       const tripleCornerBreakY = 590;
@@ -2765,7 +2765,6 @@
         return 'triple';
       }
 
-      // B) Arco circular frontal del triple (radio real ~825 px desde el centro del aro)
       const distToHoop = Math.hypot(x - hoopX, y - hoopY);
       const tripleRadius = 825;
 
@@ -2773,30 +2772,20 @@
         return 'triple';
       }
 
-      // ==========================================================
-      // 2. BANDEJA / ENTRADA A CANASTA (Debajo del aro)
-      // ==========================================================
-      // Zona inmediatamente pegada al aro y semicírculo de carga
-      if (x >= 1020 && x <= 1380 && y >= 158 && y <= 540) {
-        return 'bandeja_en_carrera';
-      }
+      // 2. Delimitación estricta de la Pintura (Zona gris oscura)
+      const inPaintWidth = (x >= 940 && x <= 1460);
+      const inPaintHeight = (y >= 152 && y <= 990);
 
-      // ==========================================================
-      // 3. TIRO CERCANO (Dentro de la botella / pintura)
-      // ==========================================================
-      // Zona rectangular azul oscura (x: 964 a 1436, y hasta 985) más semicírculo de tiro libre
-      const insideKeyWidth = (x >= 940 && x <= 1460);
-      const insideKeyHeight = (y >= 158 && y <= 990);
-      const insideFreeThrowCircle = Math.hypot(x - hoopX, y - 985) <= 240 && y <= 1100;
-
-      if ((insideKeyWidth && insideKeyHeight) || insideFreeThrowCircle || distToHoop <= 400) {
+      if (inPaintWidth && inPaintHeight) {
+        // La zona de bandeja es la parte superior de la pintura, justo bajo el aro
+        if (y <= 540 && x >= 1020 && x <= 1380) {
+          return 'bandeja_en_carrera';
+        }
+        // El resto de la pintura gris oscura es tiro cercano
         return 'tiro_cercano';
       }
 
-      // ==========================================================
-      // 4. TIRO DE MEDIA DISTANCIA
-      // ==========================================================
-      // Cualquier espacio entre la botella y la línea de 3 puntos
+      // 3. Resto de la cancha (excepto triple)
       return 'tiro_media_distancia';
     }
 
@@ -2893,14 +2882,32 @@
       // 1. Validar y blindar que los emparejamientos sean siempre 1 a 1 estricto sin duplicados
       ensureValidMatchups();
 
-      // 2. Colocar primero a los atacantes del Equipo A en sus puestos reglamentarios de check
+      // // 2. Colocar primero a los atacantes del Equipo A en sus puestos reglamentarios de check (espaciados en arco abierto)
       const basePositions = user.length === 2
-        ? [{ x: 1200, y: 1080 }, { x: 820, y: 1110 }]
+        ? [
+            { x: 1200, y: 1250 }, // 0: Jugador con balón
+            { x: 780,  y: 920  }  // 1: Alero abierto a 45 grados
+          ]
         : user.length === 3
-          ? [{ x: 1200, y: 1080 }, { x: 800, y: 1110 }, { x: 1600, y: 1110 }]
+          ? [
+            { x: 1200, y: 1250 }, // 0: Base con balón (fuera del arco)
+            { x: 600,  y: 960  }, // 1: Alero izquierdo (abierto)
+            { x: 1800, y: 960  }  // 2: Alero derecho (abierto)
+          ]
           : user.length === 4
-            ? [{ x: 1200, y: 1080 }, { x: 760, y: 1110 }, { x: 1640, y: 1110 }, { x: 1200, y: 650 }]
-            : [{ x: 1200, y: 1080 }, { x: 650, y: 1110 }, { x: 1750, y: 1110 }, { x: 1060, y: 700 }, { x: 1340, y: 620 }];
+            ? [
+            { x: 1200, y: 1250 }, // 0: Base con balón
+            { x: 600,  y: 960  }, // 1: Alero izquierdo (abierto)
+            { x: 1800, y: 960  },  // 2: Alero derecho (abierto)
+            { x: 1200, y: 720  }  // 3: Pívot (poste alto / zona central liberada)
+          ]
+            : [
+            { x: 1200, y: 1250 }, // 0: Base con balón (fuera de la línea de 3)
+            { x: 600,  y: 960  }, // 1: Alero izquierdo (abierto)
+            { x: 1800, y: 960  },  // 2: Alero derecho (abierto)
+            { x: 920,  y: 740  }, // 3: Ala-pívot (codo izquierdo)
+            { x: 1480, y: 740  }  // 4: Pívot (codo derecho)
+          ];
 
       state.players.forEach(player => {
         player.vx = 0;
@@ -3126,8 +3133,8 @@
       const chargeDurationMs = Math.round(310 + (ease * 310));
 
       // 4. Margen de verde en la cima:
-      // Mal tiro / punteado -> 0.025 (2.5%, casi 2 píxeles) | Tiro perfecto -> 0.145 (14.5%, unos 12 píxeles)
-      const greenWindow = Number((0.025 + (ease * 0.120)).toFixed(4));
+      // Mal tiro / punteado -> 0.032 | Tiro medio -> ~0.100 | Tiro liberado de especialista -> 0.175
+      const greenWindow = Number((0.032 + (ease * 0.143)).toFixed(4));
       const greenThreshold = 1 - greenWindow;
 
       return { chargeDurationMs, greenWindow, greenThreshold };
@@ -3482,6 +3489,11 @@
         handleAbandonMatch();
       });
     }
+    
+    function isInsidePaint(point) {
+      const z = canvasShotZone(point);
+      return z === 'tiro_cercano' || z === 'bandeja_en_carrera';
+    }
 
     function renderCanvasSimulationScreen(root) {
       let state = simulationState.canvas;
@@ -3644,7 +3656,7 @@
         }
         // --- REGLA DE 3 SEGUNDOS EN LA ZONA PARA EL JUGADOR CON BALÓN ---
         if (state.mode === CANVAS_STATES.OFFENSE_LIVE) {
-          const inLayupZone = canvasShotZone(active) === 'bandeja_en_carrera';
+          const inLayupZone = isInsidePaint(active);
           const isPlanted = Math.hypot(active.vx, active.vy) < 0.1;
 
           if (inLayupZone) {
@@ -3795,7 +3807,7 @@
         if (player.team === 'B') {
           // --- REGLA DE 5 SEGUNDOS EN LA ZONA PARA DEFENSORES (CPU) ---
           if (state.mode === CANVAS_STATES.OFFENSE_LIVE) {
-            if (canvasShotZone(player) === 'bandeja_en_carrera') {
+            if (canvasShotZone(player) !== 'tiro_media_distancia' && canvasShotZone(player) !== 'triple') {
               player.zoneTime = (player.zoneTime || 0) + (dt / 60);
               if (player.zoneTime >= 5.0 && !player.isClearingDefZone) {
                 player.isClearingDefZone = true;
@@ -3951,33 +3963,41 @@
         } else if (player !== active && state.mode === CANVAS_STATES.OFFENSE_LIVE) {
           const stats = getSimulationStats(player.name);
           const offensiveSpeed = 4.0 + stats.velocidad * 0.05 + stats.agilidad * 0.03;
-          // --- REGLA DE 3 SEGUNDOS EN LA ZONA PARA ATACANTES SIN BALÓN (SE ABREN AL TRIPLE) ---
-          if (canvasShotZone(player) === 'bandeja_en_carrera' && !player.isClearingPaint) {
+
+          // --- REGLA DE 3 SEGUNDOS EN LA PINTURA (SOLO PARA PÍVOTS / JUGADORES INTERIORES) ---
+          const isTrueInteriorPlayer = player.originalPaintY && player.originalPaintY <= 750;
+
+          if (isTrueInteriorPlayer && isInsidePaint(player) && !player.isClearingPaint && !player.hasClearedZone) {
             player.zoneTime = (player.zoneTime || 0) + (dt / 60);
             if (player.zoneTime >= 3.0) {
               player.zoneTime = 0;
               player.paintStayUntil = 0;
               player.isClearingPaint = true;
+              player.hasClearedZone = true; // Evita que se active en bucle
 
-              // Contar dónde hay menos gente para abrirse a la línea de triple por ese lado
-              const teammates = state.players.filter(p => p.team === 'A' && p !== player);
-              let rightCount = 0;
-              let leftCount = 0;
-              teammates.forEach(tm => {
-                if (tm.x >= CANVAS_COURT.hoop.x) rightCount++;
-                else leftCount++;
-              });
+              // Salir al borde lateral exterior más cercano de la pintura (madera clara)
+              const escapeLeft = 860;
+              const escapeRight = 1540;
+              const chosenX = player.x <= 1200 ? escapeLeft : escapeRight;
+              const safeY = clamp(player.y, 650, 920);
 
-              const exitSide = rightCount >= leftCount ? -1 : 1;
-              player.rollTarget = {
-                x: CANVAS_COURT.hoop.x + exitSide * 780, // 420 (izq) o 1980 (der) -> Más allá del arco de 3 puntos
-                y: 860
-              };
+              player.rollTarget = { x: chosenX, y: safeY };
             }
-          } else if (canvasShotZone(player) !== 'bandeja_en_carrera') {
-            player.zoneTime = 0;
-          }
-          if (player.isSettingScreen && player.screenTargetDefender && !player.screenPlanted) {
+          } else if (player.rollTarget && player.isClearingPaint) {
+            // Desplazamiento único hacia el borde exterior para limpiar la regla
+            const dx = player.rollTarget.x - player.x;
+            const dy = player.rollTarget.y - player.y;
+            const distance = Math.hypot(dx, dy) || 1;
+
+            const moveSpeed = (offensiveSpeed * 0.95) * dt;
+            player.x += (dx / distance) * Math.min(distance, moveSpeed);
+            player.y += (dy / distance) * Math.min(distance, moveSpeed);
+
+            if (distance < 30) {
+              player.isClearingPaint = false;
+              player.rollTarget = null; // Se queda fuera tranquilamente sin volver a entrar solo
+            }
+          } else if (player.isSettingScreen && player.screenTargetDefender && !player.screenPlanted) {
             const def = player.screenTargetDefender;
             const hnd = player.screenHandler || active;
             const sideToCenter = hnd.x < CANVAS_COURT.hoop.x ? 1 : -1;
@@ -4060,7 +4080,7 @@
               player.paintStayUntil = 0;
               player.isClearingPaint = false;
             }
-          } else if (player.rollTarget && !player.isClearingPaint) {
+          } else if (player.rollTarget && !player.isClearingPaint && !player.isWaitingOutside) {
             const dx = player.rollTarget.x - player.x;
             const dy = player.rollTarget.y - player.y;
             const distance = Math.hypot(dx, dy) || 1;
@@ -4091,20 +4111,6 @@
                 x: CANVAS_COURT.hoop.x + exitSide * 580,
                 y: 860
               };
-            }
-          } else if (player.rollTarget && player.isClearingPaint) {
-            const dx = player.rollTarget.x - player.x;
-            const dy = player.rollTarget.y - player.y;
-            const distance = Math.hypot(dx, dy) || 1;
-
-            const clearSpeed = (offensiveSpeed * 0.9) * dt;
-            player.x += (dx / distance) * Math.min(distance, clearSpeed);
-            player.y += (dy / distance) * Math.min(distance, clearSpeed);
-
-            if (distance < 50) {
-              player.rollTarget = null;
-              player.isClearingPaint = false;
-              player.paintStayUntil = 0;
             }
           } else {
             player.x += Math.sin(time / 900 + player.phase) * 0.35 * dt;
@@ -4201,10 +4207,10 @@
 
           const cleanDef = cleanPlayerName(defender);
 
-          // Etiqueta limpia para los banners de canasta y tarjeta de Canasta Ganadora (sin ¡EXCELENTE!)
+          // Etiqueta limpia para los banners y la tarjeta final (sin nombres de defensores para evitar que desborde)
           const contestTag = contesters.length >= 2
-            ? `Doble punteo (${contesters.slice(0, 2).join(' y ')}${contesters.length > 2 ? ' +ayuda' : ''})`
-            : (contesters.length === 1 ? `Punteado` : 'Tiro abierto');
+            ? 'Doble punteo'
+            : (contesters.length === 1 ? 'Punteado' : 'Tiro abierto');
 
           // Frase limpia para cuando entra la canasta
           const contestOutcomeText = contesters.length >= 2
@@ -4672,7 +4678,7 @@
           state.mode === CANVAS_STATES.OFFENSE_LIVE &&
           active.zoneCountStarted &&
           active.zoneTime > 0 &&
-          canvasShotZone(active) === 'bandeja_en_carrera'
+          isInsidePaint(active)
         );
         if (showZoneTimer) {
           const remainingZone = Math.max(0, 3.0 - active.zoneTime);
@@ -5510,10 +5516,10 @@
       const multiBlockBonus = contestTag.startsWith('Doble') ? 0.025 : 0;
       const blockProb = clamp(0.045 + multiBlockBonus + ((defender.tapon - shooter[shotAttr]) * 0.0025), 0.008, 0.16);
       const baseMap = {
-        tiro_cercano: 0.60,
-        bandeja_en_carrera: 0.55,
-        tiro_media_distancia: 0.45,
-        triple: 0.38
+        tiro_cercano: 0.50,         // Antes 0.60
+        bandeja_en_carrera: 0.46,   // Antes 0.55
+        tiro_media_distancia: 0.37, // Antes 0.45
+        triple: 0.31                // Antes 0.38
       };
       const clampMap = {
         tiro_cercano: [0.22, 0.86],
@@ -5523,7 +5529,7 @@
       };
       const base = baseMap[shotType] || 0.60;
       const delta = shooter[shotAttr] - defender[defenseKey];
-      const shotChance = clamp(base + (delta * 0.008) - pbpContestPenalty, clampMap[shotType][0], clampMap[shotType][1]);
+      const shotChance = clamp(base + (delta * 0.010) - pbpContestPenalty, clampMap[shotType][0], clampMap[shotType][1]);
       const missChance = clamp(1 - shotChance, 0.14, 0.88);
       registerAttempt(team, shooterName, shotType);
 
@@ -5840,7 +5846,8 @@
     function renderUltimateHeader() {
       const profile = clubState.profile || {};
       const coins = Number(profile.coins || 0).toLocaleString('es-ES');
-      return `<div class="ut-header"><div class="ut-brand">Ultimate Club</div><div class="ut-status"><span>${escapeHtml(profile.username || profile.email || 'Usuario')}</span><span>${profile.wins || 0} - ${profile.losses || 0}</span><span>🪙 ${coins}</span><button type="button" class="ut-signout" id="ut-signout">Cerrar sesión</button></div></div>`;
+      const coinIcon = `<img src="images/moneda.png" alt="🪙" class="ut-coin-img" onerror="this.outerHTML='🪙'">`;
+      return `<div class="ut-header"><div class="ut-brand">Ultimate Club</div><div class="ut-status"><span>${escapeHtml(profile.username || profile.email || 'Usuario')}</span><span>${profile.wins || 0} - ${profile.losses || 0}</span><span>${coinIcon} ${coins}</span><button type="button" class="ut-signout" id="ut-signout">Cerrar sesión</button></div></div>`;
     }
 
     function renderUltimateNav() {
@@ -5849,7 +5856,7 @@
 
     function renderUltimateCard(card, owned) {
       const canBuy = !owned && Number(clubState.profile?.coins || 0) >= card.price;
-      const price = `${card.price.toLocaleString('es-ES')} 🪙`;
+      const price = `${card.price.toLocaleString('es-ES')} <img src="images/moneda.png" alt="🪙" class="ut-coin-img">`;
       return `<article class="ut-card" data-ut-card="${card.id}"><img src="${cardImage(card)}" alt="${escapeHtml(card.name)}">${owned ? '<button type="button" disabled>En tu club</button>' : `<button type="button" data-ut-buy="${card.id}" title="${canBuy ? `Fichar por ${price}` : `Monedas insuficientes. Precio: ${price}`}" ${canBuy ? '' : 'disabled'}>${canBuy ? `Fichar por ${price}` : `Insuficiente · ${price}`}</button>`}</article>`;
     }
 
@@ -6169,7 +6176,7 @@
       if (!card) return '';
       const owned = clubState.ownedIds.has(card.id);
       const canBuy = !owned && Number(clubState.profile?.coins || 0) >= card.price;
-      const priceText = `${card.price.toLocaleString('es-ES')} 🪙`;
+      const priceText = `${card.price.toLocaleString('es-ES')} <img src="images/moneda.png" alt="🪙" class="ut-coin-img">`;
       return `
         <article class="ut-special-card" data-ut-card="${card.id}">
           <img src="${cardImage(card)}" alt="${escapeHtml(card.displayName || card.name)}">
@@ -6901,10 +6908,18 @@
         });
         document.getElementById('sim-finish-lobby')?.addEventListener('click', () => {
           clubState.loading = false;
+          clubState.initialized = true;
           resetSimulationStateForNewMatch();
           simulationState.phase = 'lobby';
           simulationState.clubView = 'play';
-          renderSimulationScreen();
+          
+          // Forzamos el renderizado del lobby principal de Jugar directamente
+          const root = document.getElementById('sim-content');
+          if (root) {
+            renderUltimatePlayLobby(root);
+          } else {
+            renderSimulationScreen();
+          }
         });
         return;
       }
