@@ -2933,6 +2933,9 @@
           const pos = basePositions[Math.min(index, basePositions.length - 1)];
           player.x = pos.x;
           player.y = pos.y;
+          // Guardamos las coordenadas de inicio del quinteto desde el primer fotograma
+          player.originalPaintX = pos.x;
+          player.originalPaintY = pos.y;
           canvasClamp(player);
         }
       });
@@ -3318,7 +3321,13 @@
       // Si ya está físicamente en contacto en este mismo instante, no reiniciar
       if (blocker.screenPlanted) return;
 
-      // 2. Localizar al defensor actual del balón
+      // 2. Liberar al pívot de cualquier estado de 3 segundos para que corra a toda velocidad al bloqueo
+      blocker.paintClearTarget = null;
+      blocker.isClearingPaint = false;
+      blocker.isWaitingOutside = false;
+      blocker.zoneTime = 0;
+
+      // 3. Localizar al defensor actual del balón
       const currentDefenderName = simulationState.matchups?.A?.[handler.name] || getDefenderForAttacker('A', handler.name);
       let defender = state.players.find(player => player.team === 'B' && player.name === currentDefenderName);
       
@@ -3332,7 +3341,7 @@
 
       if (!defender) return;
 
-      // 3. Resetear cualquier corte o carrera previa para permitir pedir bloqueo ILIMITADAS veces
+      // 4. Configurar las propiedades del bloqueo
       blocker.isSettingScreen = true;
       blocker.screenPlanted = false;
       blocker.screenTargetDefender = defender;
@@ -3960,33 +3969,51 @@
             player.x += player.vx * dt;
             player.y += player.vy * dt;
           }
-        } else if (player !== active && state.mode === CANVAS_STATES.OFFENSE_LIVE) {
+       } else if (player !== active && state.mode === CANVAS_STATES.OFFENSE_LIVE) {
           const stats = getSimulationStats(player.name);
           const offensiveSpeed = 4.0 + stats.velocidad * 0.05 + stats.agilidad * 0.03;
 
-          // --- REGLA DE 3 SEGUNDOS EN LA PINTURA (SOLO PARA PÍVOTS / JUGADORES INTERIORES) ---
-          const isTrueInteriorPlayer = player.originalPaintY && player.originalPaintY <= 750;
+          // --- REGLA UNIVERSAL DE 3 SEGUNDOS Y SALIDA DIRECTA SIN PAUSAS ---
+          const isInitialInterior = player.originalPaintY && isInsidePaint({ x: player.originalPaintX || player.x, y: player.originalPaintY });
 
-          if (isTrueInteriorPlayer && isInsidePaint(player) && !player.isClearingPaint && !player.hasClearedZone) {
+          if (isInsidePaint(player) && !player.isClearingPaint && !player.isWaitingOutside && !player.paintClearTarget && !player.rollTarget) {
             player.zoneTime = (player.zoneTime || 0) + (dt / 60);
             if (player.zoneTime >= 3.0) {
               player.zoneTime = 0;
               player.paintStayUntil = 0;
               player.isClearingPaint = true;
-              player.hasClearedZone = true; // Evita que se active en bucle
 
-              // Salir al borde lateral exterior más cercano de la pintura (madera clara)
-              const escapeLeft = 860;
-              const escapeRight = 1540;
-              const chosenX = player.x <= 1200 ? escapeLeft : escapeRight;
-              const safeY = clamp(player.y, 650, 920);
+              // Si es un pívot inicial, guardamos su origen para que pueda volver luego
+              if (isInitialInterior && !player.originalPaintX) {
+                player.originalPaintX = player.x;
+                player.originalPaintY = player.y;
+              }
 
-              player.rollTarget = { x: chosenX, y: safeY };
+              // Destino de salida: si es pívot, sale al borde lateral de la pintura; si es exterior, va directo al perímetro fuera del triple
+              if (isInitialInterior) {
+                const escapeLeft = 860;
+                const escapeRight = 1540;
+                const chosenX = player.x <= 1200 ? escapeLeft : escapeRight;
+                const safeY = clamp(player.y, 650, 920);
+                player.paintClearTarget = { x: chosenX, y: safeY };
+              } else {
+                const teammates = state.players.filter(p => p.team === 'A' && p !== player);
+                let rightCount = 0, leftCount = 0;
+                teammates.forEach(tm => {
+                  if (tm.x >= CANVAS_COURT.hoop.x) rightCount++;
+                  else leftCount++;
+                });
+                const exitSide = rightCount >= leftCount ? -1 : 1;
+                player.paintClearTarget = {
+                  x: CANVAS_COURT.hoop.x + exitSide * 580,
+                  y: 860
+                };
+              }
             }
-          } else if (player.rollTarget && player.isClearingPaint) {
-            // Desplazamiento único hacia el borde exterior para limpiar la regla
-            const dx = player.rollTarget.x - player.x;
-            const dy = player.rollTarget.y - player.y;
+          } else if (player.paintClearTarget) {
+            const targetCoord = player.paintClearTarget;
+            const dx = targetCoord.x - player.x;
+            const dy = targetCoord.y - player.y;
             const distance = Math.hypot(dx, dy) || 1;
 
             const moveSpeed = (offensiveSpeed * 0.95) * dt;
@@ -3994,10 +4021,30 @@
             player.y += (dy / distance) * Math.min(distance, moveSpeed);
 
             if (distance < 30) {
-              player.isClearingPaint = false;
-              player.rollTarget = null; // Se queda fuera tranquilamente sin volver a entrar solo
+              if (isInitialInterior) {
+                // Lógica específica para pívots: borde exterior -> pausa fuera -> retorno a la pintura
+                if (player.isClearingPaint) {
+                  player.isClearingPaint = false;
+                  player.isWaitingOutside = true;
+                  player.waitOutsideUntil = time + 2500;
+                } else if (player.isWaitingOutside && time >= player.waitOutsideUntil) {
+                  player.isWaitingOutside = false;
+                  player.paintClearTarget = {
+                    x: player.originalPaintX,
+                    y: player.originalPaintY
+                  };
+                } else if (isInsidePaint(player)) {
+                  player.paintClearTarget = null;
+                }
+              } else {
+                // Para exteriores o jugadores normales: salida limpia directa sin paradas intermedias
+                player.paintClearTarget = null;
+              }
             }
-          } else if (player.isSettingScreen && player.screenTargetDefender && !player.screenPlanted) {
+          }
+
+          // --- GESTIÓN DE BLOQUEOS (PICK AND ROLL) Y CORTES HACIA CANASTA ---
+          if (player.isSettingScreen && player.screenTargetDefender && !player.screenPlanted) {
             const def = player.screenTargetDefender;
             const hnd = player.screenHandler || active;
             const sideToCenter = hnd.x < CANVAS_COURT.hoop.x ? 1 : -1;
@@ -4070,7 +4117,9 @@
 
             const distHandler = active ? Math.hypot(active.x - player.x, active.y - player.y) : 0;
 
-            if (time >= player.pickUntil || distHandler > 200) {
+            // ANTES: time >= player.pickUntil || distHandler > 200 (esperaba demasiado)
+            // AHORA: Reducimos el tiempo de espera (1100ms en vez de 1800ms) o si el manejador se aleja un poco (160px)
+            if (time >= (player.pickStart + 1100) || distHandler > 160) {
               player.screenPlanted = false;
               player.isSettingScreen = false;
               player.screenTargetDefender = null;
@@ -4080,12 +4129,12 @@
               player.paintStayUntil = 0;
               player.isClearingPaint = false;
             }
-          } else if (player.rollTarget && !player.isClearingPaint && !player.isWaitingOutside) {
+          } else if (player.rollTarget) {
             const dx = player.rollTarget.x - player.x;
             const dy = player.rollTarget.y - player.y;
             const distance = Math.hypot(dx, dy) || 1;
 
-            if (distance >= 50 && !player.paintStayUntil) {
+            if (distance >= 30 && !player.paintStayUntil) {
               const rollSpeed = (offensiveSpeed * 0.85) * dt;
               player.x += (dx / distance) * Math.min(distance, rollSpeed);
               player.y += (dy / distance) * Math.min(distance, rollSpeed);
@@ -4095,22 +4144,34 @@
               player.x += Math.sin(time / 450 + player.phase) * 0.25 * dt;
               player.y += Math.cos(time / 550 + player.phase) * 0.15 * dt;
             } else {
-              player.paintStayUntil = 0;
-              player.isClearingPaint = true;
-
-              const teammates = state.players.filter(p => p.team === 'A' && p !== player);
-              let rightCount = 0;
-              let leftCount = 0;
-              teammates.forEach(tm => {
-                if (tm.x >= CANVAS_COURT.hoop.x) rightCount++;
-                else leftCount++;
-              });
-
-              const exitSide = rightCount >= leftCount ? -1 : 1;
-              player.rollTarget = {
-                x: CANVAS_COURT.hoop.x + exitSide * 580,
-                y: 860
-              };
+              // Si es un pívot inicial, al terminar el stay vuelve a su sitio
+              if (isInitialInterior) {
+                player.paintStayUntil = 0;
+                player.paintClearTarget = { x: player.originalPaintX, y: player.originalPaintY };
+                player.rollTarget = null;
+              } else {
+                player.paintStayUntil = 0;
+                
+                // En lugar de teletransportar, calculamos el lado libre y les asignamos el rollTarget para que caminen hacia allá
+                const teammates = state.players.filter(p => p.team === 'A' && p !== player);
+                let rightCount = 0, leftCount = 0;
+                teammates.forEach(tm => {
+                  if (tm.x >= CANVAS_COURT.hoop.x) rightCount++;
+                  else leftCount++;
+                });
+                const exitSide = rightCount >= leftCount ? -1 : 1;
+                
+                // Asignamos el destino de forma fluida (sin saltos bruscos)
+                player.rollTarget = {
+                  x: CANVAS_COURT.hoop.x + (exitSide * 580),
+                  y: 860
+                };
+                
+                // Opcional: si ya están viajando hacia su destino final, permitimos que al llegar se queden fijos:
+                if (Math.abs(player.x - (CANVAS_COURT.hoop.x + (exitSide * 580))) < 40) {
+                  player.rollTarget = null;
+                }
+              }
             }
           } else {
             player.x += Math.sin(time / 900 + player.phase) * 0.35 * dt;
