@@ -2104,11 +2104,12 @@
       .ut-market-arrow:hover { border-color:#d9ff8d; }
       .ut-card { background:#132628; border:1px solid #37605c; border-radius:10px; padding:9px; cursor:pointer; transition:transform .15s ease,border-color .15s ease; }
       .ut-card:hover { transform:translateY(-3px); border-color:#d9ff8d; }
-      .ut-card img { display:block; width:100%; aspect-ratio:2 / 3; object-fit:cover; border-radius:6px; background:#0a1215; }
+      .ut-card > img { display:block; width:100%; aspect-ratio:2 / 3; object-fit:cover; border-radius:6px; background:#0a1215; }
       .ut-card-info { display:flex; justify-content:space-between; gap:8px; align-items:center; padding-top:9px; font-size:12px; }
       .ut-card-info strong { color:#fff; }
       .ut-card-info small { color:#d9ff8d; font-weight:800; }
-      .ut-card button { width:100%; margin-top:9px; padding:8px; border-radius:7px; font-size:11px; font-weight:800; }
+      .ut-card button { width:100%; margin-top:9px; padding:8px; border-radius:7px; font-size:12px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; gap:5px; }
+      .ut-card button .ut-coin-img { width:15px; height:15px; margin:0; flex-shrink:0; }
       .ut-card button:disabled { cursor:not-allowed; opacity:.55; }
       .ut-empty { padding:28px; border:1px dashed #37605c; text-align:center; color:#9cbab3; }
       .ut-auth { width:min(430px,100%); margin:40px auto; padding:28px; background:#102021; border:1px solid #37605c; border-radius:12px; }
@@ -2222,6 +2223,26 @@
       .ut-sort-btn:hover { border-color:#d9ff8d; color:#fff; }
       .ut-sort-btn.active { background:#d9ff8d; border-color:#d9ff8d; color:#102021; }
       .ut-coin-img { width:16px; height:16px; vertical-align:-2px; object-fit:contain; margin-right:2px; }
+      .ut-controls-backdrop { position:fixed; inset:0; z-index:260; display:grid; place-items:center; padding:16px; background:rgba(2,8,10,.86); backdrop-filter:blur(4px); }
+      .ut-controls-modal { position:relative; width:min(760px, 100%); max-height:90vh; overflow-y:auto; padding:24px; background:linear-gradient(160deg, #102021 0%, #0a1517 100%); border:2px solid #d9ff8d; border-radius:16px; box-shadow:0 24px 80px rgba(0,0,0,.75); color:#f4f7fb; }
+      .ut-controls-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:14px; margin-bottom:18px; border-bottom:1px solid #285050; }
+      .ut-controls-header h3 { margin:0; font-size:22px; color:#d9ff8d; letter-spacing:.04em; text-transform:uppercase; }
+      .ut-controls-header p { margin:4px 0 0; font-size:12px; color:#9cbab3; }
+      .ut-controls-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; }
+      .ut-control-card { background:#132628; border:1px solid #315c59; border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:10px; }
+      .ut-control-card.full { grid-column:1 / -1; }
+      .ut-control-card-title { font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; color:#d9ff8d; }
+      .ut-control-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 10px; border-radius:8px; background:#0d1b1d; border:1px solid #224241; }
+      .ut-control-desc strong { display:block; font-size:13px; color:#fff; }
+      .ut-control-desc span { display:block; font-size:11px; color:#9cbab3; margin-top:2px; }
+      .ut-kbd { display:inline-flex; align-items:center; justify-content:center; min-width:34px; height:32px; padding:0 10px; border-radius:7px; background:linear-gradient(180deg, #1e3a3c, #102021); border:1px solid #4c7c77; border-bottom:3px solid #d9ff8d; color:#f4f7fb; font-family:inherit; font-size:12px; font-weight:900; box-shadow:0 3px 8px rgba(0,0,0,.45); white-space:nowrap; }
+      .ut-kbd-wasd { display:grid; grid-template-columns:repeat(3, 34px); gap:4px; justify-content:center; }
+      .ut-kbd-wasd .empty { visibility:hidden; }
+      .ut-controls-move-wrap { display:flex; align-items:center; justify-content:space-around; gap:16px; flex-wrap:wrap; padding:6px 0; }
+      .ut-controls-tips { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; margin-top:14px; }
+      .ut-control-tip { padding:9px 10px; border-radius:8px; background:#0d1b1d; border:1px dashed #315c59; font-size:11px; color:#cfe1ff; text-align:center; }
+      .ut-control-tip strong { display:block; color:#d9ff8d; font-size:12px; margin-bottom:2px; }
+      @media (max-width:640px) { .ut-controls-grid, .ut-controls-tips { grid-template-columns:1fr; } }
     `;
 
     if (!document.getElementById('sim-style-root')) {
@@ -3375,6 +3396,222 @@
       canvasMessage(`${blocker.name} sube a poner el bloqueo...`);
     }
 
+    function openControlsModal() {
+      if (document.getElementById('ut-controls-modal')) return;
+
+      const isMeter = simulationState.settings?.shotMode === 'meter';
+      const modal = document.createElement('div');
+      modal.id = 'ut-controls-modal';
+      modal.className = 'ut-controls-backdrop';
+      modal.innerHTML = `
+        <div class="ut-controls-modal" role="dialog" aria-modal="true" aria-label="Controles del partido">
+          <div class="ut-controls-header">
+            <div>
+              <h3>Controles en pista</h3>
+              <p>Modo de tiro activo: <strong style="color:#d9ff8d">${isMeter ? 'Barra de tiro (Timing)' : 'Clásico (Porcentaje)'}</strong></p>
+            </div>
+            <button type="button" class="ut-close" id="ut-controls-close" aria-label="Cerrar">×</button>
+          </div>
+
+          <div class="ut-controls-grid">
+            <!-- MOVIMIENTO -->
+            <div class="ut-control-card">
+              <div class="ut-control-card-title">Movimiento</div>
+              <div class="ut-controls-move-wrap">
+                <div class="ut-kbd-wasd">
+                  <span class="empty"></span><kbd class="ut-kbd">W</kbd><span class="empty"></span>
+                  <kbd class="ut-kbd">A</kbd><kbd class="ut-kbd">S</kbd><kbd class="ut-kbd">D</kbd>
+                </div>
+                <span style="color:#6c8a86; font-weight:800; font-size:12px;">O</span>
+                <div class="ut-kbd-wasd">
+                  <span class="empty"></span><kbd class="ut-kbd">↑</kbd><span class="empty"></span>
+                  <kbd class="ut-kbd">←</kbd><kbd class="ut-kbd">↓</kbd><kbd class="ut-kbd">→</kbd>
+                </div>
+              </div>
+              <div class="ut-control-desc" style="text-align:center;">
+                <span>Desplaza al jugador con balón o pelea el rebote tras el tiro.</span>
+              </div>
+            </div>
+
+            <!-- ACCIONES EN ATAQUE -->
+            <div class="ut-control-card">
+              <div class="ut-control-card-title">Acciones ofensivas</div>
+              <div class="ut-control-row">
+                <div class="ut-control-desc">
+                  <strong>Lanzar a canasta</strong>
+                  <span>${isMeter ? 'Mantén pulsado y suelta en la zona verde.' : 'Pulsa para tirar según tu posición y defensa.'}</span>
+                </div>
+                <kbd class="ut-kbd">F</kbd>
+              </div>
+              <div class="ut-control-row">
+                <div class="ut-control-desc">
+                  <strong>Pasar el balón</strong>
+                  <span>Apunta con el movimiento hacia tu compañero.</span>
+                </div>
+                <kbd class="ut-kbd">ESPACIO</kbd>
+              </div>
+              <div class="ut-control-row">
+                <div class="ut-control-desc">
+                  <strong>Pedir bloqueo (Pick & Roll)</strong>
+                  <span>El compañero más cercano sube a bloquear y corta al aro.</span>
+                </div>
+                <kbd class="ut-kbd">R</kbd>
+              </div>
+            </div>
+
+            <!-- SISTEMA -->
+            <div class="ut-control-card full">
+              <div class="ut-control-card-title">Partido y menú</div>
+              <div class="ut-control-row">
+                <div class="ut-control-desc">
+                  <strong>Pausar / Reanudar partido</strong>
+                  <span>Detiene el reloj, muestra el Box Score en vivo y permite salir al menú.</span>
+                </div>
+                <kbd class="ut-kbd">Q</kbd>
+              </div>
+            </div>
+          </div>
+
+          <div class="ut-controls-tips">
+            <div class="ut-control-tip">
+              <strong>⏱ 24s / 14s</strong>
+              Reloj de posesión (14s tras rebote ofensivo).
+            </div>
+            <div class="ut-control-tip">
+              <strong>3 segundos</strong>
+              No te quedes plantado en la pintura con balón.
+            </div>
+            <div class="ut-control-tip">
+              <strong>2 contra 1</strong>
+              Si dominas en la zona, la CPU doblará y dejará a uno libre.
+            </div>
+          </div>
+        </div>
+      `;
+
+      const close = () => {
+        document.removeEventListener('keydown', onEsc);
+        modal.remove();
+      };
+      const onEsc = event => {
+        if (event.key === 'Escape') close();
+      };
+
+      modal.addEventListener('click', event => {
+        if (event.target === modal || event.target.closest('#ut-controls-close')) close();
+      });
+      document.addEventListener('keydown', onEsc);
+      document.body.appendChild(modal);
+    }
+
+    function openControlsModal() {
+      if (document.getElementById('ut-controls-modal')) return;
+
+      const isMeter = simulationState.settings?.shotMode === 'meter';
+      const modal = document.createElement('div');
+      modal.id = 'ut-controls-modal';
+      modal.className = 'ut-controls-backdrop';
+      modal.innerHTML = `
+        <div class="ut-controls-modal" role="dialog" aria-modal="true" aria-label="Controles del partido">
+          <div class="ut-controls-header">
+            <div>
+              <h3>Controles en pista</h3>
+              <p>Modo de tiro activo: <strong style="color:#d9ff8d">${isMeter ? 'Barra de tiro (Timing)' : 'Clásico (Porcentaje)'}</strong></p>
+            </div>
+            <button type="button" class="ut-close" id="ut-controls-close" aria-label="Cerrar">×</button>
+          </div>
+
+          <div class="ut-controls-grid">
+            <!-- MOVIMIENTO -->
+            <div class="ut-control-card">
+              <div class="ut-control-card-title">Movimiento</div>
+              <div class="ut-controls-move-wrap">
+                <div class="ut-kbd-wasd">
+                  <span class="empty"></span><kbd class="ut-kbd">W</kbd><span class="empty"></span>
+                  <kbd class="ut-kbd">A</kbd><kbd class="ut-kbd">S</kbd><kbd class="ut-kbd">D</kbd>
+                </div>
+                <span style="color:#6c8a86; font-weight:800; font-size:12px;">O</span>
+                <div class="ut-kbd-wasd">
+                  <span class="empty"></span><kbd class="ut-kbd">↑</kbd><span class="empty"></span>
+                  <kbd class="ut-kbd">←</kbd><kbd class="ut-kbd">↓</kbd><kbd class="ut-kbd">→</kbd>
+                </div>
+              </div>
+              <div class="ut-control-desc" style="text-align:center;">
+                <span>Desplaza al jugador con balón o pelea el rebote tras el tiro.</span>
+              </div>
+            </div>
+
+            <!-- ACCIONES EN ATAQUE -->
+            <div class="ut-control-card">
+              <div class="ut-control-card-title">Acciones ofensivas</div>
+              <div class="ut-control-row">
+                <div class="ut-control-desc">
+                  <strong>Lanzar a canasta</strong>
+                  <span>${isMeter ? 'Mantén pulsado y suelta en la zona verde.' : 'Pulsa para tirar según tu posición y defensa.'}</span>
+                </div>
+                <kbd class="ut-kbd">F</kbd>
+              </div>
+              <div class="ut-control-row">
+                <div class="ut-control-desc">
+                  <strong>Pasar el balón</strong>
+                  <span>Apunta con el movimiento hacia tu compañero.</span>
+                </div>
+                <kbd class="ut-kbd">ESPACIO</kbd>
+              </div>
+              <div class="ut-control-row">
+                <div class="ut-control-desc">
+                  <strong>Pedir bloqueo (Pick & Roll)</strong>
+                  <span>El compañero más cercano sube a bloquear y corta al aro.</span>
+                </div>
+                <kbd class="ut-kbd">R</kbd>
+              </div>
+            </div>
+
+            <!-- SISTEMA -->
+            <div class="ut-control-card full">
+              <div class="ut-control-card-title">Partido y menú</div>
+              <div class="ut-control-row">
+                <div class="ut-control-desc">
+                  <strong>Pausar / Reanudar partido</strong>
+                  <span>Detiene el reloj, muestra el Box Score en vivo y permite salir al menú.</span>
+                </div>
+                <kbd class="ut-kbd">Q</kbd>
+              </div>
+            </div>
+          </div>
+
+          <div class="ut-controls-tips">
+            <div class="ut-control-tip">
+              <strong>⏱ 24s / 14s</strong>
+              Reloj de posesión (14s tras rebote ofensivo).
+            </div>
+            <div class="ut-control-tip">
+              <strong>3 segundos</strong>
+              No te quedes plantado en la pintura con balón.
+            </div>
+            <div class="ut-control-tip">
+              <strong>2 contra 1</strong>
+              Si dominas en la zona, la CPU doblará y dejará a uno libre.
+            </div>
+          </div>
+        </div>
+      `;
+
+      const close = () => {
+        document.removeEventListener('keydown', onEsc);
+        modal.remove();
+      };
+      const onEsc = event => {
+        if (event.key === 'Escape') close();
+      };
+
+      modal.addEventListener('click', event => {
+        if (event.target === modal || event.target.closest('#ut-controls-close')) close();
+      });
+      document.addEventListener('keydown', onEsc);
+      document.body.appendChild(modal);
+    }
+
     function canvasPauseMarkup() {
       const buildRows = team => (simulationState.teams[team] || []).map(player => {
         const stats = getBoxScoreEntry(team, player) || {};
@@ -3385,17 +3622,24 @@
         return `<tr><td>${escapeHtml(cleanPlayerName(player))}</td><td>${stats.pts || 0}</td><td>${reb}</td><td>${stats.ast || 0}</td><td>${stats.stl || 0}</td><td>${stats.blk || 0}</td><td>${stats.tov || 0}</td><td>${stats.fgm || 0}/${stats.fga || 0} (${fgp}%)</td><td>${stats.tpm || 0}/${stats.tpa || 0} (${tpp}%)</td><td>${rating}</td></tr>`;
       }).join('');
       const table = team => `<h4>Equipo ${team} · ${simulationState.score[team]} puntos</h4><table class="sim-canvas-box"><thead><tr><th>Jugador</th><th>PTS</th><th>REB</th><th>AST</th><th>ROB</th><th>TAP</th><th>PER</th><th>TC</th><th>3P</th><th>VAL</th></tr></thead><tbody>${buildRows(team)}</tbody></table>`;
-      return `<div class="sim-canvas-pause" id="sim-canvas-pause"><div class="sim-canvas-pause-card"><h3>Partido pausado · ${simulationState.score.A} - ${simulationState.score.B}</h3><p class="sim-canvas-help">WASD/Flechas: mover · Espacio: pase · F: tiro · R: bloqueo · Q: reanudar</p><div class="sim-canvas-pause-actions"><button type="button" class="sim-action-button primary" id="sim-canvas-resume">Reanudar partido</button><button type="button" class="sim-action-button" id="sim-canvas-exit">Salir al menú</button></div>${table('A')}${table('B')}</div></div>`;
+      return `<div class="sim-canvas-pause" id="sim-canvas-pause"><div class="sim-canvas-pause-card"><h3>Partido pausado · ${simulationState.score.A} - ${simulationState.score.B}</h3><div class="sim-canvas-pause-actions"><button type="button" class="sim-action-button primary" id="sim-canvas-resume">Reanudar partido</button><button type="button" class="sim-action-button" id="sim-canvas-controls">Controles</button><button type="button" class="sim-action-button" id="sim-canvas-exit">Salir al menú</button></div>${table('A')}${table('B')}</div></div>`;
     }
 
     function canvasTogglePause() {
       const state = simulationState.canvas;
       if (!state) return;
+
+      // Si el modal de controles estaba abierto y pulsas Q, lo cerramos limpio
+      const controlsModal = document.getElementById('ut-controls-modal');
+      if (controlsModal) controlsModal.remove();
+
+      CANVAS_KEYS.clear();
       state.mode = state.mode === CANVAS_STATES.PAUSED ? CANVAS_STATES.OFFENSE_LIVE : CANVAS_STATES.PAUSED;
       const pause = document.getElementById('sim-canvas-pause');
       if (state.mode === CANVAS_STATES.PAUSED && !pause) {
         document.querySelector('.sim-canvas-wrap')?.insertAdjacentHTML('beforeend', canvasPauseMarkup());
         document.getElementById('sim-canvas-resume')?.addEventListener('click', canvasTogglePause);
+        document.getElementById('sim-canvas-controls')?.addEventListener('click', openControlsModal);
         document.getElementById('sim-canvas-exit')?.addEventListener('click', () => {
           handleAbandonMatch();
         });
@@ -5939,8 +6183,9 @@
 
     function renderUltimateCard(card, owned) {
       const canBuy = !owned && Number(clubState.profile?.coins || 0) >= card.price;
-      const price = `${card.price.toLocaleString('es-ES')} <img src="images/moneda.png" alt="🪙" class="ut-coin-img">`;
-      return `<article class="ut-card" data-ut-card="${card.id}"><img src="${cardImage(card)}" alt="${escapeHtml(card.name)}">${owned ? '<button type="button" disabled>En tu club</button>' : `<button type="button" data-ut-buy="${card.id}" title="${canBuy ? `Fichar por ${price}` : `Monedas insuficientes. Precio: ${price}`}" ${canBuy ? '' : 'disabled'}>${canBuy ? `Fichar por ${price}` : `Insuficiente · ${price}`}</button>`}</article>`;
+      const pricePlain = card.price.toLocaleString('es-ES');
+      const priceHtml = `${pricePlain} <img src="images/moneda.png" alt="🪙" class="ut-coin-img">`;
+      return `<article class="ut-card" data-ut-card="${card.id}"><img src="${cardImage(card)}" alt="${escapeHtml(card.name)}">${owned ? '<button type="button" disabled>En tu club</button>' : `<button type="button" data-ut-buy="${card.id}" title="${canBuy ? `Fichar por ${pricePlain} monedas` : `Necesitas ${pricePlain} monedas`}" ${canBuy ? '' : 'disabled'}>${priceHtml}</button>`}</article>`;
     }
 
     function confirmDiscardLineupChanges() {
@@ -6259,15 +6504,14 @@
       if (!card) return '';
       const owned = clubState.ownedIds.has(card.id);
       const canBuy = !owned && Number(clubState.profile?.coins || 0) >= card.price;
-      const priceText = `${card.price.toLocaleString('es-ES')} <img src="images/moneda.png" alt="🪙" class="ut-coin-img">`;
+      const pricePlain = card.price.toLocaleString('es-ES');
+      const priceText = `${pricePlain} <img src="images/moneda.png" alt="🪙" class="ut-coin-img">`;
       return `
         <article class="ut-special-card" data-ut-card="${card.id}">
           <img src="${cardImage(card)}" alt="${escapeHtml(card.displayName || card.name)}">
           ${owned
             ? '<button type="button" class="ut-special-buy" disabled>En tu club</button>'
-            : `<button type="button" class="ut-special-buy" data-ut-buy="${card.id}" ${canBuy ? '' : 'disabled'}>
-                 ${canBuy ? `Fichar · ${priceText}` : `Insuficiente · ${priceText}`}
-               </button>`
+            : `<button type="button" class="ut-special-buy" data-ut-buy="${card.id}" title="${canBuy ? `Fichar por ${pricePlain} monedas` : `Necesitas ${pricePlain} monedas`}" ${canBuy ? '' : 'disabled'}>${priceText}</button>`
           }
         </article>
       `;
@@ -6304,15 +6548,15 @@
         const eventsMeta = [
           {
             title: 'Equipo de la Semana (TOTW)',
-            sub: 'Cartas IF y MOTM. Pulsa una carta para ver sus atributos.'
+            sub: 'Cartas IF y MOTM.'
           },
           {
             title: 'Evento Especial · Record Breaker',
-            sub: 'Carta histórica Record Breaker de asistencias. Pulsa para ver sus atributos.'
+            sub: 'Carta histórica Record Breaker de asistencias.'
           },
           {
             title: 'Evento Especial · Flashbacks',
-            sub: 'Cartas históricas rememorando highlights del pasado. Pulsa para ver sus atributos.'
+            sub: 'Cartas históricas rememorando highlights del pasado.'
           }
         ];
         const currentMeta = eventsMeta[evIdx] || eventsMeta[0];
@@ -6496,15 +6740,15 @@
         const eventsMeta = [
           {
             title: 'Equipo de la Semana (TOTW)',
-            sub: 'Cartas IF y MOTM. Pulsa una carta para ver sus atributos.'
+            sub: 'Cartas IF y MOTM.'
           },
           {
             title: 'Evento Especial · Record Breaker',
-            sub: 'Carta histórica Record Breaker de asistencias. Pulsa para ver sus atributos.'
+            sub: 'Carta histórica Record Breaker de asistencias.'
           },
           {
             title: 'Evento Especial · Flashbacks',
-            sub: 'Cartas históricas rememorando highlights del pasado. Pulsa para ver sus atributos.'
+            sub: 'Cartas históricas rememorando highlights del pasado.'
           }
         ];
         const total = eventsMeta.length;
