@@ -1074,6 +1074,22 @@
         defensa: [['Defensa Interior', 65], ['Defensa Exterior', 80], ['Robo', 65], ['Tapón', 65]],
         rebote: [['Rebote Ofensivo', 64], ['Rebote Defensivo', 75]],
         fisico: [['Velocidad', 86], ['Agilidad', 89], ['Fuerza', 64]]
+      }, 
+      Llongueras_Flashback: {
+        finalizacion: [['Tiro Cercano', 89], ['Bandeja en Carrera', 88]],
+        tiro: [['Tiro de Media Distancia', 82], ['Triple', 85]],
+        pase: [['Precisión de Pase', 85], ['Manejo de Balón', 88]],
+        defensa: [['Defensa Interior', 74], ['Defensa Exterior', 85], ['Robo', 86], ['Tapón', 72]],
+        rebote: [['Rebote Ofensivo', 80], ['Rebote Defensivo', 84]],
+        fisico: [['Velocidad', 89], ['Agilidad', 82], ['Fuerza', 89]]
+      }, 
+      Raset_Flashback: {
+        finalizacion: [['Tiro Cercano', 80], ['Bandeja en Carrera', 76]],
+        tiro: [['Tiro de Media Distancia', 84], ['Triple', 91]],
+        pase: [['Precisión de Pase', 87], ['Manejo de Balón', 79]],
+        defensa: [['Defensa Interior', 75], ['Defensa Exterior', 90], ['Robo', 89], ['Tapón', 76]],
+        rebote: [['Rebote Ofensivo', 74], ['Rebote Defensivo', 73]],
+        fisico: [['Velocidad', 88], ['Agilidad', 82], ['Fuerza', 79]]
       }
     };
 
@@ -1891,7 +1907,9 @@
       { id: 'aleix_if', name: 'Aleix_IF', displayName: 'Aleix', overall: 78, price: 10000, image_path: 'cards/Aleix_IF_Card.png', isSpecial: true, event: 'totw' },
       { id: 'jamo_motm', name: 'Jamo_MOTM', displayName: 'Jamo', overall: 84, price: 20000, image_path: 'cards/Jamo_MOTM_Card.png', isSpecial: true, event: 'totw' },
       { id: 'diaz_if', name: 'Diaz_IF', displayName: 'Diaz', overall: 79, price: 10000, image_path: 'cards/Diaz_IF_Card.png', isSpecial: true, event: 'totw' },
-      { id: 'eric_record_breaker', name: 'Eric_Record_Breaker', displayName: 'Eric', overall: 87, price: 50000, image_path: 'cards/Eric_Record_Breaker_Card.png', isSpecial: true, event: 'record_breaker' }
+      { id: 'eric_record_breaker', name: 'Eric_Record_Breaker', displayName: 'Eric', overall: 87, price: 50000, image_path: 'cards/Eric_Record_Breaker_Card.png', isSpecial: true, event: 'record_breaker' },
+      { id: 'llongueras_flashback', name: 'Llongueras_Flashback', displayName: 'Llongueras', overall: 85, price: 25000, image_path: 'cards/Llongueras_Flashback_Card.png', isSpecial: true, event: 'flashback' },
+      { id: 'raset_flashback', name: 'Raset_Flashback', displayName: 'Raset', overall: 83, price: 25000, image_path: 'cards/Raset_Flashback_Card.png', isSpecial: true, event: 'flashback' }
     ];
 
     const ULTIMATE_BASE_CATALOG = SIMULATION_POOL.map(name => ({
@@ -1950,7 +1968,9 @@
       Jamo_MOTM: { tiro_cercano: 78, bandeja_en_carrera: 83, tiro_media_distancia: 77, triple: 95, precision_pase: 88, manejo_balon: 83, defensa_interior: 90, defensa_exterior: 79, robo: 84, tapon: 90, rebote_ofensivo: 78, rebote_defensivo: 82, velocidad: 83, agilidad: 91, fuerza: 72 },
       Eric_Record_Breaker: { tiro_cercano: 91, bandeja_en_carrera: 87, tiro_media_distancia: 85, triple: 82, precision_pase: 99, manejo_balon: 94, defensa_interior: 85, defensa_exterior: 82, robo: 79, tapon: 89, rebote_ofensivo: 90, rebote_defensivo: 85, velocidad: 81, agilidad: 84, fuerza: 84 },
       Diaz_IF: { tiro_cercano: 80, bandeja_en_carrera: 72, tiro_media_distancia: 67, triple: 72, precision_pase: 84, manejo_balon: 76, defensa_interior: 78, defensa_exterior: 85, robo: 86, tapon: 74, rebote_ofensivo: 88, rebote_defensivo: 86, velocidad: 80, agilidad: 80, fuerza: 78 },
-      Aleix_IF: { tiro_cercano: 86, bandeja_en_carrera: 88, tiro_media_distancia: 81, triple: 68, precision_pase: 84, manejo_balon: 85, defensa_interior: 65, defensa_exterior: 80, robo: 65, tapon: 65, rebote_ofensivo: 64, rebote_defensivo: 75, velocidad: 86, agilidad: 89, fuerza: 64 }
+      Aleix_IF: { tiro_cercano: 86, bandeja_en_carrera: 88, tiro_media_distancia: 81, triple: 68, precision_pase: 84, manejo_balon: 85, defensa_interior: 65, defensa_exterior: 80, robo: 65, tapon: 65, rebote_ofensivo: 64, rebote_defensivo: 75, velocidad: 86, agilidad: 89, fuerza: 64 },
+      Llongueras_Flashback: { tiro_cercano: 89, bandeja_en_carrera: 88, tiro_media_distancia: 82, triple: 85, precision_pase: 85, manejo_balon: 88, defensa_interior: 74, defensa_exterior: 85, robo: 86, tapon: 72, rebote_ofensivo: 80, rebote_defensivo: 84, velocidad: 89, agilidad: 82, fuerza: 89 },
+      Raset_Flashback: { tiro_cercano: 80, bandeja_en_carrera: 76, tiro_media_distancia: 84, triple: 91, precision_pase: 87, manejo_balon: 79, defensa_interior: 75, defensa_exterior: 90, robo: 89, tapon: 76, rebote_ofensivo: 74, rebote_defensivo: 73, velocidad: 88, agilidad: 82, fuerza: 79 }
     };
 
     const SIMULATION_CSS = `
@@ -2178,10 +2198,12 @@
       .ut-event-slide { flex:0 0 100%; width:100%; min-width:0; min-height:420px; padding:26px 56px; background-size:cover; background-position:center; background-repeat:no-repeat; display:flex; flex-direction:column; justify-content:center; align-items:center; position:relative; box-sizing:border-box; }
       .ut-event-cards-row { display:grid; grid-template-columns:repeat(3, minmax(0, 175px)); justify-content:center; align-items:center; gap:20px; width:100%; z-index:2; }
       .ut-event-slide:nth-child(2) .ut-event-cards-row { grid-template-columns:minmax(0, 235px); }
+      .ut-event-slide:nth-child(3) .ut-event-cards-row { grid-template-columns:repeat(2, minmax(0, 205px)); gap:28px; }
       .ut-special-card { width:100%; min-width:0; background:transparent !important; border:0 !important; padding:0; cursor:pointer; transition:transform .2s ease, filter .2s ease; display:flex; flex-direction:column; align-items:center; }
       .ut-special-card:hover { transform:translateY(-6px) scale(1.03); filter:drop-shadow(0 16px 24px rgba(0,0,0,.75)); }
-      .ut-special-card img { display:block; width:100%; height:auto; object-fit:contain; background:transparent !important; border:0 !important; filter:drop-shadow(0 12px 20px rgba(0,0,0,.65)); }
-      .ut-special-buy { margin-top:10px; width:100%; padding:8px 8px; border-radius:999px; background:rgba(10, 18, 21, 0.88); border:1.5px solid #d9ff8d; color:#d9ff8d; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.03em; backdrop-filter:blur(6px); box-shadow:0 8px 20px rgba(0,0,0,.5); transition:all .15s ease; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .ut-special-card > img { display:block; width:100%; height:auto; object-fit:contain; background:transparent !important; border:0 !important; filter:drop-shadow(0 12px 20px rgba(0,0,0,.65)); }
+      .ut-special-buy { display:inline-flex; align-items:center; justify-content:center; gap:5px; margin-top:10px; width:100%; padding:8px 8px; border-radius:999px; background:rgba(10, 18, 21, 0.88); border:1.5px solid #d9ff8d; color:#d9ff8d; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.03em; backdrop-filter:blur(6px); box-shadow:0 8px 20px rgba(0,0,0,.5); transition:all .15s ease; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .ut-special-buy .ut-coin-img { width:15px; height:15px; flex-shrink:0; margin:0; }
       .ut-special-buy:hover:not(:disabled) { background:#d9ff8d; color:#102021; transform:scale(1.03); }
       .ut-special-buy:disabled { opacity:.65; border-color:#6c8a86; color:#b0c4c0; cursor:not-allowed; }
       .ut-event-nav-arrow { position:absolute; top:50%; transform:translateY(-50%) !important; z-index:30; width:44px; height:44px; padding:0 !important; margin:0; border-radius:50%; background:rgba(10,18,21,.88); border:2px solid #d9ff8d; color:#d9ff8d; font-size:26px; line-height:1; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; backdrop-filter:blur(4px); box-shadow:0 6px 18px rgba(0,0,0,.55); }
@@ -3004,7 +3026,7 @@
     }
 
     function formatDisplayNames(text) {
-      return String(text ?? '').replace(/\b(Eric|Aleix|Diaz|Jamo)_(Record_Breaker|MOTM|IF)\b/g, '$1');
+      return String(text ?? '').replace(/\b(Eric|Aleix|Diaz|Jamo|Llongueras|Raset)_(Record_Breaker|MOTM|IF|Flashback)\b/g, '$1');
     }
 
     function canvasMessage(text, type = 'info', rawEventText = null) {
@@ -6279,18 +6301,27 @@
         `;
       } else if (simulationState.clubView === 'events') {
         const evIdx = simulationState.specialEventIndex || 0;
-        const eventTitle = evIdx === 0
-          ? 'Equipo de la Semana (TOTW)'
-          : 'Evento Especial · Record Breaker';
-        const eventSub = evIdx === 0
-          ? 'Cartas IF y MOTM. Pulsa una carta para ver sus atributos.'
-          : 'Carta histórica Record Breaker de asistencias. Pulsa para ver sus atributos.';
+        const eventsMeta = [
+          {
+            title: 'Equipo de la Semana (TOTW)',
+            sub: 'Cartas IF y MOTM. Pulsa una carta para ver sus atributos.'
+          },
+          {
+            title: 'Evento Especial · Record Breaker',
+            sub: 'Carta histórica Record Breaker de asistencias. Pulsa para ver sus atributos.'
+          },
+          {
+            title: 'Evento Especial · Flashbacks',
+            sub: 'Cartas históricas rememorando highlights del pasado. Pulsa para ver sus atributos.'
+          }
+        ];
+        const currentMeta = eventsMeta[evIdx] || eventsMeta[0];
 
         content = `
           <div class="ut-title-row">
             <div>
-              <h2 id="ut-event-title">${eventTitle}</h2>
-              <p id="ut-event-sub">${eventSub}</p>
+              <h2 id="ut-event-title">${currentMeta.title}</h2>
+              <p id="ut-event-sub">${currentMeta.sub}</p>
             </div>
             <button type="button" class="sim-action-button" id="ut-back-market">Volver al Mercado</button>
           </div>
@@ -6312,6 +6343,13 @@
                   ${renderSpecialEventCard('eric_record_breaker')}
                 </div>
               </div>
+              <!-- SLIDE 3: FLASHBACKS -->
+              <div class="ut-event-slide" style="background-image:url('images/Fondo_Flashback.jpg');">
+                <div class="ut-event-cards-row">
+                  ${renderSpecialEventCard('raset_flashback')}
+                  ${renderSpecialEventCard('llongueras_flashback')}
+                </div>
+              </div>
             </div>
             <button type="button" class="ut-event-nav-arrow next" id="ut-event-next" aria-label="Siguiente evento"><span>›</span></button>
           </div>
@@ -6319,6 +6357,7 @@
           <div class="ut-event-dots">
             <button type="button" class="ut-event-dot ${evIdx === 0 ? 'active' : ''}" data-ut-event-dot="0">🔥 Jugadores de la Semana</button>
             <button type="button" class="ut-event-dot ${evIdx === 1 ? 'active' : ''}" data-ut-event-dot="1">⚡ Record Breaker</button>
+            <button type="button" class="ut-event-dot ${evIdx === 2 ? 'active' : ''}" data-ut-event-dot="2">⏪ Flashbacks</button>
           </div>
         `;
       } else if (simulationState.clubView === 'lineup') {
@@ -6454,7 +6493,22 @@
       });
 
       const switchEventSlide = (newIdx) => {
-        const idx = (newIdx + 2) % 2;
+        const eventsMeta = [
+          {
+            title: 'Equipo de la Semana (TOTW)',
+            sub: 'Cartas IF y MOTM. Pulsa una carta para ver sus atributos.'
+          },
+          {
+            title: 'Evento Especial · Record Breaker',
+            sub: 'Carta histórica Record Breaker de asistencias. Pulsa para ver sus atributos.'
+          },
+          {
+            title: 'Evento Especial · Flashbacks',
+            sub: 'Cartas históricas rememorando highlights del pasado. Pulsa para ver sus atributos.'
+          }
+        ];
+        const total = eventsMeta.length;
+        const idx = (newIdx + total) % total;
         simulationState.specialEventIndex = idx;
 
         const slider = root.querySelector('.ut-events-slider');
@@ -6464,16 +6518,8 @@
 
         const titleEl = root.querySelector('#ut-event-title');
         const subEl = root.querySelector('#ut-event-sub');
-        if (titleEl) {
-          titleEl.textContent = idx === 0
-            ? 'Equipo de la Semana (TOTW)'
-            : 'Evento Especial · Record Breaker';
-        }
-        if (subEl) {
-          subEl.textContent = idx === 0
-            ? 'Cartas IF y MOTM. Pulsa una carta para ver sus atributos.'
-            : 'Carta histórica Record Breaker de asistencias. Pulsa para ver sus atributos.';
-        }
+        if (titleEl) titleEl.textContent = eventsMeta[idx].title;
+        if (subEl) subEl.textContent = eventsMeta[idx].sub;
 
         root.querySelectorAll('[data-ut-event-dot]').forEach(dot => {
           dot.classList.toggle('active', Number(dot.dataset.utEventDot) === idx);
